@@ -81,6 +81,7 @@ type podIdentifier struct {
 	eventType string
 }
 
+// String  to string
 func (p *podIdentifier) String() string {
 	return fmt.Sprintf("namespace:%s,name:%s,jobName:%s,eventType:%s", p.namespace, p.name, p.jobName, p.eventType)
 }
@@ -390,18 +391,20 @@ func isPodAnnotationsReady(pod *v1.Pod, identifier string) bool {
 // CheckConfigmapCreation check configmap
 func (b *businessAgent) CheckConfigmapCreation(job *v1alpha1.Job) (*v1.ConfigMap, error) {
 	var cm *v1.ConfigMap
-	err := wait.PollImmediate(time.Duration(b.cmCheckInterval)*time.Second, time.Duration(b.cmCheckTimeout)*time.Second, func() (bool, error) {
-		var errTmp error
-		cm, errTmp = b.kubeClientSet.CoreV1().ConfigMaps(job.Namespace).Get(fmt.Sprintf("%s-%s",
-			ConfigmapPrefix, job.Name), metav1.GetOptions{})
-		if errTmp != nil {
-			if errors.IsNotFound(errTmp) {
-				return false, nil
+	err := wait.PollImmediate(time.Duration(b.cmCheckInterval)*time.Second, time.Duration(b.cmCheckTimeout)*time.Second,
+		func() (bool, error) {
+			var errTmp error
+			cm, errTmp = b.kubeClientSet.CoreV1().ConfigMaps(job.Namespace).
+				Get(fmt.Sprintf("%s-%s",
+					ConfigmapPrefix, job.Name), metav1.GetOptions{})
+			if errTmp != nil {
+				if errors.IsNotFound(errTmp) {
+					return false, nil
+				}
+				return true, fmt.Errorf("get configmap error: %v", errTmp)
 			}
-			return true, fmt.Errorf("get configmap error: %v", errTmp)
-		}
-		return true, nil
-	})
+			return true, nil
+		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get configmap for job %s/%s: %v", job.Namespace, job.Name, err)
 	}

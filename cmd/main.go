@@ -14,8 +14,8 @@
 * limitations under the License.
  */
 
-// Package main implements initialization of the startup parameters of the hccl-controller
-package main
+// Package cmd implements initialization of the startup parameters of the hccl-controller
+package cmd
 
 import (
 	"flag"

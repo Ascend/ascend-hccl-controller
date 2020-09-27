@@ -23,7 +23,7 @@ function clear_env()
 
 function build()
 {
-    cd ${TOP_DIR}/cmd/ring-controller/
+    cd ${TOP_DIR}/cmd
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
             -X main.BuildTime=${build_time}"  \

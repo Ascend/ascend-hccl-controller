@@ -266,8 +266,8 @@ func Test_businessAgent_doWork(t *testing.T) {
 	mockIndexer.EXPECT().GetByKey(gomock.Any()).Return(pod.DeepCopy(), true, nil)
 	pod.Annotations[PodJobVersion] = "1"
 	mockIndexer.EXPECT().GetByKey(gomock.Any()).Return(pod.DeepCopy(), true, nil)
-	pod.Annotations[PodDeviceKey] = "{\"pod_name\":\"0\",\"server_id\":\"51.38.60.7\"," +
-		"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"192.168.100.100\"}]}\n"
+	pod.Annotations[PodDeviceKey] = "{\"pod_name\":\"0\",\"server_id\":\"127.0.0.1\"," +
+		"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}\n"
 	mockIndexer.EXPECT().GetByKey(gomock.Any()).Return(pod.DeepCopy(), true, nil)
 	key := "vcjob/hccl-test/jobname/add"
 	tests := []testCase{
@@ -297,9 +297,9 @@ func Test_businessAgent_doWork(t *testing.T) {
 }
 
 type testCase struct {
+	workAgent *businessAgent
 	obj       interface{}
 	name      string
-	workAgent *businessAgent
 	want      bool
 	worker    bool
 }

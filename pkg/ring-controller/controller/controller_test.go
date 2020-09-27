@@ -210,7 +210,8 @@ func TestNewController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewController(mockK8s, nil, config, mockInformer, make(chan struct{})); !reflect.DeepEqual(got.businessAgent, tt.want.businessAgent) {
+			got := NewController(mockK8s, nil, config, mockInformer, make(chan struct{}))
+			if !reflect.DeepEqual(got.businessAgent, tt.want.businessAgent) {
 				t.Errorf("NewController() = %v, want %v", got, tt.want)
 			}
 		})
