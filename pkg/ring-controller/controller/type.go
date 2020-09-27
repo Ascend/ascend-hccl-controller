@@ -72,6 +72,7 @@ const (
 	four             = 4
 	eight            = 8
 	status           = 200
+	oneMinitue       = 60
 )
 
 // RankTable to hccl

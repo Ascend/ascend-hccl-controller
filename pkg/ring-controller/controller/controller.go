@@ -286,7 +286,6 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return err
 		}
-
 	case EventDelete:
 		if exists {
 			// abnormal
@@ -296,7 +295,6 @@ func (c *Controller) syncHandler(key string) error {
 		// delete job worker from businessAgent
 		klog.V(L2).Infof("not exist + delete, current job is %s/%s", namespace, name)
 		c.businessAgent.DeleteBusinessWorker(namespace, name)
-
 	case EventUpdate:
 		// unnecessary to handle
 		err := c.eventUpdate(exists, tempObj, namespace, name, key)

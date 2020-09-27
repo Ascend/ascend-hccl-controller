@@ -206,7 +206,7 @@ func TestNewController(t *testing.T) {
 		DisplayStatistic: false,
 		PodParallelism:   1,
 		CmCheckInterval:  decimal,
-		CmCheckTimeout:   decimal * 6,
+		CmCheckTimeout:   oneMinitue,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
