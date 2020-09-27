@@ -104,7 +104,8 @@ func main() {
 		CmCheckInterval:  cmCheckInterval,
 		CmCheckTimeout:   cmCheckTimeout,
 	}
-	controller := controller.NewController(kubeClient, jobClient, config, jobInformerFactory.Batch().V1alpha1().Jobs(), stopCh)
+	controller := controller.NewController(kubeClient, jobClient, config,
+		jobInformerFactory.Batch().V1alpha1().Jobs(), stopCh)
 
 	go jobInformerFactory.Start(stopCh)
 

@@ -28,6 +28,7 @@ import (
 	"time"
 )
 
+// Test_businessWorker_statistic test statistic
 func Test_businessWorker_statistic(t *testing.T) {
 
 	tests := []struct {
@@ -89,6 +90,7 @@ type testCaseForWorker struct {
 	wantErr bool
 }
 
+// Test_businessWorker_SyncHandler test SyncHandler
 func Test_businessWorker_SyncHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
@@ -179,6 +181,7 @@ func mockJSON() string {
 	return string(bytes)
 }
 
+// Test_businessWorker_handleDeleteEvent test handleDeleteEvent
 func Test_businessWorker_handleDeleteEvent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
@@ -221,6 +224,7 @@ func Test_businessWorker_handleDeleteEvent(t *testing.T) {
 	}
 }
 
+// Test_businessWorker_handleAddUpdateEvent test handleAddUpdateEvent
 func Test_businessWorker_handleAddUpdateEvent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)

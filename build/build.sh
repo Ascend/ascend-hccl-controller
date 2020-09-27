@@ -1,4 +1,8 @@
 #!/bin/bash
+# Perform  build hccl-controller
+# Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+
+set -e
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 export GO111MODULE="on"

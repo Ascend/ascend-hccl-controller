@@ -1,4 +1,7 @@
 #!/bin/sh
+# Perform  test for  hccl-controller
+# Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+set -e
 export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
 unset GOPATH

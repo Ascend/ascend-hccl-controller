@@ -205,8 +205,8 @@ func TestNewController(t *testing.T) {
 		DryRun:           false,
 		DisplayStatistic: false,
 		PodParallelism:   1,
-		CmCheckInterval:  10,
-		CmCheckTimeout:   60,
+		CmCheckInterval:  decimal,
+		CmCheckTimeout:   decimal * 6,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,6 +301,7 @@ func mockController() *Controller {
 	}
 }
 
+// TestController_processNextWorkItem  test  processNextWorkItem
 func TestController_processNextWorkItem(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockIndexr := mock_cache.NewMockIndexer(ctrl)

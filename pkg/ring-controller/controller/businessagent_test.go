@@ -33,6 +33,7 @@ import (
 	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 )
 
+// Test_businessAgent_deleteBusinessWorker test  deleteBusinessWorker
 func Test_businessAgent_deleteBusinessWorker(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -68,6 +69,7 @@ func Test_businessAgent_deleteBusinessWorker(t *testing.T) {
 	}
 }
 
+// Test_businessAgent_isBusinessWorkerExist  test isBusinessWorkerExist
 func Test_businessAgent_isBusinessWorkerExist(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -137,6 +139,7 @@ func createAgentForController(dryrun bool) *businessAgent {
 	}
 }
 
+// Test_businessAgent_createBusinessWorker test  createBusinessWorker
 func Test_businessAgent_createBusinessWorker(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -259,6 +262,8 @@ func mockSpec() v1.PodSpec {
 		},
 	}
 }
+
+// Test_businessAgent_doWork  test dowork
 func Test_businessAgent_doWork(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockIndexer := mock_cache.NewMockIndexer(ctrl)
@@ -323,6 +328,7 @@ func getTestCaseForDoWork(name string, obj interface{}, want, worker bool) testC
 	}
 }
 
+// Test_businessAgent_enqueuePod test enqueuePod
 func Test_businessAgent_enqueuePod(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -346,6 +352,7 @@ func Test_businessAgent_enqueuePod(t *testing.T) {
 	}
 }
 
+// Test_businessAgent_CheckConfigmapCreation  test for CheckConfigmapCreation
 func Test_businessAgent_CheckConfigmapCreation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)

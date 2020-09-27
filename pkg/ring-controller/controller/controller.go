@@ -71,7 +71,7 @@ type Controller struct {
 	workAgentInterface WorkAgentInterface
 }
 
-// ControllerConfig controller init configure
+// Config controller init configure
 type Config struct {
 	DryRun           bool
 	DisplayStatistic bool
