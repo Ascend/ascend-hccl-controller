@@ -7,6 +7,7 @@ RUN useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX && \
 COPY ./hccl-controller  /usr/local/bin/
 
 RUN chown -R hwMindX:hwMindX /usr/local/bin/hccl-controller  &&\
+    chmod +x /usr/local/bin/hccl-controller &&\
     echo 'umask 027' >> /etc/profile && \
     echo 'source /etc/profile' >> ~/.bashrc
 

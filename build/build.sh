@@ -23,7 +23,7 @@ function clear_env()
 
 function build()
 {
-    cd ${TOP_DIR}/cmd
+    cd ${TOP_DIR}
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
             -X main.BuildVersion=${build_version} \
             -X main.BuildTime=${build_time}"  \
@@ -37,13 +37,12 @@ function build()
 
 function mv_file()
 {
-    mv ${TOP_DIR}/cmd/${OUTPUT_NAME}   ${TOP_DIR}/output
+    mv ${TOP_DIR}/${OUTPUT_NAME}   ${TOP_DIR}/output
 }
 
 function build_docker_image() {
     cp ${TOP_DIR}/build/${DOCKER_FILE_NAME}     ${TOP_DIR}/output
     cd ${TOP_DIR}/output
-    docker rmi ${docker_images_name}
     docker build -t ${docker_images_name} .
     docker save ${docker_images_name} | gzip > ${docker_zip_name}
     rm -f ${DOCKER_FILE_NAME}

@@ -15,7 +15,7 @@
  */
 
 // Package cmd implements initialization of the startup parameters of the hccl-controller
-package cmd
+package main
 
 import (
 	"flag"
