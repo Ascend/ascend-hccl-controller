@@ -46,21 +46,21 @@ func Test_businessAgent_deleteBusinessWorker(t *testing.T) {
 			name:      "test1:worker not exist",
 			wantErr:   false,
 			namespace: "vcjob",
-			podName:   "hccl-test",
+			podName:   "hccl-test3",
 			worker:    createAgent(true),
 		},
 		{
 			name:      "test1:worker exist",
 			wantErr:   false,
 			namespace: "vcjob",
-			podName:   "hccl-test",
+			podName:   "hccl-test3",
 			worker:    createAgent(false),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if !tt.worker.dryRun {
-				tt.worker.businessWorker["vcjob/hccl-test"] = newMockBusinessWorkerforStatistic(1, 1, false)
+				tt.worker.businessWorker["vcjob/hccl-test3"] = newMockBusinessWorkerforStatistic(1, 1, false)
 			}
 			if err := tt.worker.DeleteBusinessWorker(tt.namespace, tt.podName); (err != nil) != tt.wantErr {
 				t.Errorf("deleteBusinessWorker() error = %v, wantErr %v", err, tt.wantErr)

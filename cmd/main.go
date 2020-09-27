@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	masterAddr         string
+	masterIUrl         string
 	kubeconfig         string
 	dryRun             bool
 	displayStatistic   bool
@@ -51,22 +51,25 @@ var (
 	cmCheckTimeout     int
 )
 
-func validate(masterAddr *string) bool {
-	if *masterAddr == "" {
+func validate(masterIUrl *string) bool {
+	if *masterIUrl == "" {
 		return true
 	}
-	realPath, err := filepath.Abs(*masterAddr)
+	realPath, err := filepath.Abs(*masterIUrl)
 	if err != nil {
 		klog.Fatalf("It's error when converted to an absolute path.")
 		return false
 	}
-	masterAddr = &realPath
+	masterIUrl = &realPath
 	return true
 }
 
 func main() {
 	flag.Parse()
-	if !validate(&masterAddr) {
+	if !validate(&masterIUrl) {
+		klog.Fatalf("file not in security directory")
+	}
+	if !validate(&kubeconfig) {
 		klog.Fatalf("file not in security directory")
 	}
 	// check the validity of input parameters
@@ -77,7 +80,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterAddr, kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(masterIUrl, kubeconfig)
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
@@ -121,7 +124,7 @@ func init() {
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "",
 		"Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterAddr, "master", "",
+	flag.StringVar(&masterIUrl, "master", "",
 		"The address of the Kubernetes API server. "+
 			"Overrides any value in kubeconfig. Only required if out-of-cluster.")
 

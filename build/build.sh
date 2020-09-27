@@ -10,7 +10,7 @@ unset GOPATH
 build_version="v0.0.1"
 build_time=$(date +'%Y-%m-%d_%T')
 OUTPUT_NAME="hccl-controller"
-DEPLOYNAME="deploy.sh"
+
 
 
 DOCKER_FILE_NAME="Dockerfile"
@@ -38,7 +38,6 @@ function build()
 function mv_file()
 {
     mv ${TOP_DIR}/cmd/${OUTPUT_NAME}   ${TOP_DIR}/output
-    chmod 500 ${TOP_DIR}/build/${DEPLOYNAME}
 }
 
 function build_docker_image() {
