@@ -450,7 +450,7 @@ func (b *businessAgent) CreateBusinessWorker(job *v1alpha1.Job) error {
 func (b *businessAgent) DeleteBusinessWorker(namespace string, name string) error {
 	b.rwMu.Lock()
 	defer b.rwMu.Unlock()
-
+	klog.V(L2).Infof("not exist + delete, current job is %s/%s", namespace, name)
 	identifier := namespace + "/" + name
 	_, exist := b.businessWorker[identifier]
 	if !exist {

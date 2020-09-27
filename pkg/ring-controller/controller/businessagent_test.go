@@ -269,18 +269,18 @@ func Test_businessAgent_doWork(t *testing.T) {
 	pod.Annotations[PodDeviceKey] = "{\"pod_name\":\"0\",\"server_id\":\"127.0.0.1\"," +
 		"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}\n"
 	mockIndexer.EXPECT().GetByKey(gomock.Any()).Return(pod.DeepCopy(), true, nil)
-	key := "vcjob/hccl-test/jobname/add"
+	namespaceKey := "vcjob/hccl-test/jobname/add"
 	tests := []testCase{
 		getTestCaseForDoWork("test0：precheck failed", false, true, false),
 		getTestCaseForDoWork("test1：should split key error", "vcjob/hccl-test", true, false),
-		getTestCaseForDoWork("test2：no pod from listener", key, true, false),
-		getTestCaseForDoWork("test3：worker not exist", key, false, false),
-		getTestCaseForDoWork("test4：worker exist but OwnerReferences check fail", key, true, true),
-		getTestCaseForDoWork("test5：worker exist, version check error", key, true, true),
-		getTestCaseForDoWork("test6：worker exist.pod version < worker version", key, true, true),
-		getTestCaseForDoWork("test7：worker exist,Pod version > worker version", key, false, true),
-		getTestCaseForDoWork("test8：worker exist,Pod version = worker version", key, false, true),
-		getTestCaseForDoWork("test9：worker exist,Pod have device info", key, true, true),
+		getTestCaseForDoWork("test2：no pod from listener", namespaceKey, true, false),
+		getTestCaseForDoWork("test3：worker not exist", namespaceKey, false, false),
+		getTestCaseForDoWork("test4：worker exist but OwnerReferences check fail", namespaceKey, true, true),
+		getTestCaseForDoWork("test5：worker exist, version check error", namespaceKey, true, true),
+		getTestCaseForDoWork("test6：worker exist.pod version < worker version", namespaceKey, true, true),
+		getTestCaseForDoWork("test7：worker exist,Pod version > worker version", namespaceKey, false, true),
+		getTestCaseForDoWork("test8：worker exist,Pod version = worker version", namespaceKey, false, true),
+		getTestCaseForDoWork("test9：worker exist,Pod have device info", namespaceKey, true, true),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

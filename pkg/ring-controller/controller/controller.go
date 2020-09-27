@@ -293,7 +293,6 @@ func (c *Controller) syncHandler(key string) error {
 			return fmt.Errorf("undefined condition, exist + delete, current key is %s", key)
 		}
 		// delete job worker from businessAgent
-		klog.V(L2).Infof("not exist + delete, current job is %s/%s", namespace, name)
 		c.businessAgent.DeleteBusinessWorker(namespace, name)
 	case EventUpdate:
 		// unnecessary to handle

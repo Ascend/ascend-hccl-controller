@@ -159,11 +159,11 @@ func generateInstance(worker *businessWorker) {
 func mockJSON() string {
 	var deviceInfo = map[string]interface{}{
 		"pod_name":  "hccl-test",
-		"server_id": "127.0.0.1",
+		"server_id": "xx.xx.xx.xx",
 		"devices": []map[string]string{
 			{
 				"device_id": "0",
-				"device_ip": "0.0.0.0",
+				"device_ip": "xx.xx.xx.xx",
 			},
 		},
 	}

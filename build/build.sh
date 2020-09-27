@@ -37,7 +37,7 @@ function build()
 
 function mv_file()
 {
-    mv ${TOP_DIR}/cmd/ring-controller/${OUTPUT_NAME}   ${TOP_DIR}/output
+    mv ${TOP_DIR}/cmd/${OUTPUT_NAME}   ${TOP_DIR}/output
     chmod 500 ${TOP_DIR}/build/${DEPLOYNAME}
 }
 
