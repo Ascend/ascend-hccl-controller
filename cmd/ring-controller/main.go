@@ -69,7 +69,6 @@ func main() {
 	if !validate(&masterAddr) {
 		klog.Fatalf("file not in security directory")
 	}
-	// TODO: check other input parameters
 	// check the validity of input parameters
 	if jobParallelism <= 0 {
 		klog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
@@ -115,7 +114,6 @@ func main() {
 }
 
 func init() {
-	// TODO: add more parameters
 	// * buildStatInterval
 	// * bdefaultResync of two informers
 	// * bperiod of two runMasterWorker method

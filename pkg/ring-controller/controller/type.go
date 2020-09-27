@@ -76,24 +76,24 @@ const (
 
 // RankTable to hccl
 type RankTable struct {
+	GroupList  []*Group `json:"group_list"`          // hccl group list
 	Status     string   `json:"status"`              // get hccl_json status
 	GroupCount string   `json:"group_count, string"` // hccl_json grouoCount
-	GroupList  []*Group `json:"group_list"`          // hccl group list
 }
 
 // Group to hccl
 type Group struct {
+	InstanceList  []*Instance `json:"instance_list"`          // hccl InstaceList
 	GroupName     string      `json:"group_name"`             // hccl GroupName
 	DeviceCount   string      `json:"device_count, string"`   // hccl Devicecount
 	InstanceCount string      `json:"instance_count, string"` // hccl Instance Count
-	InstanceList  []*Instance `json:"instance_list"`          // hccl InstaceList
 }
 
 // Instance to hccl
 type Instance struct {
+	Devices  []Device `json:"devices"`   // hccl Deviceid
 	PodName  string   `json:"pod_name"`  // hccl PodName
 	ServerID string   `json:"server_id"` // hccl servceId
-	Devices  []Device `json:"devices"`   // hccl Deviceid
 }
 
 // Device to hccl

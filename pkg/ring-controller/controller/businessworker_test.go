@@ -24,16 +24,18 @@ import (
 	"hccl-controller/pkg/ring-controller/controller/mock_v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"testing"
 	"time"
+	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 )
 
 // Test_businessWorker_statistic test statistic
 func Test_businessWorker_statistic(t *testing.T) {
 
 	tests := []struct {
-		name   string
 		worker *businessWorker
+		name   string
 	}{
 		{
 			name:   "test1:cachePod equals task and channel need to stop",
@@ -80,28 +82,19 @@ func newMockBusinessWorkerforStatistic(cachedPodNum, taskReplicasTotal int32, st
 
 type args struct {
 	pod      *apiCoreV1.Pod
-	podExist bool
 	podInf   *podIdentifier
+	podExist bool
 }
 
 type testCaseForWorker struct {
-	name    string
 	args    args
+	name    string
 	wantErr bool
 }
 
 // Test_businessWorker_SyncHandler test SyncHandler
 func Test_businessWorker_SyncHandler(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockCm := mock_v1.NewMockConfigMapInterface(ctrl)
-	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockCm.EXPECT().Update(gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(four)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
-	job := mockJob()
-	pod := mockPod()
+	mockK8s, job, pod := initMock(t)
 	tests := []testCaseForWorker{
 		newTestCaseForWorker("test1: task ==0,return directly", false, nil, false,
 			nil),
@@ -193,10 +186,10 @@ func Test_businessWorker_handleDeleteEvent(t *testing.T) {
 	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
 	job := mockJob()
 	tests := []struct {
-		name    string
+		worker  *businessWorker
 		podInf  *podIdentifier
 		wantErr bool
-		worker  *businessWorker
+		name    string
 	}{
 		{
 			name:    "test1:no data to remove, return directly",
@@ -226,16 +219,7 @@ func Test_businessWorker_handleDeleteEvent(t *testing.T) {
 
 // Test_businessWorker_handleAddUpdateEvent test handleAddUpdateEvent
 func Test_businessWorker_handleAddUpdateEvent(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockCm := mock_v1.NewMockConfigMapInterface(ctrl)
-	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockCm.EXPECT().Update(gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(four)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
-	job := mockJob()
-	pod := mockPod()
+	mockK8s, job, pod := initMock(t)
 	var pods []*apiCoreV1.Pod
 	pods = append(pods, pod.DeepCopy())
 	pod.Annotations[PodDeviceKey] = mockJSON()
@@ -262,4 +246,19 @@ func Test_businessWorker_handleAddUpdateEvent(t *testing.T) {
 			}
 		})
 	}
+}
+
+func initMock(t *testing.T) (kubernetes.Interface, *v1alpha1.Job, *apiCoreV1.Pod) {
+	ctrl := gomock.NewController(t)
+	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
+	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
+	mockCm := mock_v1.NewMockConfigMapInterface(ctrl)
+	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(mockConfigMap(), nil).Times(two)
+	mockCm.EXPECT().Update(gomock.Any()).Return(mockConfigMap(), nil).Times(two)
+	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(four)
+	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
+	job := mockJob()
+	pod := mockPod()
+	return mockK8s, job, pod
+
 }

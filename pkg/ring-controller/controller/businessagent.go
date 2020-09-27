@@ -46,15 +46,13 @@ import (
 // * list/watch 910 pods, and assign each pod to corresponding handler
 //   (each business worker belongs to a volcano job, and contains a handler for building rank table)
 type businessAgent struct {
+	// business worker for each volcano job
+	businessWorker  map[string]*businessWorker
 	informerFactory informers.SharedInformerFactory
 	podInformer     cache.SharedIndexInformer
 	podsIndexer     cache.Indexer
 	kubeClientSet   kubernetes.Interface
-	// TODO: use more job info as key will resolve some other todos (e.g. uid)
-	// business worker for each volcano job
-	businessWorker map[string]*businessWorker
-
-	agentSwitch <-chan struct{}
+	agentSwitch     <-chan struct{}
 
 	rwMu sync.RWMutex
 
@@ -232,7 +230,6 @@ func (b *businessAgent) doWork(obj interface{}) bool {
 	if !pass {
 		return done
 	}
-	// TODO: pod delete event - new pod not exist + old business worker exist
 	// if configmap status of worker struct is completed, no need to sync pod anymore
 	pass, done = b.updateConfigMap(obj, pod, podExist, podKeyInfo)
 	if !pass {

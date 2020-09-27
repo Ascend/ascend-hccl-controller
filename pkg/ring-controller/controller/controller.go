@@ -46,6 +46,9 @@ import (
 
 // Controller initialize business agent
 type Controller struct {
+	// component for recycle resources
+	businessAgent *businessAgent
+
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
@@ -55,9 +58,6 @@ type Controller struct {
 	// component for resource batch/v1alpha1/Job
 	jobsSynced  cache.InformerSynced
 	jobsIndexer cache.Indexer
-
-	// component for recycle resources
-	businessAgent *businessAgent
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -282,7 +282,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	switch eventType {
 	case EventAdd:
-		err := eventAdd(exists, namespace, name, tempObj, c, key)
+		err := c.eventAdd(exists, namespace, name, tempObj, key)
 		if err != nil {
 			return err
 		}
@@ -299,7 +299,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	case EventUpdate:
 		// unnecessary to handle
-		err := eventUpdate(exists, tempObj, c, namespace, name, key)
+		err := c.eventUpdate(exists, tempObj, namespace, name, key)
 		if err != nil {
 			return err
 		}
@@ -312,7 +312,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func eventAdd(exists bool, namespace string, name string, tempObj interface{}, c *Controller, key string) error {
+func (c *Controller) eventAdd(exists bool, namespace string, name string, tempObj interface{}, key string) error {
 	if exists {
 		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
 		// check if job's corresponding configmap is created successfully via volcano controller
@@ -330,7 +330,7 @@ func eventAdd(exists bool, namespace string, name string, tempObj interface{}, c
 	return nil
 }
 
-func eventUpdate(exists bool, tempObj interface{}, c *Controller, namespace string, name string, key string) error {
+func (c *Controller) eventUpdate(exists bool, tempObj interface{}, namespace string, name string, key string) error {
 	if exists {
 		job, ok := tempObj.(*v1alpha1apis.Job)
 		if !ok {
@@ -341,8 +341,6 @@ func eventUpdate(exists bool, tempObj interface{}, c *Controller, namespace stri
 			return nil
 		}
 		if !c.businessAgent.IsBusinessWorkerExist(namespace, name) {
-			// TODO: more restrictions? outdated job update event is not suitable here
-			// TODO: although a job update event won't enqueue twice up to now
 			// for job update, if create business worker at job restart phase, the version will be incorrect
 			err := c.createBusinessWorker(job)
 			if err != nil {

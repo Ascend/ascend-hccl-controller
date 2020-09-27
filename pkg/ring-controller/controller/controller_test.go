@@ -70,9 +70,9 @@ func TestController_createBusinessWorker(t *testing.T) {
 	mockAgent := mock_controller.NewMockWorkAgentInterface(ctrl)
 	mockAgent.EXPECT().CreateBusinessWorker(gomock.Any()).Return(nil)
 	tests := []struct {
+		configMap *v1.ConfigMap
 		name      string
 		wantErr   bool
-		configMap *v1.ConfigMap
 	}{
 		{
 			name:    "test1:return error for json format error",
@@ -191,8 +191,8 @@ func TestNewController(t *testing.T) {
 	stub := gostub.StubFunc(&newBusinessAgent, createAgentForController(false), nil)
 	defer stub.Reset()
 	tests := []struct {
-		name string
 		want *Controller
+		name string
 	}{
 		{
 			name: "normal situation,return controller instance",
@@ -315,8 +315,8 @@ func TestController_processNextWorkItem(t *testing.T) {
 	contrl2.workqueue.AddRateLimited(nil)
 	controllers = append(controllers, contrl2)
 	tests := []struct {
-		name       string
 		controller *Controller
+		name       string
 		want       bool
 	}{
 		{

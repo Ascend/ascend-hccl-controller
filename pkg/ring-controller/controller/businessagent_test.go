@@ -36,11 +36,11 @@ import (
 // Test_businessAgent_deleteBusinessWorker test  deleteBusinessWorker
 func Test_businessAgent_deleteBusinessWorker(t *testing.T) {
 	tests := []struct {
+		worker    *businessAgent
 		name      string
 		wantErr   bool
 		namespace string
 		podName   string
-		worker    *businessAgent
 	}{
 		{
 			name:      "test1:worker not exist",
@@ -72,11 +72,11 @@ func Test_businessAgent_deleteBusinessWorker(t *testing.T) {
 // Test_businessAgent_isBusinessWorkerExist  test isBusinessWorkerExist
 func Test_businessAgent_isBusinessWorkerExist(t *testing.T) {
 	tests := []struct {
+		worker    *businessAgent
 		name      string
 		expect    bool
 		namespace string
 		podName   string
-		worker    *businessAgent
 	}{
 		{
 			name:      "test1:worker not exist,return directly",
@@ -142,8 +142,8 @@ func createAgentForController(dryrun bool) *businessAgent {
 // Test_businessAgent_createBusinessWorker test  createBusinessWorker
 func Test_businessAgent_createBusinessWorker(t *testing.T) {
 	tests := []struct {
-		name   string
 		worker *businessAgent
+		name   string
 	}{
 		{
 			name:   "test1:worker not exist,return directly",
@@ -193,21 +193,7 @@ func mockTask() []v1alpha1.TaskSpec {
 			Replicas: 1,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Image: "",
-							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{
-									ResourceName: resource.MustParse("1"),
-								},
-								Requests: v1.ResourceList{
-									ResourceName: resource.MustParse("1"),
-								},
-							},
-						},
-					},
-				},
+				Spec:       mockSpec(),
 			},
 		}}
 }
@@ -320,9 +306,9 @@ type testCase struct {
 
 func getTestCaseForDoWork(name string, obj interface{}, want, worker bool) testCase {
 	return testCase{
+		workAgent: createAgent(false),
 		name:      name,
 		obj:       obj,
-		workAgent: createAgent(false),
 		want:      want,
 		worker:    worker,
 	}
@@ -366,9 +352,9 @@ func Test_businessAgent_CheckConfigmapCreation(t *testing.T) {
 	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(three)
 	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(three)
 	tests := []struct {
-		name    string
 		job     *v1alpha1.Job
 		want    *v1.ConfigMap
+		name    string
 		wantErr bool
 	}{
 		{

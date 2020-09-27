@@ -153,7 +153,6 @@ func (b *businessWorker) syncHandler(pod *apiCoreV1.Pod, podExist bool, podInfo 
 func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
 	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
 	if !b.dryRun {
-		// TODO: add task name to key for better forloop efficiency ??
 		err := b.removePodInfo(podInfo.namespace, podInfo.name)
 		if err != nil {
 			return err
