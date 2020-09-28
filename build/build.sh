@@ -38,6 +38,7 @@ function build()
 function mv_file()
 {
     mv ${TOP_DIR}/${OUTPUT_NAME}   ${TOP_DIR}/output
+    mv ${TOP_DIR}/build/*.yaml    ${TOP_DIR}/output
 }
 
 function build_docker_image() {
