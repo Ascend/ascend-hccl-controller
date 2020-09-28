@@ -1,0 +1,128 @@
+---
+# This playbook is used to deploy the MindX DL platform.
+# Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts.
+- hosts: localnode
+  remote_user: root
+  vars:
+    deploy_dir: "{{dls_root_dir}}"
+    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+    version: v0.0.1
+
+  tasks:
+    - name: Remove /var/log/atlas_dls
+      shell:
+        cmd: rm -rf /var/log/atlas_dls
+      ignore_errors: True
+
+    - name: Create dls_core log directory
+      file:
+        path: /var/log/atlas_dls/{{ item }}
+        state: directory
+        mode: "0750"
+        owner: 'hwMindX'
+        group: 'hwMindX'
+      tags: dls_core
+      with_items:
+        - volcano-controller
+        - volcano-scheduler
+        - volcano-admission
+        - hccl-controller
+
+    - name: Create log directory for cadvisor and device-plugin
+      file:
+        path: /var/log/{{ item }}
+        state: directory
+        mode: "0750"
+      tags: dls-core
+      with_items:
+        - devicePlugin
+        - cadvisor
+
+    - name: Add dls_core config information
+      blockinfile:
+        path: /etc/logrotate.d/atlas_dls
+        block: |
+          /var/log/atlas_dls/volcano-*/*.log
+          /var/log/atlas_dls/hccl-*/*.log
+          /var/log/devicePlugin/*.log
+          /var/log/cadvisor/*.log {
+              daily
+              rotate 30
+              size 50M
+              compress
+              dateext
+              missingok
+              notifempty
+              copytruncate
+              create 0640 root root
+              sharedscripts
+              postrotate
+                  chmod 640 /var/log/atlas_dls/volcano-*/*.log
+                  chmod 640 /var/log/atlas_dls/hccl-*/*.log
+                  chmod 640 /var/log/devicePlugin/*.log
+                  chmod 640 /var/log/cadvisor/*.log
+                  chmod 440 /var/log/atlas_dls/volcano-*/*.log-*
+                  chmod 440 /var/log/atlas_dls/hccl-*/*.log-*
+                  chmod 440 /var/log/devicePlugin/*.log-*
+                  chmod 440 /var/log/cadvisor/*.log-*
+              endscript
+          }
+        state: present
+        create: yes
+      tags: dls_core
+
+    - name: Deploy hccl-controller
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl apply -f hccl-controller.yaml
+      tags: dls_core
+
+    - name: Deploy device plugin
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl apply -f ascendplugin-volcano.yaml;
+          kubectl apply -f ascendplugin-310.yaml
+      tags: dls_core
+
+    # directory contains three yamls:
+    #   cadvisor-args.yaml
+    #   gpu-privilages.yaml
+    #   kustomization.yaml
+    - name: Deploy cadvisor
+      shell:
+        chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
+        cmd:
+          kubectl apply -k huawei
+      tags: dls_core
+
+    # deploy volcano services
+    - name: Create volcano environment
+      shell:
+        chdir: "{{deploy_dir}}/base_software"
+        cmd:
+          kubectl delete namespace volcano-system;
+          kubectl create namespace volcano-system;
+          tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh;
+          bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret
+      tags: dls_core
+
+    - name: Deploy volcano
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl apply -f volcano-v0.0.1.yaml
+      tags: dls_core
+
+    # Deleting Software Packages
+    - name: Deleting software packages
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          rm libtirpc* rpcbind* libnfsidmap2* keyutils* nfs-common* nfs-kernel-server*;
+          rm libltdl7* git* docker-ce_18.06.3* cri-tools* conntrack* socat*;
+          rm kubernetes-cni* kubelet_1.17.3* kubectl_1.17.3* kubeadm_1.17.3*;
+          rm ../go1.14.3*
+      tags: clean_pkg
+      ignore_errors: True
