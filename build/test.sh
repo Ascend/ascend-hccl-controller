@@ -5,9 +5,10 @@ set -e
 export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
 unset GOPATH
+# if didn't install the following  tools, please install firstly
 #go get -insecure github.com/axw/gocov/gocov
 #go get github.com/matm/gocov-html
-go get github.com/golang/mock/mockgen
+#go get github.com/golang/mock/mockgen
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 MOCK_TOP=${TOP_DIR}/pkg/ring-controller/controller
