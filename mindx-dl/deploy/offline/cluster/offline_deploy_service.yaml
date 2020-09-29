@@ -126,7 +126,7 @@
     - name: Deploy volcano
       shell:
         chdir: "{{deploy_yaml_dir}}"
-        cmd: kubectl apply -f volcano-v0.0.1.yaml
+        cmd: kubectl apply -f volcano-*.yaml
 
     # Deleting Software Packages
     - name: Deleting software packages

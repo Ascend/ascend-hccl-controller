@@ -11,6 +11,7 @@
 
 - 已完成操作系统的安装。
 - 已完成NPU驱动的安装。 
+- 已完成MindX DL组件的编译。
 
 #### 软件包
 
@@ -19,22 +20,29 @@
 | 用途                            | 软件名称（arm）             | 软件名称（x86）             |
 | ------------------------------- | --------------------------- | --------------------------- |
 | Python、Ansible离线安装包       | base-pkg_arm64.zip          | base-pkg-amd64.zip          |
-| Go安装包                        | go1.14.8.linux-arm64.tar.gz | go1.14.8.linux-amd64.tar.gz |
+| Go安装包                        | go1.14.3.linux-arm64.tar.gz | go1.14.3.linux-amd64.tar.gz |
 | NFS、Docker、K8s、Git离线安装包 | offline-pkg-arm64.zip       | offline-pkg-amd64.zip       |
 
-#### 脚本``
+#### 脚本
 
 从MindX-DL全量包中获取离线部署脚本，如下表所示。
 
-| 脚本名称                     | 用途                       | 全量包中的路径                                               |
-| ---------------------------- | -------------------------- | ------------------------------------------------------------ |
-| entry.sh                     | 快速部署入口脚本           | /mindx-dl/deploy/offline/single/                             |
-| set_global_env.yaml          | 设置全局变量               | /mindx-dl/deploy/offline/single/                             |
-| offline_install_package.yaml | 安装软件包及依赖           | /mindx-dl/deploy/offline/single/                             |
-| offline_load_images.yaml     | 导入所需Docker镜像         | /mindx-dl/deploy/offline/single/                             |
-| init_kubernetes.yaml         | 建立K8s集群                | /mindx-dl/deploy/offline/single/                            |
-| offline_deploy_service.yaml  | 部署MindX DL组件           | /mindx-dl/deploy/offline/single/                            |
-| MindX DL-core                | 部署服务配置文件           | ascend-device-plugin/ascendplugin.yamlMindX DL-core-cadvisor：/deploy/kubernetes/下所有脚本MindX DL-core-volcano：/volcano/volcano-v0.0.1.yaml |
+| 脚本名称                     | 用途                                      | 全量包中的路径                    |
+| ---------------------------- | ----------------------------------------- | --------------------------------- |
+| entry.sh                     | 快速部署入口脚本                          | /mindx-dl/deploy/offline/cluster/ |
+| set_global_env.yaml          | 设置全局变量                              | /mindx-dl/deploy/offline/cluster/ |
+| offline_install_package.yaml | 安装软件包及依赖                          | /mindx-dl/deploy/offline/cluster/ |
+| offline_load_images.yaml     | 导入所需Docker镜像                        | /mindx-dl/deploy/offline/cluster/ |
+| init_kubernetes.yaml         | 建立K8s集群                               | /mindx-dl/deploy/offline/cluster/ |
+| offline_deploy_service.yaml  | 部署MindX DL组件                          | /mindx-dl/deploy/offline/cluster/ |
+| ascendplugin-volcano.yaml    | 昇腾910处理器Ascend Device Plugin配置文件 | /mindx-dl/deploy/yamls/           |
+| ascendplugin-310.yaml        | 昇腾310处理器Ascend Device Plugin配置文件 | /mindx-dl/deploy/yamls/           |
+| calico.yaml                  | K8s网络插件配置文件                       | /mindx-dl/deploy/yamls/           |
+| hccl-controller.yaml         | NPU训练任务组件配置文件                   | /mindx-dl/deploy/yamls/           |
+| gen-admission-secret.sh      | 生成Volcano组件秘钥                       | /mindx-dl/deploy/yamls/           |
+| kubernetes(文件夹)           | NPU设备监控组件配置文件                   | /mindx-dl/deploy/yamls/           |
+| rbac.yaml                    | K8s角色权限访问控制                       | /mindx-dl/deploy/yamls/           |
+| volcano-v20.1.0.yaml         | NPU训练任务调度组件配置文件               | /mindx-dl/deploy/yamls/           |
 
 #### 镜像包
 全量镜像包列表，如下表所示。
@@ -59,11 +67,10 @@
 |  | vc-scheduler.tar.gz | vc-scheduler.tar.gz |
 |  | vc-webhook-manager.tar.gz | vc-webhook-manager.tar.gz |
 
-
-
-1. 将Python、Ansible离线安装包拷贝到管理节点任意位置并解压，执行如下命令安装python开发环境
+1. 以**root**用户登录服务器，将Python、Ansible离线安装包拷贝到管理节点任意位置并解压，执行如下命令安装python开发环境
 
     ```
+    dpkg -i dos2unix*.deb zlib1g-dev*.deb libffi-dev*.deb
     tar -zxvf Python-3.7.5.tgz
     cd Python-3.7.5
     ./configure --prefix=/usr/local/python3.7.5 --enable-shared
@@ -79,6 +86,11 @@
 2. 在解压软件包目录下执行以下命令安装Ansible
 
     ```
+    pip3.7 install Jinja2-2.11.2* MarkupSafe-1.1.1* PyYAML-5.3.1* pycparser-2.20* cffi-1.14.3* six-1.15.0* cryptography-3.1*
+    tar zxf setuptools-19.6.tar.gz
+    cd setuptools-19.6
+    python3.7 setup.py install
+    cd ..
     dpkg -i libhavege1_1.9.1-6*.deb
     dpkg -i haveged_1.9.1-6*.deb
     tar -zxvf ansible-2.9.7.tar.gz
@@ -91,7 +103,7 @@
     dpkg -i sshpass_1.06-1*.deb
     ```
 
-    执行以下命令，编辑hosts文件
+3. 执行以下命令，编辑hosts文件
 
     vi /etc/ansible/hosts
 
@@ -103,62 +115,64 @@
     nfs_shared_dir=/data/atlas_dls
     
     # NFS service IP
-    nfs_service_ip=51.38.60.19
+    nfs_service_ip=nfs-host-ip
+    
+    # Master IP
+    master_ip=master-host-ip
     
     # dls install package dir
     dls_root_dir=/tmp
     
     [nfs_server]
-    <nfs-host-name> ansible_host=<nfs-host-ip> ansible_ssh_user="username" ansible_ssh_pass="password"
+    nfs-host-name ansible_host=nfs-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
     
     [master]
-    <master-host-name> ansible_host=<master-host-ip> ansible_ssh_user="username" ansible_ssh_pass="password"
+    master-host-name ansible_host=master-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
     
-    [workers]
-    <worker1-host-name> ansible_host=<worker1-host-ip> ansible_ssh_user="username" ansible_ssh_pass="password"
-    <worker2-host-name> ansible_host=<worker2-host-ip> ansible_ssh_user="username" ansible_ssh_pass="password"
+    [training_node]
+    training-node1-host-name ansible_host=training-node1-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
+    training-node2-host-name ansible_host=training-node2-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
     ...
+    
+    [inference_node]
+    inference-node1-host-name ansible_host=inference-node1-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
+    inference-node2-host-name ansible_host=inference-node2-host-ip ansible_ssh_user="username" ansible_ssh_pass="password"
+    ...
+    
+    [workers:children]
+    training_node
+    inference_node
     
     [cluster:children]
     master
     workers
-    
     ```
 
     参数说明：
 
-    参数说明：
+    ```
+    – nfs-host-ip：NFS节点服务器IP地址，根据实际写入。
+    – master-host-ip：管理节点服务器IP地址，根据实际写入。
     – XXX-host-name：节点主机名，根据实际写入。
     – XXX-host-ip：节点IP地址，根据实际写入。
-    – username：对应节点的用户名。
-    – passwd：对应节点的用户密码。
+    – username：对应节点的用户名，根据实际写入。
+    – passwd：对应节点的用户密码，根据实际写入。
+    ```
 
+4. 执行以下命令，编辑ansible.cfg
 
-    执行以下命令，编辑ansible.cfg
-    
     vi /etc/ansible/ansible.cfg
-    
+
     取消以下两行内容的注释并更改deprecation_warnings为“False”：
+
+    ```
     host_key_checking = False
     deprecation_warnings = False
+    ```
 
-3. 执行部署脚本
+5. 执行部署脚本
 
-   部署脚本内容：
-
-   | playbook                                      | 用途                   |
-   | --------------------------------------------- | ---------------------- |
-   | ansible-playbook set_global_env.yaml          | 设置全局变量           |
-   | ansible-playbook offline_install_package.yaml | 离线安装软件包及依赖   |
-   | ansible-playbook offline_load_images.yaml     | 离线导入所需docker镜像 |
-   | ansible-playbook init_kubernetes.yaml         | 建立k8s集群            |
-   | ansible-playbook offline_deploy_service.yaml  | 部署MindX DL组件       |
-
-   将软件包及镜像包（以x86的为例）上传至hosts中定义的dls_root_dir目录，在管理节点上执行以下脚本：
-
-   **bash -x entry.sh**
-
-   dls_root_dir目录结构如下（以/tmp为例）：
+   5.1 将软件包、镜像包和yaml文件（以x86的为例）上传至hosts中定义的dls_root_dir目录，目录结构如下（以/tmp为例）：
 
    ```
    /tmp
@@ -208,8 +222,11 @@
        │   │       ├── gpu-privilages.yaml
        │   │       └── kustomization.yaml
        │   └── README.md
-       └── volcano-v0.0.1.yaml
+    └── volcano-v20.1.0.yaml
    ```
 
-   
+   5.2 上传/mindx-dl/deploy/offline/cluster/下所有文件到管理节点任意目录，进入目录执行以下脚本，进行MindX DL快速部署：
 
+   **dos2unix ***
+
+   **bash -x entry.sh**

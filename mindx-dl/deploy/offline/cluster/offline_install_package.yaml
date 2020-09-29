@@ -75,7 +75,7 @@
           chmod 755 {{nfs_shared_dir}};
           chown hwMindX:hwMindX {{nfs_shared_dir}}
 
-    - name: Add permission
+    - name: Add NFS config info
       lineinfile:
         path: /etc/exports
         line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
