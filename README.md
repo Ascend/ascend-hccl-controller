@@ -59,7 +59,7 @@ HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的�
 
 2.  执行以下命令，启动HCCL-Controller。
     ```
-        mkdir -p /var/log/atlas\_dls/hccl-controller
+        mkdir -p /var/log/atlas_dls/hccl-controller
         kubectl apply -f rbac.yaml
         kubectl apply -f hccl-controller.yaml
     ```
@@ -122,4 +122,4 @@ hccl-controller                             #深度学习组件hccl-controller�
 
 | 版本   | 发布日期   | 修改说明  |
 | ---- | ---- | ---- |
-| v0.0.1| 2020-09-30    | 第一次正式发布    |
+| v20.1.0| 2020-09-30    | 第一次正式发布    |
