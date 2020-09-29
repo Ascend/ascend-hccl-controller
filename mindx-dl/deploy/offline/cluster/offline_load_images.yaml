@@ -24,8 +24,7 @@
           docker load < calico-node_arm64.tar.gz;
           docker load < calico-pod2daemon-flexvol_arm64.tar.gz;
           docker load < calico-cni_arm64.tar.gz;
-          docker load < calico-kube-controllers_arm64.tar.gz;
-          docker load < vc-webhook-manager-base_arm64.tar.gz;
+          docker load < calico-kube-controllers_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
     - name: Load kubernetes basic images - x86_64
@@ -42,8 +41,7 @@
           docker load < calico-node_amd64.tar.gz;
           docker load < calico-pod2daemon-flexvol_amd64.tar.gz;
           docker load < calico-cni_amd64.tar.gz;
-          docker load < calico-kube-controllers_amd64.tar.gz;
-          docker load < vc-webhook-manager-base_amd64.tar.gz;
+          docker load < calico-kube-controllers_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
     - name: Load Volcano images

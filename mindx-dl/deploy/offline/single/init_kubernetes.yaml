@@ -38,6 +38,13 @@
           chown $(id -u):$(id -g) $HOME/.kube/config;
       tags: init-master
 
+    - name: Modify calico yaml file
+      lineinfile:
+        dest: "{{deploy_yaml_dir}}/calico.yaml"
+        insertbefore: '             - name: CALICO_IPV4POOL_CIDR'
+        line: '             - name: IP_AUTODETECTION_METHOD
+                                          value: "can-reach=10.174.217.94"'
+
     # apply deploy/yaml/calico.yaml
     - name: Apply calico yaml file
       shell:

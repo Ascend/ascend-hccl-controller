@@ -87,6 +87,11 @@
         state: present
         create: yes
 
+    - name: Deploy rbac
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd: kubectl apply -f rbac.yaml
+
     - name: Deploy hccl-controller
       shell:
         chdir: "{{deploy_yaml_dir}}"
@@ -111,7 +116,7 @@
     # deploy volcano services
     - name: Create volcano environment
       shell:
-        chdir: "{{deploy_dir}}/base_software"
+        chdir: "{{deploy_yaml_dir}}"
         cmd:
           kubectl delete namespace volcano-system;
           kubectl create namespace volcano-system;

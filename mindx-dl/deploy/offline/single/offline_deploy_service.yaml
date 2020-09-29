@@ -6,7 +6,6 @@
   vars:
     deploy_dir: "{{dls_root_dir}}"
     deploy_yaml_dir: "{{dls_root_dir}}/yaml"
-    version: v0.0.1
 
   tasks:
     - name: Remove /var/log/atlas_dls
@@ -88,6 +87,11 @@
         state: present
         create: yes
 
+    - name: Deploy rbac
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd: kubectl apply -f rbac.yaml
+
     - name: Deploy hccl-controller
       shell:
         chdir: "{{deploy_yaml_dir}}"
@@ -112,7 +116,7 @@
     # deploy volcano services
     - name: Create volcano environment
       shell:
-        chdir: "{{deploy_dir}}/base_software"
+        chdir: "{{deploy_yaml_dir}}"
         cmd:
           kubectl delete namespace volcano-system;
           kubectl create namespace volcano-system;
@@ -123,8 +127,6 @@
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd: kubectl apply -f volcano-v0.0.1.yaml
-
-
 
     # Deleting Software Packages
     - name: Deleting software packages
