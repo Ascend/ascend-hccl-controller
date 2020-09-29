@@ -7,7 +7,7 @@ CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(realpath ${CUR_DIR}/..)
 export GO111MODULE="on"
 unset GOPATH
-build_version="v0.0.1"
+build_version="v20.1.0"
 build_time=$(date +'%Y-%m-%d_%T')
 OUTPUT_NAME="hccl-controller"
 
@@ -25,8 +25,7 @@ function build()
 {
     cd ${TOP_DIR}
     go build -ldflags "-X main.BuildName=${OUTPUT_NAME} \
-            -X main.BuildVersion=${build_version} \
-            -X main.BuildTime=${build_time}"  \
+            -X main.BuildVersion=${build_version}" \
             -o ${OUTPUT_NAME}
     ls ${OUTPUT_NAME}
     if [ $? -ne 0 ]; then
@@ -38,7 +37,7 @@ function build()
 function mv_file()
 {
     mv ${TOP_DIR}/${OUTPUT_NAME}   ${TOP_DIR}/output
-    mv ${TOP_DIR}/build/*.yaml    ${TOP_DIR}/output
+    cp ${TOP_DIR}/build/*.yaml    ${TOP_DIR}/output
 }
 
 function build_docker_image() {
