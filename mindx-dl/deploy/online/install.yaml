@@ -1,0 +1,270 @@
+---
+- hosts: localnode
+  remote_user: root
+  vars:
+    proxy:
+
+  tasks:
+
+  # Step1: Network Environment Ensurance
+  - name: Make selinux permissive
+    lineinfile:
+      path: /etc/selinux/config
+      line: "SELINUX=permissive"
+      create: yes
+
+  - name: Delete restrictive forwarding
+    lineinfile:
+      path: /etc/sysctl.conf
+      line: "net.ipv4.ip_forward=0"
+      state: absent
+
+  - name: Allow packet forwarding
+    lineinfile:
+      path: /etc/sysctl.conf
+      line: "net.ipv4.ip_forward = 1"
+      state: present
+
+  - name: Allow packet forwarding next
+    lineinfile:
+      path: /etc/rc.local
+      line: "/usr/sbin/iptables -P FORWARD ACCEPT"
+      create: yes
+
+  - name: Network config
+    blockinfile:
+      path: /etc/sysctl.d/k8s.conf
+      block: |
+        net.bridge.bridge-nf-call-ip6tables = 1
+        net.bridge.bridge-nf-call-iptables = 1
+      create: yes
+
+  - name: Network config step && Close swap area && Remove swap mount
+    shell:
+      cmd:
+        modprobe br_netfilter;
+        sysctl -p /etc/sysctl.conf;
+        sysctl -p /etc/sysctl.d/k8s.conf;
+        swapoff -a;
+        sed -i 's/.*swap.*/#&/' /etc/fstab
+
+  - name: Add User
+    shell:
+      cmd:
+        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+        usermod -a -G HwHiAiUser hwMindX
+
+
+  ### Step2 Install kubernetes
+  - name: Create kubernetes apt source
+    lineinfile:
+      path: /etc/apt/sources.list.d/kubernetes.list
+      line: "deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main"
+      create: yes
+
+  - name: Add kubernetes source gpg key
+    get_url:
+      dest: /tmp
+      url: https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg
+    environment:
+      http_proxy: "{{proxy}}"
+      https_proxy: "{{proxy}}"
+
+  - name: Add kubernetes source gpg key
+    shell:
+      chdir: /tmp
+      cmd: apt-key add apt-key.gpg
+
+  - name: Install kubelet kubeadm kubectl
+    shell:
+      cmd:
+        apt-get update;
+        apt-get install -y kubelet=1.17.3-00  kubeadm=1.17.3-00 kubectl=1.17.3-00
+    tags: kubernetes
+
+  - name: Hold version
+    shell:
+      cmd: apt-mark hold kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
+    tags: kubernetes
+
+  - name: Tag images - arm64
+    shell:
+      cmd:
+        docker tag cruse/kube-apiserver-arm64:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3;
+        docker tag cruse/kube-controller-manager-arm64:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3;
+        docker tag cruse/kube-scheduler-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-scheduler:v1.17.3;
+        docker tag cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3;
+        docker tag cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1;
+        docker tag cruse/etcd-arm64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0;
+        docker tag coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+    when: ansible_architecture == "aarch64"
+    tags: kubernetes
+
+  - name: Remove redundant images - arm64
+    shell:
+      cmd:
+        docker rmi cruse/kube-apiserver-arm64:v1.17.3;
+        docker rmi cruse/kube-controller-manager-arm64:v1.17.3;
+        docker rmi cruse/kube-scheduler-arm64:v1.17.3-beta.0;
+        docker rmi cruse/kube-proxy-arm64:v1.17.3-beta.0;
+        docker rmi cruse/pause-arm64:3.1;
+        docker rmi cruse/etcd-arm64:3.4.3-0;
+        docker rmi coredns/coredns:1.6.5
+    when: ansible_architecture == "aarch64"
+    tags: kubernetes
+
+  - name: Tag images - x86_64
+    shell:
+      cmd:
+        docker tag kubesphere/kube-apiserver:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3;
+        docker tag kubesphere/kube-controller-manager:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3;
+        docker tag kubesphere/kube-scheduler:v1.17.3 k8s.gcr.io/kube-scheduler:v1.17.3;
+        docker tag kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3;
+        docker tag kubesphere/pause:3.1 k8s.gcr.io/pause:3.1;
+        docker tag cruse/etcd-amd64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0;
+        docker tag coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+    when: ansible_architecture == "x86_64"
+    tags: kubernetes
+
+  - name: Remove redundant images - x86_64
+    shell:
+      cmd:
+        docker rmi kubesphere/kube-apiserver:v1.17.3;
+        docker rmi kubesphere/kube-controller-manager:v1.17.3;
+        docker rmi kubesphere/kube-scheduler:v1.17.3;
+        docker rmi kubesphere/kube-proxy:v1.17.3;
+        docker rmi kubesphere/pause:3.1;
+        docker rmi cruse/etcd-amd64:3.4.3-0;
+        docker rmi coredns/coredns:1.6.5
+    when: ansible_architecture == "x86_64"
+    tags: kubernetes
+
+  - name: Deploy kubernetes
+    shell:
+      cmd:
+        kubeadm init --kubernetes-version=v1.17.3
+          --pod-network-cidr=192.168.0.0/16
+          --apiserver-advertise-address={{master_ip}}
+    tags: kubernetes
+
+  - name: Set k8s apiserver public key
+    shell:
+      cmd:
+        mkdir -p $HOME/.kube;
+        cp -i /etc/kubernetes/admin.conf $HOME/.kube/config;
+        chown $(id -u):$(id -g) $HOME/.kube/config
+    tags: kubernetes
+
+  - name: Apply calico yamls file
+    shell:
+      chdir: "{{playbook_dir}}/../yamls"
+      cmd:
+        kubectl apply -f calico.yamls
+    tags: kubernetes
+
+  - name: Release master node quarantine
+    shell:
+      cmd:
+        kubectl taint nodes --all node-role.kubernetes.io/master-
+    tags: kubernetes
+
+
+  ### Step3: Deploy NFS
+  - name: Install Linux NFS
+    shell:
+      cmd: apt-get install nfs-kernel-server -y
+    tags: nfs
+
+  - name: Check NFS directory
+    stat:
+     path: /etc/exports
+    register: nfs_config_folder
+    tags: nfs
+
+  - name: Create nfs mount directory
+    file:
+      path: /etc/exports
+      state: directory
+    tags: nfs
+    when: nfs_config_folder.stat.exists == false
+
+  - name: Check NFS directory
+    stat:
+     path: /data/atlas_dls
+    register: nfs_mount_folder
+    tags: nfs
+
+  - name: Create nfs mount directory
+    file:
+      path: /data/atlas_dls
+      state: directory
+    tags: nfs
+    when: nfs_mount_folder.stat.exists == false
+
+  - name: Set right
+    shell:
+      cmd:
+        chmod 755 /data/atlas_dls;
+        chown hwMindX:hwMindX /data/atlas_dls
+    tags : nfs
+
+  - name: Add NFS config info
+    lineinfile:
+      path: /etc/exports
+      line: "/data/atlas_dls *(rw,sync,no_root_squash)"
+    tags: nfs
+
+  - name: Start service
+    shell:
+      cmd:
+        systemctl restart rpcbind.service;
+        systemctl enable rpcbind.service;
+        systemctl start nfs-server.service;
+        systemctl enable nfs-server.service
+    tags: nfs
+
+
+  ### Step4: Install go-lang
+  - name: Download go tar file - arm64
+    get_url:
+      dest: /tmp/go1.14.3.linux.tar.gz
+      url: https://dl.google.com/go/go1.14.3.linux-arm64.tar.gz
+    when: ansible_architecture == "aarch64"
+    tags: go
+    environment:
+      http_proxy: "{{proxy}}"
+      https_proxy: "{{proxy}}"
+
+  - name: Download go tar file - x86_64
+    get_url:
+      dest: /tmp/go1.14.3.linux.tar.gz
+      url: https://dl.google.com/go/go1.14.3.linux-amd64.tar.gz
+    when: ansible_architecture == "x86_64"
+    tags: go
+    environment:
+      http_proxy: "{{proxy}}"
+      https_proxy: "{{proxy}}"
+
+  - name: Unzip go tar file
+    unarchive:
+     src: "/tmp/go1.14.3.linux.tar.gz"
+     dest: /usr/local
+    tags: go
+
+  - name: Add ENV
+    blockinfile:
+      path: /etc/profile
+      block: |
+        export GOROOT=/usr/local/go
+        export GOPATH=/home/gopath
+        export PATH=$PATH:/usr/local/go/bin
+    tags: go
+
+  - name: Add ENV for non-login shell
+    blockinfile:
+      path: ~/.bashrc
+      block: |
+        export GOROOT=/usr/local/go
+        export GOPATH=/home/gopath
+        export PATH=$PATH:/usr/local/go/bin
+    tags: go

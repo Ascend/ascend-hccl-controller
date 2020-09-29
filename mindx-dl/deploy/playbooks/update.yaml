@@ -1,0 +1,253 @@
+---
+
+- hosts: localnode
+  remote_user: root
+  vars:
+   package_version: 20.1.1
+
+  tasks:
+  - name: Add User
+    shell:
+      cmd:
+        userdel -r dls-user || true;
+        groupdel dls-user || true;
+        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+        usermod -a -G HwHiAiUser hwMindX
+    tags: always
+
+  - name: Remove log dir /var/log/atlas_dls
+    shell:
+      cmd:
+        rm -rf /var/log/atlas_dls || true;
+    tags: always
+
+  - name: Change /data/atlas_dls owner
+    shell:
+      cmd:
+        chown -R hwMindX:hwMindX /data/atlas_dls
+    tags: always
+
+  - name: Set MindX-DL path to arm64
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-aarch64/"
+      open_source_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_open-source_ubuntu18.04-aarch64/"
+    when: ansible_architecture == "aarch64"
+    tags: always
+
+  - name: Set MindX-DL path to x86
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-x86/"
+      open_source_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_open-source_ubuntu18.04-x86/"
+    when: ansible_architecture == "x86_64"
+    tags: always
+
+  - name: remove volcano
+    shell:
+      chdir: "{{ open_source_path }}/ascend-for volcano"
+      cmd:
+        kubectl delete -f volcano-*.yaml;
+    tags: volcano
+    ignore_errors: yes
+
+  - name: Check whether all service component services are terminated
+    shell:
+      cmd:
+        kubectl get pods --all-namespaces -o wide
+        | grep Terminating >/dev/null 2>&1;
+        echo $?
+    register: return_value
+    until: "'1' in return_value.stdout"
+    retries: 6
+    delay: 5
+    ignore_errors: yes
+
+  - name: Create log directory
+    file:
+      path: /var/log/atlas_dls/{{ item }}
+      state: directory
+      mode: "0750"
+      owner: 'hwMindX'
+      group: 'hwMindX'
+    tags: dls-core
+    with_items:
+      - volcano-controller
+      - volcano-scheduler
+      - volcano-admission
+      - hccl-controller
+
+  - name: Create log directory for cadvisor and device-plugin
+    file:
+      path: /var/log/{{ item }}
+      state: directory
+      mode: "0750"
+    tags: dls-core
+    with_items:
+      - devicePlugin
+      - cadvisor
+
+  - name: Add scheduler log config information
+    blockinfile:
+      path: /etc/logrotate.d/mindx_dl_scheduler
+      block: |
+        /var/log/atlas_dls/volcano-*/*.log
+        /var/log/atlas_dls/hccl-*/*.log{
+            daily
+            rotate 8
+            size 20M
+            compress
+            dateext
+            missingok
+            notifempty
+            copytruncate
+            create 0640 hwMindX hwMindX
+            sharedscripts
+            postrotate
+                chmod 640 /var/log/atlas_dls/volcano-*/*.log
+                chmod 640 /var/log/atlas_dls/hccl-*/*.log
+                chmod 440 /var/log/atlas_dls/volcano-*/*.log-*
+                chmod 440 /var/log/atlas_dls/hccl-*/*.log-*
+            endscript
+        }
+      state: present
+      create: yes
+
+  - name: Add acvisor log config information
+    blockinfile:
+      path: /etc/logrotate.d/mindx_dl_advisor
+      block: |
+        /var/log/devicePlugin/*.log
+        /var/log/cadvisor/*.log{
+            daily
+            rotate 8
+            size 20M
+            compress
+            dateext
+            missingok
+            notifempty
+            copytruncate
+            create 0640 root root
+            sharedscripts
+            postrotate
+                chmod 640 /var/log/devicePlugin/*.log
+                chmod 640 /var/log/cadvisor/*.log
+                chmod 440 /var/log/devicePlugin/*.log-*
+                chmod 440 /var/log/cadvisor/*.log-*
+            endscript
+        }
+      state: present
+      create: yes
+
+  - name: Create volcano environment
+    shell:
+      chdir: "{{playbook_dir}}"
+      cmd:
+        kubectl create namespace volcano-system;
+        tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh;
+        bash -x gen-admission-secret-exec.sh --service volcano-admission-service
+        --namespace volcano-system --secret volcano-admission-secret
+    tags: volcano
+
+  - name: Apply volcano
+    shell:
+      chdir: "{{ open_source_path }}/ascend-for volcano"
+      cmd:
+        docker load < vc-controller-manager.tar.gz;
+        docker load < vc-vc-scheduler.tar.gz;
+        docker load < vc-webhook-manager-base.tar.gz;
+        docker load < vc-webhook-manager.tar.gz;
+        kubectl apply -f volcano-*.yaml
+    tags: volcano
+
+  - name: Apply hccl controller
+    shell:
+      chdir: "{{ mindxdl_path }}/ascend-hccl-controller"
+      cmd:
+        kubectl delete -f hccl-controller.yaml;
+        docker rmi -f hccl-controller:{{ package_version }};
+        docker load < hccl-controller.tar.gz;
+        kubectl apply -f hccl-controller.yaml
+    tags: hccl-controller
+
+  - name: Unarchive kubernetes
+    unarchive:
+      src: "{{ open_source_path }}/ascend-for cadvisor/kubernetes_yaml.tar.gz"
+      dest: "{{ open_source_path }}/ascend-for cadvisor/"
+    tags: cadvisor
+
+  - name: Upgrade cadvisor
+    shell:
+      chdir: "{{ open_source_path }}/ascend-for cadvisor"
+      cmd:
+        kubectl delete -k deploy/kubernetes/overlays/huawei/;
+        docker rmi -f google/cadvisor:beta;
+        docker load < huawei-cadvisor-beta.tar.gz;
+        kubectl apply -k deploy/kubernetes/overlays/huawei/
+    tags: cadvisor
+
+  - name: Remove error status volcano-admission-init pods
+    shell:
+      cmd: kubectl get pod -n volcano-system | grep "volcano-admission-init" | awk '{print $1}'
+           | xargs kubectl delete pod -n volcano-system
+    tags: volcano
+
+
+# Update ascend device-plugin on training node
+- hosts: trainingNode
+  remote_user: root
+  vars:
+    package_version: 20.1.1
+
+  tasks:
+  - name: Set MindX-DL path to arm64
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-aarch64/"
+    when: ansible_architecture == "aarch64"
+    tags: always
+
+  - name: Set MindX-DL path to x86
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-x86/"
+    when: ansible_architecture == "x86_64"
+    tags: always
+
+  - name: Apply ascend-device-plugin
+    shell:
+      chdir: "{{ mindxdl_path }}/ascend-device-plugin"
+      cmd:
+        kubectl delete -f ascendplugin-volcano.yaml;
+        docker images | grep "ascend-k8s" | awk '{print $1":"$2}'|xargs docker rmi;
+        docker load -i Ascend-K8sDevicePlugin*Docker*;
+        kubectl label nodes ubuntu accelerator=huawei-Ascend910 --overwrite;
+        kubectl apply -f ascendplugin-volcano.yaml
+    tags: device-plugin
+
+
+# Update ascend device-plugin on inference node
+- hosts: inferenceNode
+  remote_user: root
+  vars:
+    package_version: 20.1.1
+
+  tasks:
+  - name: Set MindX-DL path to arm64
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-aarch64/"
+    when: ansible_architecture == "aarch64"
+    tags: always
+
+  - name: Set MindX-DL path to x86
+    set_fact:
+      mindxdl_path: "{{playbook_dir}}/MindX-DL_{{ package_version }}_ubuntu18.04-x86/"
+    when: ansible_architecture == "x86_64"
+    tags: always
+
+  - name: Apply ascend-device-plugin
+    shell:
+      chdir: "{{ mindxdl_path }}/ascend-device-plugin"
+      cmd:
+        kubectl delete -f ascendplugin-310.yaml;
+        docker images | grep "ascend-k8s" | awk '{print $1":"$2}'|xargs docker rmi;
+        docker load -i Ascend-K8sDevicePlugin*Docker*;
+        kubectl label nodes ubuntu accelerator=huawei-Ascend310 --overwrite;
+        kubectl apply -f ascendplugin-310.yaml
+    tags: device-plugin

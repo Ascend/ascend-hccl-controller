@@ -1,0 +1,71 @@
+---
+- hosts: localnode
+  remote_user: root
+  vars:
+    proxy:
+
+  tasks:
+
+  - name: Remove old version docker
+    apt:
+      pkg:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+      state: absent
+      autoremove: yes
+
+
+  - name: Install prerequisite software
+    apt:
+      pkg:
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg-agent
+      - software-properties-common
+      - libltdl7
+      - nfs-common
+      - git
+      state: latest
+
+
+  - name: Download docker - arm64
+    get_url:
+      url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/arm64/docker-ce_18.06.3~ce~3-0~ubuntu_arm64.deb
+      dest: /tmp/docker-ce_18.06.3_ce_3-0_ubuntu_arm64.deb
+      validate_certs: no
+    when: ansible_architecture == "aarch64"
+    tags: test
+    environment:
+      http_proxy: "{{proxy}}"
+      https_proxy: "{{proxy}}"
+
+
+  - name: Install docker - arm64
+    shell:
+      chdir: /tmp/
+      cmd: dpkg -i docker-ce_18.06.3_ce_3-0_ubuntu_arm64.deb;
+           rm docker-ce_18.06.3_ce_3-0_ubuntu_arm64.deb
+    when: ansible_architecture == "aarch64"
+
+
+  - name: Download docker - x86_64
+    get_url:
+      url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~ubuntu_amd64.deb
+      dest: /tmp/docker-ce_18.06.3_ce_3-0_ubuntu_amd64.deb
+      validate_certs: no
+    when: ansible_architecture == "x86_64"
+    environment:
+      http_proxy: "{{proxy}}"
+      https_proxy: "{{proxy}}"
+
+
+  - name: Install docker - x86_64
+    shell:
+      chdir: /tmp/
+      cmd: dpkg -i docker-ce_18.06.3_ce_3-0_ubuntu_amd64.deb;
+           rm docker-ce_18.06.3_ce_3-0_ubuntu_amd64.deb
+    when: ansible_architecture == "x86_64"
