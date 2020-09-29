@@ -16,7 +16,7 @@ spec:
         masterselector: dls-master-node
       containers:
       - name: hccl-controller
-        image: hccl-controller:v0.0.1
+        image: hccl-controller:v20.1.0
         resources:
           requests:
               memory: 300Mi

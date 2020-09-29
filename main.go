@@ -19,7 +19,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"k8s.io/apimachinery/pkg/labels"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -49,6 +51,11 @@ var (
 	podParallelism     int
 	cmCheckInterval    int
 	cmCheckTimeout     int
+	version            bool
+	// BuildName build name
+	BuildName string
+	// BuildVersion  build version
+	BuildVersion string
 )
 
 func validate(masterIUrl *string) bool {
@@ -72,6 +79,12 @@ func main() {
 	if !validate(&kubeconfig) {
 		klog.Fatalf("file not in security directory")
 	}
+
+	if version {
+		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
+		os.Exit(0)
+	}
+
 	// check the validity of input parameters
 	if jobParallelism <= 0 {
 		klog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
@@ -143,5 +156,7 @@ func init() {
 		"Interval (seconds) to check job's configmap before building rank table.")
 	flag.IntVar(&cmCheckTimeout, "cmCheckTimeout", cmCheckTimeoutConst,
 		"Maximum time (seconds) to check creation of job's configmap.")
+	flag.BoolVar(&version, "version", false,
+		"Query the verison of the program")
 
 }
