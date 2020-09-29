@@ -19,7 +19,7 @@
 | 用途                            | 软件名称（arm）             | 软件名称（x86）             |
 | ------------------------------- | --------------------------- | --------------------------- |
 | Python、Ansible离线安装包       | base-pkg_arm64.zip          | base-pkg-amd64.zip          |
-| Go安装包                        | go1.14.3.linux-arm64.tar.gz | go1.14.3.linux-amd64.tar.gz |
+| Go安装包                        | go1.14.8.linux-arm64.tar.gz | go1.14.8.linux-amd64.tar.gz |
 | NFS、Docker、K8s、Git离线安装包 | offline-pkg-arm64.zip       | offline-pkg-amd64.zip       |
 
 #### 脚本
@@ -34,9 +34,6 @@
 | offline_load_images.yaml     | 导入所需Docker镜像         | /deploy/playbooks/offline/single/                            |
 | init_kubernetes.yaml         | 建立K8s集群                | /deploy/playbooks/offline/single/                            |
 | offline_deploy_service.yaml  | 部署MindX DL组件           | /deploy/playbooks/offline/single/                            |
-| authority.yaml               | MindX DL服务访问数据库认证 | /src/apigw/configuration/                                    |
-| mysql                        | 部署时重新生成MySQL镜像    | /src/mysql下所有脚本                                         |
-| MindX DL                     | 部署服务配置文件           | MindX DL/deploy/yaml下所有脚本                               |
 | MindX DL-core                | 部署服务配置文件           | MindX DL-core-device-plugin：ascend-device-plugin/ascendplugin.yamlMindX DL-core-cadvisor：/deploy/kubernetes/下所有脚本MindX DL-core-volcano：/volcano/volcano-v0.0.1.yaml |
 
 #### 镜像包

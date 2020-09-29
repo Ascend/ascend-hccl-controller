@@ -20,7 +20,6 @@
         mode: "0750"
         owner: 'hwMindX'
         group: 'hwMindX'
-      tags: dls_core
       with_items:
         - volcano-controller
         - volcano-scheduler
@@ -32,22 +31,45 @@
         path: /var/log/{{ item }}
         state: directory
         mode: "0750"
-      tags: dls-core
       with_items:
         - devicePlugin
         - cadvisor
 
-    - name: Add dls_core config information
+    - name: Add scheduler log config information
       blockinfile:
-        path: /etc/logrotate.d/atlas_dls
+        path: /etc/logrotate.d/mindx_dl_scheduler
         block: |
           /var/log/atlas_dls/volcano-*/*.log
-          /var/log/atlas_dls/hccl-*/*.log
-          /var/log/devicePlugin/*.log
-          /var/log/cadvisor/*.log {
+          /var/log/atlas_dls/hccl-*/*.log{
               daily
-              rotate 30
-              size 50M
+              rotate 8
+              size 20M
+              compress
+              dateext
+              missingok
+              notifempty
+              copytruncate
+              create 0640 hwMindX hwMindX
+              sharedscripts
+              postrotate
+                  chmod 640 /var/log/atlas_dls/volcano-*/*.log
+                  chmod 640 /var/log/atlas_dls/hccl-*/*.log
+                  chmod 440 /var/log/atlas_dls/volcano-*/*.log-*
+                  chmod 440 /var/log/atlas_dls/hccl-*/*.log-*
+              endscript
+          }
+        state: present
+        create: yes
+
+    - name: Add acvisor log config information
+      blockinfile:
+        path: /etc/logrotate.d/mindx_dl_advisor
+        block: |
+          /var/log/devicePlugin/*.log
+          /var/log/cadvisor/*.log{
+              daily
+              rotate 8
+              size 20M
               compress
               dateext
               missingok
@@ -56,26 +78,19 @@
               create 0640 root root
               sharedscripts
               postrotate
-                  chmod 640 /var/log/atlas_dls/volcano-*/*.log
-                  chmod 640 /var/log/atlas_dls/hccl-*/*.log
                   chmod 640 /var/log/devicePlugin/*.log
                   chmod 640 /var/log/cadvisor/*.log
-                  chmod 440 /var/log/atlas_dls/volcano-*/*.log-*
-                  chmod 440 /var/log/atlas_dls/hccl-*/*.log-*
                   chmod 440 /var/log/devicePlugin/*.log-*
                   chmod 440 /var/log/cadvisor/*.log-*
               endscript
           }
         state: present
         create: yes
-      tags: dls_core
 
     - name: Deploy hccl-controller
       shell:
         chdir: "{{deploy_yaml_dir}}"
-        cmd:
-          kubectl apply -f hccl-controller.yaml
-      tags: dls_core
+        cmd: kubectl apply -f hccl-controller.yaml
 
     - name: Deploy device plugin
       shell:
@@ -83,7 +98,6 @@
         cmd:
           kubectl apply -f ascendplugin-volcano.yaml;
           kubectl apply -f ascendplugin-310.yaml
-      tags: dls_core
 
     # directory contains three yamls:
     #   cadvisor-args.yaml
@@ -92,9 +106,7 @@
     - name: Deploy cadvisor
       shell:
         chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
-        cmd:
-          kubectl apply -k huawei
-      tags: dls_core
+        cmd: kubectl apply -k huawei
 
     # deploy volcano services
     - name: Create volcano environment
@@ -105,14 +117,11 @@
           kubectl create namespace volcano-system;
           tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh;
           bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret
-      tags: dls_core
 
     - name: Deploy volcano
       shell:
         chdir: "{{deploy_yaml_dir}}"
-        cmd:
-          kubectl apply -f volcano-v0.0.1.yaml
-      tags: dls_core
+        cmd: kubectl apply -f volcano-v0.0.1.yaml
 
     # Deleting Software Packages
     - name: Deleting software packages

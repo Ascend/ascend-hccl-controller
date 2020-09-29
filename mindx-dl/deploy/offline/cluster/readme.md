@@ -19,25 +19,22 @@
 | 用途                            | 软件名称（arm）             | 软件名称（x86）             |
 | ------------------------------- | --------------------------- | --------------------------- |
 | Python、Ansible离线安装包       | base-pkg_arm64.zip          | base-pkg-amd64.zip          |
-| Go安装包                        | go1.14.3.linux-arm64.tar.gz | go1.14.3.linux-amd64.tar.gz |
+| Go安装包                        | go1.14.8.linux-arm64.tar.gz | go1.14.8.linux-amd64.tar.gz |
 | NFS、Docker、K8s、Git离线安装包 | offline-pkg-arm64.zip       | offline-pkg-amd64.zip       |
 
-#### 脚本
+#### 脚本``
 
 从MindX-DL全量包中获取离线部署脚本，如下表所示。
 
 | 脚本名称                     | 用途                       | 全量包中的路径                                               |
 | ---------------------------- | -------------------------- | ------------------------------------------------------------ |
-| entry.sh                     | 快速部署入口脚本           | /deploy/playbooks/offline/single/                            |
-| set_global_env.yaml          | 设置全局变量               | /deploy/playbooks/offline/single/                            |
-| offline_install_package.yaml | 安装软件包及依赖           | /deploy/playbooks/offline/single/                            |
-| offline_load_images.yaml     | 导入所需Docker镜像         | /deploy/playbooks/offline/single/                            |
-| init_kubernetes.yaml         | 建立K8s集群                | /deploy/playbooks/offline/single/                            |
-| offline_deploy_service.yaml  | 部署MindX DL组件           | /deploy/playbooks/offline/single/                            |
-| authority.yaml               | MindX DL服务访问数据库认证 | /src/apigw/configuration/                                    |
-| mysql                        | 部署时重新生成MySQL镜像    | /src/mysql下所有脚本                                         |
-| MindX DL                     | 部署服务配置文件           | MindX DL/deploy/yaml下所有脚本                               |
-| MindX DL-core                | 部署服务配置文件           | MindX DL-core-device-plugin：ascend-device-plugin/ascendplugin.yamlMindX DL-core-cadvisor：/deploy/kubernetes/下所有脚本MindX DL-core-volcano：/volcano/volcano-v0.0.1.yaml |
+| entry.sh                     | 快速部署入口脚本           | /mindx-dl/deploy/offline/single/                             |
+| set_global_env.yaml          | 设置全局变量               | /mindx-dl/deploy/offline/single/                             |
+| offline_install_package.yaml | 安装软件包及依赖           | /mindx-dl/deploy/offline/single/                             |
+| offline_load_images.yaml     | 导入所需Docker镜像         | /mindx-dl/deploy/offline/single/                             |
+| init_kubernetes.yaml         | 建立K8s集群                | /mindx-dl/deploy/offline/single/                            |
+| offline_deploy_service.yaml  | 部署MindX DL组件           | /mindx-dl/deploy/offline/single/                            |
+| MindX DL-core                | 部署服务配置文件           | ascend-device-plugin/ascendplugin.yamlMindX DL-core-cadvisor：/deploy/kubernetes/下所有脚本MindX DL-core-volcano：/volcano/volcano-v0.0.1.yaml |
 
 #### 镜像包
 全量镜像包列表，如下表所示。
