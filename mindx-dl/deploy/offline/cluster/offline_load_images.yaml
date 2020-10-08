@@ -44,19 +44,25 @@
           docker load < calico-kube-controllers_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
-    - name: Load Volcano images
+    - name: Load mindx images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
-          docker load < vc-controller-manager.tar.gz;
-          docker load < vc-scheduler.tar.gz;
-          docker load < vc-webhook-manager.tar.gz
+          docker load < vc-controller-manager_arm64.tar.gz;
+          docker load < vc-scheduler_arm64.tar.gz;
+          docker load < vc-webhook-manager_arm64.tar.gz;
+          docker load < hccl-controller_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
 
-    - name: Load hccl-controller images
+    - name: Load mindx images - x86_64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
-          docker load < hccl-controller.tar.gz
+          docker load < vc-controller-manager_amd64.tar.gz;
+          docker load < vc-scheduler_amd64.tar.gz;
+          docker load < vc-webhook-manager_amd64.tar.gz;
+          docker load < hccl-controller_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
 
 # Load docker images on worker
 - hosts: workers
@@ -77,7 +83,7 @@
         - calico-cni_arm64.tar.gz
         - calico-kube-controllers_arm64.tar.gz
         - Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta.tar.gz
+        - huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
     - name: scp docker images from master to workers - x86_64
@@ -92,10 +98,10 @@
         - calico-cni_amd64.tar.gz
         - calico-kube-controllers_amd64.tar.gz
         - Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz
-        - huawei-cadvisor-beta.tar.gz
+        - huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
-    - name: Load kubernetes basic images - arm64
+    - name: Load images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -106,10 +112,10 @@
           docker load < calico-cni_arm64.tar.gz;
           docker load < calico-kube-controllers_arm64.tar.gz;
           docker load < Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz;
-          docker load < huawei-cadvisor-beta.tar.gz
+          docker load < huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
-    - name: Load kubernetes basic images - x86_64
+    - name: Load images - x86_64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -120,5 +126,5 @@
           docker load < calico-cni_amd64.tar.gz;
           docker load < calico-kube-controllers_amd64.tar.gz;
           docker load < Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz;
-          docker load < huawei-cadvisor-beta.tar.gz
+          docker load < huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"

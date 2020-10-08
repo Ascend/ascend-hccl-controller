@@ -229,7 +229,7 @@
         - calico-cni_arm64.tar.gz
         - calico-kube-controllers_arm64.tar.gz
         - Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta.tar.gz
+        - huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
     - name: scp docker images from master to new_node - x86_64
@@ -244,7 +244,7 @@
         - calico-cni_amd64.tar.gz
         - calico-kube-controllers_amd64.tar.gz
         - Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz
-        - huawei-cadvisor-beta.tar.gz
+        - huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
     - name: Load kubernetes basic images - arm64
@@ -258,7 +258,7 @@
           docker load < calico-cni_arm64.tar.gz;
           docker load < calico-kube-controllers_arm64.tar.gz;
           docker load < Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz;
-          docker load < huawei-cadvisor-beta.tar.gz
+          docker load < huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
     - name: Load kubernetes basic images - x86_64
@@ -272,7 +272,7 @@
           docker load < calico-cni_amd64.tar.gz;
           docker load < calico-kube-controllers_amd64.tar.gz;
           docker load < Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz;
-          docker load < huawei-cadvisor-beta.tar.gz
+          docker load < huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
 # print join cluster command

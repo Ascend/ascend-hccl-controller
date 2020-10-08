@@ -163,16 +163,16 @@
    │   ├── calico-pod2daemon-flexvol_amd64.tar.gz
    │   ├── coredns_amd64.tar.gz
    │   ├── etcd_amd64.tar.gz
-   │   ├── hccl-controller.tar.gz
-   │   ├── huawei-cadvisor-beta.tar.gz
+   │   ├── hccl-controller_amd64.tar.gz
+   │   ├── huawei-cadvisor-beta_amd64.tar.gz
    │   ├── kube-apiserver_amd64.tar.gz
    │   ├── kube-controller-manager_amd64.tar.gz
    │   ├── kube-proxy_amd64.tar.gz
    │   ├── kube-scheduler_amd64.tar.gz
    │   ├── pause_amd64.tar.gz
-   │   ├── vc-controller-manager.tar.gz
-   │   ├── vc-scheduler.tar.gz
-   │   └── vc-webhook-manager.tar.gz
+   │   ├── vc-controller-manager_amd64.tar.gz
+   │   ├── vc-scheduler_amd64.tar.gz
+   │   └── vc-webhook-manager_amd64.tar.gz
    ├─ go1.14.3.linux-amd64.tar.gz
    ├─ offline-pkg-amd64.zip
    └─ yaml
