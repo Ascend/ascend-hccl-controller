@@ -10,6 +10,7 @@ Copyright Notice and License Texts
 ## Software: kubernetes 1.17.8
 
 **Copyright notice:** 
+
 Copyright ©2013 The gonum Authors. All rights reserved.
 
 Copyright 2019 The Kubernetes Authors.
@@ -753,6 +754,7 @@ Please see above.
 
 ##Software: github.com/stretchr/testify v1.4.0
 **Copyright notice:** 
+
 Copyright (c) 2012-2016 Dave Collins <dave@davec.name>
 
 Copyright (c) 2014 Stretchr, Inc.
