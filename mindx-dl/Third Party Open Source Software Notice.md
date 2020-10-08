@@ -448,7 +448,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
 ## Software: volcano v0.4.0
 
-**Copyright notice: **
+**Copyright notice:**
 
 Copyright (c) 2016 Uber Technologies, Inc.
 
@@ -752,7 +752,7 @@ Please see above.
 
 
 
-##Software: github.com/stretchr/testify v1.4.0
+## Software: github.com/stretchr/testify v1.4.0
 **Copyright notice:** 
 
 Copyright (c) 2012-2016 Dave Collins <dave@davec.name>
@@ -790,8 +790,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-##Software: github.com/prashantv/gostub v1.0.1
-**Copyright notice: **
+## Software: github.com/prashantv/gostub v1.0.1
+**Copyright notice:**
 
 Copyright (c) 2015 Prashant Varanasi
 
@@ -800,7 +800,7 @@ Please see above.
 
 
 
-##Software: openmpi 4.0.3
+## Software: openmpi 4.0.3
 
 **Copyright notice:** 
 
@@ -2831,7 +2831,7 @@ Copyright (c) 2016-2018 Inria. All rights reserved.
 
 
 License: BSD 3-Clause License
-Copyright (c) <YEAR>, <OWNER>
+Copyright (c) <YEAR>, <OWNER>:
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
