@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ascend310-device-plugin-daemonset
+  name: ascend-device-plugin2-daemonset
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      name: ascend310-device-plugin-ds
+      name: ascend-device-plugin-ds
   updateStrategy:
     type: RollingUpdate
   template:
@@ -14,7 +14,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
-        name: ascend310-device-plugin-ds
+        name: ascend-device-plugin-ds
     spec:
       tolerations:
         - key: CriticalAddonsOnly
@@ -30,7 +30,7 @@ spec:
       nodeSelector:
         accelerator: huawei-Ascend310
       containers:
-      - image: ascend-k8sdeviceplugin:v20.1.0
+      - image: ascend-k8sdeviceplugin:V20.1.0
         name: device-plugin-01
         resources:
           requests:

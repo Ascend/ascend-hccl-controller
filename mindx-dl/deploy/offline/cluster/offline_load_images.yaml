@@ -82,7 +82,7 @@
         - calico-pod2daemon-flexvol_arm64.tar.gz
         - calico-cni_arm64.tar.gz
         - calico-kube-controllers_arm64.tar.gz
-        - Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz
+        - Ascend-K8sDevicePlugin-V20.1.0-arm64-Docker.tar.gz
         - huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
@@ -97,7 +97,7 @@
         - calico-pod2daemon-flexvol_amd64.tar.gz
         - calico-cni_amd64.tar.gz
         - calico-kube-controllers_amd64.tar.gz
-        - Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz
+        - Ascend-K8sDevicePlugin-V20.1.0-x86-Docker.tar.gz
         - huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
@@ -111,7 +111,7 @@
           docker load < calico-pod2daemon-flexvol_arm64.tar.gz;
           docker load < calico-cni_arm64.tar.gz;
           docker load < calico-kube-controllers_arm64.tar.gz;
-          docker load < Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-V20.1.0-arm64-Docker.tar.gz;
           docker load < huawei-cadvisor-beta_arm64.tar.gz
       when: ansible_architecture == "aarch64"
 
@@ -125,6 +125,6 @@
           docker load < calico-pod2daemon-flexvol_amd64.tar.gz;
           docker load < calico-cni_amd64.tar.gz;
           docker load < calico-kube-controllers_amd64.tar.gz;
-          docker load < Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-V20.1.0-x86-Docker.tar.gz;
           docker load < huawei-cadvisor-beta_amd64.tar.gz
       when: ansible_architecture == "x86_64"
