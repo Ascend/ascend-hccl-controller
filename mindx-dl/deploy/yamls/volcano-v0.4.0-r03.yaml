@@ -125,7 +125,7 @@ spec:
       
       containers:
         - name: volcano-scheduler
-          image: volcanosh/vc-scheduler:v20.1.0
+          image: volcanosh/vc-scheduler:v0.4.0-r03
           imagePullPolicy: "IfNotPresent"
           command: [ "/bin/bash", "-c", "--"]
           args: [ "umask 027;/vc-scheduler
@@ -249,7 +249,7 @@ spec:
             - --log_dir=/var/log/
             - --log_file=/var/log/volcano-admission.log
             - -v=4
-          image: volcanosh/vc-webhook-manager:v20.1.0
+          image: volcanosh/vc-webhook-manager:v0.4.0-r03
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -318,7 +318,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: main
-          image: volcanosh/vc-webhook-manager:v20.1.0
+          image: volcanosh/vc-webhook-manager:v0.4.0-r03
           imagePullPolicy: IfNotPresent
           command: ["./gen-admission-secret.sh", "--service", "volcano-admission-service", "--namespace",
                     "volcano-system", "--secret", "volcano-admission-secret"]
@@ -418,7 +418,7 @@ spec:
       
       containers:
           - name: volcano-controllers
-            image: volcanosh/vc-controller-manager:v20.1.0
+            image: volcanosh/vc-controller-manager:v0.4.0-r03
             imagePullPolicy: "IfNotPresent"
             command: [ "/bin/bash", "-c", "--"]
             args: [ "umask 027;/vc-controller-manager
