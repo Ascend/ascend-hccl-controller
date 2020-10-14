@@ -25,7 +25,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p178845251052"><a name="zh-cn_topic_0183384832_p178845251052"></a><a name="zh-cn_topic_0183384832_p178845251052"></a>本文档介绍了MindX DL的产品定位、功能介绍、应用场景和系统架构，帮助用户快速了解产品。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p196171515446"><a name="zh-cn_topic_0183384832_p196171515446"></a><a name="zh-cn_topic_0183384832_p196171515446"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p196171515446"><a name="zh-cn_topic_0183384832_p196171515446"></a><a name="zh-cn_topic_0183384832_p196171515446"></a><a href="https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_19_0002.html" target="_blank" rel="noopener noreferrer">https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_19_0002.html</a></p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row68842250517"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0183384832_p38841125952"><a name="zh-cn_topic_0183384832_p38841125952"></a><a name="zh-cn_topic_0183384832_p38841125952"></a>安装与调测</p>
@@ -34,7 +34,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p988414258519"><a name="zh-cn_topic_0183384832_p988414258519"></a><a name="zh-cn_topic_0183384832_p988414258519"></a>本文档介绍了MindX DL的安装方式，包括快速安装、在线安装和手动安装三种方式，以及功能测试、卸载操作、安全加固和故障处理方法。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p2061713112443"><a name="zh-cn_topic_0183384832_p2061713112443"></a><a name="zh-cn_topic_0183384832_p2061713112443"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p2061713112443"><a name="zh-cn_topic_0183384832_p2061713112443"></a><a name="zh-cn_topic_0183384832_p2061713112443"></a><a href="https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_03_0001.html" target="_blank" rel="noopener noreferrer">https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_03_0001.html</a></p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row168848256514"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0183384832_p168847257517"><a name="zh-cn_topic_0183384832_p168847257517"></a><a name="zh-cn_topic_0183384832_p168847257517"></a>操作类</p>
@@ -43,7 +43,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p288422518517"><a name="zh-cn_topic_0183384832_p288422518517"></a><a name="zh-cn_topic_0183384832_p288422518517"></a>本文档介绍了MindX DL支持的API接口以及调用API接口的方法。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p76175124410"><a name="zh-cn_topic_0183384832_p76175124410"></a><a name="zh-cn_topic_0183384832_p76175124410"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p76175124410"><a name="zh-cn_topic_0183384832_p76175124410"></a><a name="zh-cn_topic_0183384832_p76175124410"></a><a href="https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_07_0001.html" target="_blank" rel="noopener noreferrer">https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_07_0001.html</a></p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row38849251258"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="p127292039101416"><a name="p127292039101416"></a><a name="p127292039101416"></a>参考</p>
@@ -52,7 +52,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="p9869143715147"><a name="p9869143715147"></a><a name="p9869143715147"></a>本文档提供了MindX DL产品通信矩阵的相关解释说明。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p1861718134417"><a name="zh-cn_topic_0183384832_p1861718134417"></a><a name="zh-cn_topic_0183384832_p1861718134417"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="p195631364517"><a name="p195631364517"></a><a name="p195631364517"></a><a href="https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_09_0001.html" target="_blank" rel="noopener noreferrer">https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_09_0001.html</a></p>
 </td>
 </tr>
 </tbody>
@@ -65,7 +65,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 ├─ ascend-for volcano             #详情请参见ascend-for volcano代码仓
 ├─ ascend-hccl-controller         #详情请参见ascend-hccl-controller代码仓
 │   ├─ mindx-dl                       
-│   │   └─ README.md             #MindX DL文档说明
+│   │   └─ README.md              #MindX DL文档说明
 ├─ ascend-for cadvisor            #详情请参见ascend-for cadvisor代码仓
 └─ ascend-device-plugin           #详情请参见ascend-device-plugin代码仓
 ```
@@ -83,7 +83,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </thead>
 <tbody><tr id="row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p08571442174415"><a name="p08571442174415"></a><a name="p08571442174415"></a>01</p>
 </td>
-<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p38571542154414"><a name="p38571542154414"></a><a name="p38571542154414"></a>2020-09-30</p>
+<td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.2 "><p id="p38571542154414"><a name="p38571542154414"></a><a name="p38571542154414"></a>2020-10-14</p>
 </td>
 <td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.3 "><p id="p5857142154415"><a name="p5857142154415"></a><a name="p5857142154415"></a>第一次正式发布。</p>
 </td>
