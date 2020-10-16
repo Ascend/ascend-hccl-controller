@@ -1,7 +1,7 @@
 #!/bin/bash
 # Perform  test for  hccl-controller
 # Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
-
+set -e
 # clean the mockgen file if exist
 function clean_source() {
       if  [ -f "${MOCK_TOP}"/mock_cache ]; then
@@ -64,7 +64,7 @@ function execute_test(){
   echo "</table></body></html>" >> ./"$file_detail_output"
 }
 
-set -e
+
 export GO111MODULE="on"
 export PATH=$GOPATH/bin:$PATH
 unset GOPATH
