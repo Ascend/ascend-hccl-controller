@@ -39,7 +39,7 @@ function mockgen_files() {
     mockgen k8s.io/client-go/tools/cache Indexer > "${MOCK_TOP}"/mock_cache/indexer_mock.go
     mockgen k8s.io/client-go/tools/cache SharedIndexInformer >  "${MOCK_TOP}"/mock_cache/sharedInformer_mock.go
 }
-# execute go test and echo resute to report files
+# execute go test and echo result to report files
 function execute_test(){
   if ! (go test -v -race -coverprofile cov.out "${TOP_DIR}"/pkg/ring-controller/controller > ./"$file_input")
   then
