@@ -79,46 +79,117 @@ Go 1.13 or later
 <h2 id="directory-structure.md">Directory Structure</h2>
 
 ```
-hcl-controller                             # HCL-CONTROLLER module of the deep learning component
-├─ build                                  # Compilation and test directory
-│   ├─ build.sh
-│   ├─ deploy.sh
-│   ├─ Dockerfile
-│   ├─ test.bat
-│   └─ test.sh
-├─ cmd/ring-controller
-│   └─ main.go                          # Program entry
-├─ doc/images                            # Document materials
-├─ hack
-│   ├─ update-codegen.sh
-│   └─ verify-codegen.sh
-├─ pkg                                  # Program file package
-│   ├─ apis/resourcecontroller
-│   │   ├─ v1alpha1
-│   │   │   ├─ doc.go
-│   │   │   ├─ register.go
-│   │   │   ├─ types.go
-│   │   │   └─ zz_generated.deepcopy.go
-│   │   └─ register.go
-│   ├─ resource-controller/signals
-│   │   ├─ signal.go
-│   │   ├─ signal_posix.go
-│   │   └─ signal_windows.go
-│   ├─ ring-controller/controller
-│   │   ├─ agent_interface.go
-│   │   ├─ businessagent.go
-│   │   ├─ businessagent_test.go
-│   │   ├─ businessworker.go
-│   │   ├─ businessworker_test.go
-│   │   ├─ controller.go
-│   │   ├─ controller_test.go
-│   │   └─ type.go
-│   └─ util/waitcycle
-│   │   └─ waitcycle.go
-├─ docker_run.sh
-├─ go.mod
-├─ go.sum
-└─ README.zh.md                       # README file.
+hccl-controller                                        # HCCL-CONTROLLER module of the deep learning component
+├── build                                                 # Compilation and test directory
+│   ├── build.sh
+│   ├── Dockerfile
+│   ├── hccl-controller.yaml
+│   ├── rbac.yaml
+│   ├── test.bat
+│   └── test.sh
+├── doc
+│   └── images                                            # Document materials
+│   │   ├── Controller-interaction-process.png
+│   │   ├── HCCL-Controller-process.png
+│   │   ├── icon-caution.gif
+│   │   ├── icon-danger.gif
+│   │   ├── icon-note.gif
+│   │   ├── icon-notice.gif
+│   │   ├── icon-tip.gif
+│   │   └── icon-warning.gif
+├── go.mod
+├── go.sum
+├── hack
+│   ├── update-codegen.sh
+│   └── verify-codegen.sh
+├── main.go                                               # Program entry
+├── mindx-dl                                              # MindX DL component documents and installation scripts
+│   ├── deploy                                            # MindX DL installation scripts
+│   │   ├── offline                                       # Offline installation scripts
+│   │   │   ├── cluster                                   # cluster deployment
+│   │   │   │   ├── clean_services.yaml
+│   │   │   │   ├── entry.sh
+│   │   │   │   ├── init_kubernetes.yaml
+│   │   │   │   ├── offline_deploy_service.yaml
+│   │   │   │   ├── offline_install_package.yaml
+│   │   │   │   ├── offline_load_images.yaml
+│   │   │   │   └── set_global_env.yaml
+│   │   │   ├── join_cluster.yaml
+│   │   │   └── single                                    # Single-node deployment
+│   │   │       ├── clean_services.yaml
+│   │   │       ├── entry.sh
+│   │   │       ├── init_kubernetes.yaml
+│   │   │       ├── offline_deploy_service.yaml
+│   │   │       ├── offline_install_package.yaml
+│   │   │       ├── offline_load_images.yaml
+│   │   │       └── set_global_env.yaml
+│   │   ├── online                                        # Online installation scripts
+│   │   │   ├── deploy.yaml
+│   │   │   ├── docker_install.yaml
+│   │   │   ├── entry.sh
+│   │   │   └── install.yaml
+│   │   ├── playbooks                                     # Update scripts
+│   │   │   └── update.yaml
+ │   │   └── yamls                                         # Component deployment files
+│   │       ├── ascendplugin-310.yaml
+│   │       ├── ascendplugin-volcano.yaml
+│   │       ├── calico.yaml
+│   │       ├── gen-admission-secret.sh
+│   │       ├── hccl-controller.yaml
+│   │       ├── kubernetes
+│   │       │   ├── base
+│   │       │   │   ├── cluserrolebinding.yaml
+│   │       │   │   ├── cluserrole.yaml
+│   │       │   │   ├── daemonset.yaml
+│   │       │   │   ├── kustomization.yaml
+│   │       │   │   ├── namespace.yaml
+│   │       │   │   ├── podsecuritypolicy.yaml
+│   │       │   │   └── serviceaccount.yaml
+│   │       │   ├── overlays
+│   │       │   │   ├── examples
+│   │       │   │   │   ├── cadvisor-args.yaml
+│   │       │   │   │   ├── critical-priority.yaml
+│   │       │   │   │   ├── gpu-privilages.yaml
+│   │       │   │   │   ├── kustomization.yaml
+│   │       │   │   │   └── stackdriver-sidecar.yaml
+│   │       │   │   └── huawei
+│   │       │   │       ├── cadvisor-args.yaml
+│   │       │   │       ├── gpu-privilages.yaml
+│   │       │   │       └── kustomization.yaml
+│   │       │   └── README.md
+│   │       ├── rbac.yaml
+│   │       └── volcano-v0.4.0-r03.yaml
+│   ├── LICENSE
+│   ├── README.md
+│   └── Third\ Party\ Open\ Source\ Software\ Notice.md
+├── output                                                   # Compilation result output path
+│   └── README.md
+ ├──pkg                                                      # Program file package
+│   ├── apis
+│   │   └── resourcecontroller
+│   │       ├── register.go
+│   │       └── v1alpha1
+│   │           ├── doc.go
+│   │           ├── register.go
+│   │           ├── types.go
+│   │           └── zz_generated.deepcopy.go
+│   ├── resource-controller
+│   │   └── signals
+│   │       ├── signal.go
+│   │       ├── signal_posix.go
+│   │       └── signal_windows.go
+│   └── ring-controller
+│       └── controller
+│           ├── agent_interface.go
+│           ├── businessagent.go
+│           ├── businessagent_test.go
+│           ├── businessworker.go
+│           ├── businessworker_test.go
+│           ├── controller.go
+│           ├── controller_test.go
+│           └── type.go
+├── README_EN.md                                        # HCCL-Controller README file (English)
+└── README.md                                           # HCCL-Controller README file (Chinese)
 ```
 
 <h2 id="version-updates.md">Version Updates</h2>

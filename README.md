@@ -75,46 +75,117 @@ Go 1.13及以上
 <h2 id="目录结构.md">目录结构</h2>
 
 ```
-hccl-controller                             #深度学习组件hccl-controller模块
-├─ build                                  #编译和测试目录
-│   ├─ build.sh
-│   ├─ deploy.sh
-│   ├─ Dockerfile
-│   ├─ test.bat
-│   └─ test.sh
-├─ cmd/ring-controller
-│   └─ main.go                          #程序入口
-├─ doc/images                            #文档素材
-├─ hack
-│   ├─ update-codegen.sh
-│   └─ verify-codegen.sh
-├─ pkg                                  #程序文件包
-│   ├─ apis/resourcecontroller
-│   │   ├─ v1alpha1
-│   │   │   ├─ doc.go
-│   │   │   ├─ register.go
-│   │   │   ├─ types.go
-│   │   │   └─ zz_generated.deepcopy.go
-│   │   └─ register.go
-│   ├─ resource-controller/signals
-│   │   ├─ signal.go
-│   │   ├─ signal_posix.go
-│   │   └─ signal_windows.go
-│   ├─ ring-controller/controller
-│   │   ├─ agent_interface.go
-│   │   ├─ businessagent.go
-│   │   ├─ businessagent_test.go
-│   │   ├─ businessworker.go
-│   │   ├─ businessworker_test.go
-│   │   ├─ controller.go
-│   │   ├─ controller_test.go
-│   │   └─ type.go
-│   └─ util/waitcycle
-│   │   └─ waitcycle.go
-├─ docker_run.sh
-├─ go.mod
-├─ go.sum
-└─ README.zh.md                       #README文件
+hccl-controller                                    #深度学习组件hccl-controller模块                       
+├── build                                                 #编译和测试目录 
+│   ├── build.sh
+│   ├── Dockerfile
+│   ├── hccl-controller.yaml
+│   ├── rbac.yaml
+│   ├── test.bat
+│   └── test.sh
+├── doc
+│   └── images                                            #文档素材
+│       ├── Controller-interaction-process.png
+│       ├── HCCL-Controller-process.png
+│       ├── icon-caution.gif
+│       ├── icon-danger.gif
+│       ├── icon-note.gif
+│       ├── icon-notice.gif
+│       ├── icon-tip.gif
+│       └── icon-warning.gif
+├── go.mod
+├── go.sum
+├── hack
+│   ├── update-codegen.sh
+│   └── verify-codegen.sh
+├── main.go                                               #程序入口
+├── mindx-dl                                              #mindx dl组件文档及安装脚本
+│   ├── deploy                                            #mindx dl安装脚本
+│   │   ├── offline                                       #离线安装脚本
+│   │   │   ├── cluster                                   #集群部署
+│   │   │   │   ├── clean_services.yaml
+│   │   │   │   ├── entry.sh
+│   │   │   │   ├── init_kubernetes.yaml
+│   │   │   │   ├── offline_deploy_service.yaml
+│   │   │   │   ├── offline_install_package.yaml
+│   │   │   │   ├── offline_load_images.yaml
+│   │   │   │   └── set_global_env.yaml
+│   │   │   ├── join_cluster.yaml
+│   │   │   └── single                                    #单机部署
+│   │   │       ├── clean_services.yaml
+│   │   │       ├── entry.sh
+│   │   │       ├── init_kubernetes.yaml
+│   │   │       ├── offline_deploy_service.yaml
+│   │   │       ├── offline_install_package.yaml
+│   │   │       ├── offline_load_images.yaml
+│   │   │       └── set_global_env.yaml
+│   │   ├── online                                        #在线安装脚本
+│   │   │   ├── deploy.yaml
+│   │   │   ├── docker_install.yaml
+│   │   │   ├── entry.sh
+│   │   │   └── install.yaml
+│   │   ├── playbooks                                     #更新脚本
+│   │   │   └── update.yaml
+│   │   └── yamls                                         #各组件部署文件
+│   │       ├── ascendplugin-310.yaml
+│   │       ├── ascendplugin-volcano.yaml
+│   │       ├── calico.yaml
+│   │       ├── gen-admission-secret.sh
+│   │       ├── hccl-controller.yaml
+│   │       ├── kubernetes
+│   │       │   ├── base
+│   │       │   │   ├── cluserrolebinding.yaml
+│   │       │   │   ├── cluserrole.yaml
+│   │       │   │   ├── daemonset.yaml
+│   │       │   │   ├── kustomization.yaml
+│   │       │   │   ├── namespace.yaml
+│   │       │   │   ├── podsecuritypolicy.yaml
+│   │       │   │   └── serviceaccount.yaml
+│   │       │   ├── overlays
+│   │       │   │   ├── examples
+│   │       │   │   │   ├── cadvisor-args.yaml
+│   │       │   │   │   ├── critical-priority.yaml
+│   │       │   │   │   ├── gpu-privilages.yaml
+│   │       │   │   │   ├── kustomization.yaml
+│   │       │   │   │   └── stackdriver-sidecar.yaml
+│   │       │   │   └── huawei
+│   │       │   │       ├── cadvisor-args.yaml
+│   │       │   │       ├── gpu-privilages.yaml
+│   │       │   │       └── kustomization.yaml
+│   │       │   └── README.md
+│   │       ├── rbac.yaml
+│   │       └── volcano-v0.4.0-r03.yaml
+│   ├── LICENSE
+│   ├── README.md
+│   └── Third\ Party\ Open\ Source\ Software\ Notice.md
+├── output                                                     #编译结果输出路径
+│   └── README.md
+├── pkg                                                         #程序文件包
+│   ├── apis
+│   │   └── resourcecontroller
+│   │       ├── register.go
+│   │       └── v1alpha1
+│   │           ├── doc.go
+│   │           ├── register.go
+│   │           ├── types.go
+│   │           └── zz_generated.deepcopy.go
+│   ├── resource-controller
+│   │   └── signals
+│   │       ├── signal.go
+│   │       ├── signal_posix.go
+│   │       └── signal_windows.go
+│   └── ring-controller
+│       └── controller
+│           ├── agent_interface.go
+│           ├── businessagent.go
+│           ├── businessagent_test.go
+│           ├── businessworker.go
+│           ├── businessworker_test.go
+│           ├── controller.go
+│           ├── controller_test.go
+│           └── type.go
+├── README_EN.md                                           #HCCL-Controller README文件英文版
+└── README.md                                              #HCCL-Controller README文件中文版
 ```
 
 <h2 id="版本更新信息.md">版本更新信息</h2>
