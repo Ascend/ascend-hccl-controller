@@ -241,3 +241,38 @@
       when:
         - whether_uninstall_k8s_and_docker == true
         - ansible_distribution == 'Ubuntu'
+
+
+
+# This play is used to uninstall nfs.
+- hosts: localnode, nfs_server
+  remote_user: root
+
+  tasks:
+    - name: Stop NFS service
+      shell:
+        cmd:
+          systemctl stop nfs-server
+
+    - name: Remove NFS config info
+      lineinfile:
+        path: /etc/exports
+        line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
+        state: absent
+
+    - name: Remove shared directory
+      file:
+        path: "{{nfs_shared_dir}}"
+        state: absent
+
+    - name: Uninstall nfs-server
+      apt:
+        pkg:
+          - nfs-kernel-server
+          - nfs-common
+          - rpcbind
+        state: absent
+        purge: yes
+        autoremove: yes
+      when:
+        - ansible_distribution == 'Ubuntu'
