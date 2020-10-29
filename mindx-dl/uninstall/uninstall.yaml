@@ -276,3 +276,18 @@
         autoremove: yes
       when:
         - ansible_distribution == 'Ubuntu'
+
+# This play is used to uninstall nfs.
+- hosts: cluster
+  remote_user: root
+
+  tasks:
+    - name: Uninstall nfs-common
+      apt:
+        pkg:
+          - nfs-common
+        state: absent
+        purge: yes
+        autoremove: yes
+      when:
+        - ansible_distribution == 'Ubuntu'
