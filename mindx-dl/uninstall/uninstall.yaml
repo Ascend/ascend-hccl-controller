@@ -14,6 +14,10 @@
       prompt: Do you want to uninstall kubernetes and docker?(yes/no)
       private: no
       default: "no"
+    - name: uninstall_nfs
+      prompt: Do you want to uninstall NFS?(yes/no)
+      private: no
+      default: "no"
 
   vars:
     deploy_dir: "{{dls_root_dir}}"
@@ -25,7 +29,7 @@
       fail:
         msg: "Answer for prompt questions should be 'yes' or 'no', run the script again with valid input."
       when:
-        - uninstall_k8s_and_docker not in ['no', 'yes'] or remove_log_files not in ['no', 'yes']
+        - uninstall_k8s_and_docker not in ['no', 'yes'] or remove_log_files not in ['no', 'yes'] or uninstall_nfs not in ['no', 'yes']
 
     - name: Record user config
       shell:
@@ -33,6 +37,7 @@
           cat << EOF > "{{playbook_dir}}"/config.yaml
           whether_uninstall_k8s_and_docker: {{uninstall_k8s_and_docker}}
           whether_remove_log_files: {{remove_log_files}}
+          whether_uninstall_nfs: {{uninstall_nfs}}
           EOF
 
     - name: Remove volcano service
@@ -247,23 +252,31 @@
 # This play is used to uninstall nfs.
 - hosts: localnode, nfs_server
   remote_user: root
+  vars_files:
+    - config.yaml
 
   tasks:
     - name: Stop NFS service
       shell:
         cmd:
           systemctl stop nfs-server
+      when:
+        - whether_uninstall_nfs == true
 
     - name: Remove NFS config info
       lineinfile:
         path: /etc/exports
         line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
         state: absent
+      when:
+        - whether_uninstall_nfs == true
 
     - name: Remove shared directory
       file:
         path: "{{nfs_shared_dir}}"
         state: absent
+      when:
+        - whether_uninstall_nfs == true
 
     - name: Uninstall nfs-server
       apt:
@@ -275,11 +288,14 @@
         purge: yes
         autoremove: yes
       when:
+        - whether_uninstall_nfs == true
         - ansible_distribution == 'Ubuntu'
 
 # This play is used to uninstall nfs.
 - hosts: cluster
   remote_user: root
+  vars_files:
+    - config.yaml
 
   tasks:
     - name: Uninstall nfs-common
@@ -290,4 +306,5 @@
         purge: yes
         autoremove: yes
       when:
+        - whether_uninstall_nfs == true
         - ansible_distribution == 'Ubuntu'
