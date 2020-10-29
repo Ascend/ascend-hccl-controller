@@ -1,0 +1,243 @@
+---
+# This playbook is used to uninstall MindX DL platform.
+# Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts
+
+# This play is used to remove 1).Services 2).Images 3).Logs 4).Log rotate config file on master node.
+- hosts: localnode, master
+  remote_user: root
+  vars_prompt:
+    - name: remove_log_files
+      prompt: Do you want to remove logs of MindX DL?(yes/no)
+      private: no
+      default: "no"
+    - name: uninstall_k8s_and_docker
+      prompt: Do you want to uninstall kubernetes and docker?(yes/no)
+      private: no
+      default: "no"
+
+  vars:
+    deploy_dir: "{{dls_root_dir}}"
+    deploy_yaml_dir: "{{dls_root_dir}}/yamls"
+
+  tasks:
+    # check interactive input
+    - name: Check interactive input
+      fail:
+        msg: "Answer for prompt questions should be 'yes' or 'no', run the script again with valid input."
+      when:
+        - uninstall_k8s_and_docker not in ['no', 'yes'] or remove_log_files not in ['no', 'yes']
+
+    - name: Record user config
+      shell:
+        cmd: |
+          cat << EOF > "{{playbook_dir}}"/config.yaml
+          whether_uninstall_k8s_and_docker: {{uninstall_k8s_and_docker}}
+          whether_remove_log_files: {{remove_log_files}}
+          EOF
+
+    - name: Remove volcano service
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl delete -f volcano-*.yaml
+
+    - name: Remove hccl-controller service
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl delete -f hccl-controller.yaml
+
+    - name: Remove device-plugin service
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl delete -f ascendplugin-volcano.yaml;
+          kubectl delete -f ascendplugin-310.yaml
+      ignore_errors: True
+
+    - name: Remove cadvisor service
+      shell:
+        chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
+        cmd: kubectl delete -k huawei
+
+    - name: Check whether all service component services are terminated
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces -o wide 
+          | grep Terminating >/dev/null 2>&1;
+          echo $?
+      register: return_value
+      until: "'1' in return_value.stdout"
+      retries: 6
+      delay: 5  
+      ignore_errors: yes
+
+    - name: Remove volcano images
+      shell:
+        cmd:
+          docker rmi -f $(docker images | grep volcanosh | awk '{print $3}')
+
+    - name: Remove hccl-controller image
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          docker rmi -f $(docker images | grep hccl-controller | awk '{print $3}')
+
+    - name: Remove logs
+      file:
+        path: /var/log/atlas_dls/{{item}}
+        state: absent
+      with_items:
+        - hccl-controller
+        - volcano-admission
+        - volcano-controller
+        - volcano-scheduler
+      when: remove_log_files == 'yes'
+
+    - name: Remove log config file
+      file:
+        path: /etc/logrotate.d/mindx_dl_scheduler
+        state: absent
+
+
+
+# This play is used to remove 1).Images 2).Logs 3).Log rotate config file on worker nodes.
+- hosts: localnode, workers
+  remote_user: root
+  vars_files:
+    - config.yaml
+
+  tasks:
+    - name: Remove device-plugin image
+      shell:
+        docker rmi -f $(docker images | grep ascend-k8sdeviceplugin | awk '{print $3}')
+
+    - name: Remove cadvisor image
+      shell:
+        docker rmi -f $(docker images | grep google/cadvisor |awk '{print $3}')
+
+    - name: Remove logs
+      file:
+        path: /var/log/{{item}}
+        state: absent
+      with_items:
+        - cadvisor
+        - devicePlugin
+      when: whether_remove_log_files == true
+
+    - name: Remove log config file
+      file:
+        path: /etc/logrotate.d/mindx_dl_advisor
+        state: absent
+
+
+
+# For who chose to remove k8s & docker, this play is used to remove all nodes in cluster. 
+- hosts: master
+  remote_user: root
+  vars_files:
+    - config.yaml
+
+  tasks:
+    - name: Get node names in cluster
+      shell:
+        cmd: kubectl get nodes | grep -v master | awk '{print $1}'
+      register: cluster_node_names
+      when: whether_uninstall_k8s_and_docker == true
+
+    - name: Drain all nodes in kubernetes clusters
+      shell:
+        cmd:
+          kubectl drain {{item}} --delete-local-data --force --ignore-daemonsets
+      with_items: "{{cluster_node_names.stdout_lines[1:]}}"
+      when: whether_uninstall_k8s_and_docker == true
+
+    - name: Delete all nodes in kubernetes clusters
+      shell:
+        cmd:
+          kubectl delete node {{item}}
+      with_items: "{{cluster_node_names.stdout_lines[1:]}}"
+    
+
+
+# This play is used to remove k8s & docker and restore system environment on all nodes(master & cluster).
+- hosts: localnode, cluster
+  remote_user: root
+  vars_files:
+    - config.yaml
+
+  tasks:
+    - name: Uninstall kubernetes on every node
+      shell:
+        cmd:
+          kubeadm reset -f;
+          apt-mark unhold kubelet kubeadm kubectl
+      when: whether_uninstall_k8s_and_docker == true
+
+    - name: Uninstall kubernetes on every node
+      apt:
+        pkg:
+          - kubeadm
+          - kubectl
+          - kubelet
+          - kubernetes-cni
+          - kube*
+        state: absent
+        purge: yes
+        autoremove: yes
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Remove residule files
+      file:
+        path: "{{item}}"
+        state: absent
+      with_items:
+        - ~/.kube
+        - /etc/kubernetes
+        - /etc/systemd/system/kubelet.service.d
+        - /etc/systemd/system/kubelet.service
+        - /usr/bin/kube*
+        - /etc/cni
+        - /opt/cni
+        - /var/lib/etcd
+        - /var/etcd
+      when: whether_uninstall_k8s_and_docker == true
+
+    - name: Uninstall docker on every node
+      apt:
+        pkg:
+          - docker
+          - docker-ce
+          - docker-engine
+          - docker.io
+          - containerd
+          - runc
+        state: absent
+        purge: yes
+        autoremove: yes
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Restore system configs
+      shell:
+        cmd:
+          sed -ri 's/^#*(.*swap.*)/\1/' /etc/fstab;
+          swapon /swapfile;
+          sed -ri 's/net.ipv4.ip_forward(.*)=(.*)1/net.ipv4.ip_forward = 0/' /etc/sysctl.conf
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Restore system configs
+      file:
+        path: "{{item}}"
+        state: absent
+      with_items:
+        - /etc/sysctl.d/k8s.conf
+        - /etc/rc.local
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'Ubuntu'
