@@ -271,13 +271,6 @@
       when:
         - whether_uninstall_nfs == true
 
-    - name: Remove shared directory
-      file:
-        path: "{{nfs_shared_dir}}"
-        state: absent
-      when:
-        - whether_uninstall_nfs == true
-
     - name: Uninstall nfs-server
       apt:
         pkg:
