@@ -45,12 +45,14 @@
         chdir: "{{deploy_yaml_dir}}"
         cmd:
           kubectl delete -f volcano-*.yaml
+      ignore_errors: True
 
     - name: Remove hccl-controller service
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd:
           kubectl delete -f hccl-controller.yaml
+      ignore_errors: True
 
     - name: Remove device-plugin service
       shell:
@@ -64,6 +66,7 @@
       shell:
         chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
         cmd: kubectl delete -k huawei
+      ignore_errors: True
 
     - name: Check whether all service component services are terminated
       shell:
@@ -75,18 +78,20 @@
       until: "'1' in return_value.stdout"
       retries: 6
       delay: 5  
-      ignore_errors: yes
+      ignore_errors: True
 
     - name: Remove volcano images
       shell:
         cmd:
           docker rmi -f $(docker images | grep volcanosh | awk '{print $3}')
+      ignore_errors: True
 
     - name: Remove hccl-controller image
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd:
           docker rmi -f $(docker images | grep hccl-controller | awk '{print $3}')
+      ignore_errors: True
 
     - name: Remove logs
       file:
@@ -116,10 +121,12 @@
     - name: Remove device-plugin image
       shell:
         docker rmi -f $(docker images | grep ascend-k8sdeviceplugin | awk '{print $3}')
+      ignore_errors: True
 
     - name: Remove cadvisor image
       shell:
         docker rmi -f $(docker images | grep google/cadvisor |awk '{print $3}')
+      ignore_errors: True
 
     - name: Remove logs
       file:
@@ -149,6 +156,7 @@
         cmd: kubectl get nodes | grep -v master | awk '{print $1}'
       register: cluster_node_names
       when: whether_uninstall_k8s_and_docker == true
+      ignore_errors: True
 
     - name: Drain all nodes in kubernetes clusters
       shell:
@@ -156,13 +164,14 @@
           kubectl drain {{item}} --delete-local-data --force --ignore-daemonsets
       with_items: "{{cluster_node_names.stdout_lines[1:]}}"
       when: whether_uninstall_k8s_and_docker == true
+      ignore_errors: True
 
     - name: Delete all nodes in kubernetes clusters
       shell:
         cmd:
           kubectl delete node {{item}}
       with_items: "{{cluster_node_names.stdout_lines[1:]}}"
-    
+      ignore_errors: True
 
 
 # This play is used to remove k8s & docker and restore system environment on all nodes(master & cluster).
@@ -178,6 +187,7 @@
           kubeadm reset -f;
           apt-mark unhold kubelet kubeadm kubectl
       when: whether_uninstall_k8s_and_docker == true
+      ignore_errors: True
 
     - name: Uninstall kubernetes on every node
       apt:
@@ -193,6 +203,7 @@
       when:
         - whether_uninstall_k8s_and_docker == true
         - ansible_distribution == 'Ubuntu'
+      ignore_errors: True
 
     - name: Remove residule files
       file:
@@ -267,13 +278,6 @@
       lineinfile:
         path: /etc/exports
         line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
-        state: absent
-      when:
-        - whether_uninstall_nfs == true
-
-    - name: Remove shared directory
-      file:
-        path: "{{nfs_shared_dir}}"
         state: absent
       when:
         - whether_uninstall_nfs == true
