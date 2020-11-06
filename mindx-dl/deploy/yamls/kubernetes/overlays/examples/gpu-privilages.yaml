@@ -1,0 +1,28 @@
+# This patch adds the required hostpath mounts and privilages to initialize NVML, as well as to access devices.
+# This patch meets the requirements described in the accellerator docs: 
+# https://github.com/google/cadvisor/blob/master/docs/running.md#hardware-accelerator-monitoring
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cadvisor
+spec:
+  template:
+    spec:
+      containers:
+      - name: cadvisor
+        volumeMounts:
+        - name: ascend-dirver
+          mountPath: /usr/local/Ascend/driver
+          readOnly: true
+        - name: lib
+          mountPath: /lib
+          readOnly: true
+        securityContext:
+          privileged: true
+      volumes:
+        - name: ascend-dirver
+          hostPath:
+            path: /usr/local/Ascend/driver
+        - name: lib
+          hostPath:
+            path: /lib
