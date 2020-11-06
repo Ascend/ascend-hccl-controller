@@ -16,5 +16,3 @@ limitations under the License.
 
 // Package signals to signals
 package signals
-
-// var shutdownSignals = []os.Signal{os.Interrupt}

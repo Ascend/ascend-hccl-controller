@@ -1,0 +1,386 @@
+---
+# This playbook is used to add new nodes to the cluster.
+
+- hosts: new_node
+  remote_user: root
+
+  tasks:
+    - name: Close firewall
+      shell:
+        cmd:
+          ufw disable
+
+    # delete router forward config
+    - name: Delete restrictive forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        regexp: "net.ipv4.ip_forward(.*)=(.*)0"
+        state: absent
+
+    # add router forward config
+    - name: Allow packet forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "net.ipv4.ip_forward = 1"
+        state: present
+
+    - name: Allow packet forwarding next
+      lineinfile:
+        path: /etc/rc.local
+        line: "/usr/sbin/iptables -P FORWARD ACCEPT"
+        create: yes
+
+    - name: Network config
+      blockinfile:
+        path: /etc/sysctl.d/k8s.conf
+        block: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+        create: yes
+
+    # close swap and remove swap mount
+    - name: Network config step && Close swap && Remove swap mount
+      shell:
+        cmd:
+          modprobe br_netfilter;
+          swapoff -a;
+          sed -i 's/.*swap.*/#&/' /etc/fstab;
+
+    # configure the Go environment
+    - name: Add ENV
+      blockinfile:
+        path: /etc/profile
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Add ENV for non-login shell
+      blockinfile:
+        path: ~/.bashrc
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Enable config
+      shell:
+        cmd:
+          source /etc/profile;
+      args:
+        executable: "/bin/bash"
+      tags: go
+
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          usermod -a -G HwHiAiUser hwMindX
+
+- hosts: new_node
+  remote_user: root
+  tasks:
+    - name: scp install package from master to new_node - arm64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "aarch64"
+
+    - name: scp install package from master to new_node - x86_64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "x86_64"
+
+    - name: scp go package from master to new_node - arm64
+      copy:
+        src: "{{dls_root_dir}}/go1.14.3.linux-arm64.tar.gz"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "aarch64"
+
+    - name: scp go package from master to new_node - x86_64
+      copy:
+        src: "{{dls_root_dir}}/go1.14.3.linux-amd64.tar.gz"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "x86_64"
+
+# unzip offline package
+- hosts: new_node
+  remote_user: root
+  tasks:
+    - name: create offline package directory
+      shell:
+        cmd: mkdir -p {{dls_root_dir}}/base_software
+
+    - name: unarchive offline package - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "aarch64"
+
+    - name: unarchive offline package - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "x86_64"
+
+# install docker, k8s, go in cluster
+- hosts: new_node
+  remote_user: root
+
+  tasks:
+    - name: Install prerequisite software
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i libltdl7*;
+          dpkg -i git*
+
+    - name: Install docker engine
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i docker-ce_18.06.3*
+
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "https://docker-hub.tools.huawei.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+          EOF
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker
+
+    - name: Install k8s server
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i cri-tools* conntrack* socat*;
+          dpkg -i kubernetes-cni*;
+          dpkg -i kubelet_1.17.3*;
+          dpkg -i kubectl_1.17.3*;
+          dpkg -i kubeadm_1.17.3*
+
+    - name: Hold version
+      shell:
+        cmd: apt-mark hold kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
+      tags: kubernetes
+
+    - name: Unzip go tar file - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/go1.14.3.linux-amd64.tar.gz"
+        dest: /usr/local/
+      when: ansible_architecture == "x86_64"
+      tags: go
+
+    - name: Unzip go tar file - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/go1.14.3.linux-arm64.tar.gz"
+        dest: /usr/local/
+      when: ansible_architecture == "aarch64"
+      tags: go
+
+    - name: Add ENV
+      blockinfile:
+        path: /etc/profile
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Add ENV for non-login shell
+      blockinfile:
+        path: ~/.bashrc
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+# Load docker images on new_node
+- hosts: new_node
+  remote_user: root
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
+    - name: scp docker images from master to new_node - arm64
+      copy:
+        src: "{{docker_images_dir}}/{{item}}"
+        dest: "{{docker_images_dir}}/"
+      with_items:
+        - kube-proxy_arm64.tar.gz
+        - pause_arm64.tar.gz
+        - calico-node_arm64.tar.gz
+        - calico-pod2daemon-flexvol_arm64.tar.gz
+        - calico-cni_arm64.tar.gz
+        - calico-kube-controllers_arm64.tar.gz
+        - Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz
+        - huawei-cadvisor-beta_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+
+    - name: scp docker images from master to new_node - x86_64
+      copy:
+        src: "{{docker_images_dir}}/{{item}}"
+        dest: "{{docker_images_dir}}/"
+      with_items:
+        - kube-proxy_amd64.tar.gz
+        - pause_amd64.tar.gz
+        - calico-node_amd64.tar.gz
+        - calico-pod2daemon-flexvol_amd64.tar.gz
+        - calico-cni_amd64.tar.gz
+        - calico-kube-controllers_amd64.tar.gz
+        - Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz
+        - huawei-cadvisor-beta_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+
+    - name: Load kubernetes basic images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < kube-proxy_arm64.tar.gz;
+          docker load < pause_arm64.tar.gz;
+          docker load < calico-node_arm64.tar.gz;
+          docker load < calico-pod2daemon-flexvol_arm64.tar.gz;
+          docker load < calico-cni_arm64.tar.gz;
+          docker load < calico-kube-controllers_arm64.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-0.0.1-arm64-Docker.tar.gz;
+          docker load < huawei-cadvisor-beta_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+
+    - name: Load kubernetes basic images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < kube-proxy_amd64.tar.gz;
+          docker load < pause_amd64.tar.gz;
+          docker load < calico-node_amd64.tar.gz;
+          docker load < calico-pod2daemon-flexvol_amd64.tar.gz;
+          docker load < calico-cni_amd64.tar.gz;
+          docker load < calico-kube-controllers_amd64.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-0.0.1-x86-Docker.tar.gz;
+          docker load < huawei-cadvisor-beta_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+
+# print join cluster command
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Register join commomd
+      shell:
+        cmd:
+          kubeadm token create --print-join-command
+      register: join_command
+      tags: init-workers
+
+    - name: Print join cluster command
+      debug: var=join_command.stdout
+      tags: init-workers
+
+
+# init workers
+- hosts: new_node
+  remote_user: root
+  vars_prompt:
+    - name: "join_cluster_command"
+      prompt: "Input the command of joining into cluster"
+      default: ""
+      private: no
+
+  tasks:
+    - name: reset k8s
+      shell:
+        cmd:
+          kubeadm reset -f;
+          rm -rf /etc/cni/net.d /root/.kube/
+      tags: init-master
+      ignore_errors: True
+
+    - name: Join into cluster
+      shell:
+        cmd: "{{join_cluster_command}}"
+      tags: init-workers
+
+    # copy local admin.conf to workers
+    - name: copy local kubelet.conf to workers
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /etc/kubernetes/
+        backup: yes
+      tags: init-workers
+
+    - name: Add worker kubeconfig file
+      lineinfile:
+        path: /etc/profile
+        regexp: 'export KUBECONFIG(.*)=(.*)/etc'
+        line: 'export KUBECONFIG=/etc/kubernetes/kubelet.conf'
+      tags: init-workers
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile
+          systemctl daemon-reload;
+          systemctl restart kubelet;
+      args:
+        executable: "/bin/bash"
+      tags: init-workers
+
+# Label worker node
+- hosts: master
+  remote_user: root
+  vars:
+    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+
+  tasks:
+    - name: Label worker nodes - arm64
+      shell:
+        cmd:
+          kubectl label nodes {{item}} node-role.kubernetes.io/worker=worker;
+          kubectl label nodes {{item}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{item}} host-arch=huawei-arm --overwrite=true
+      tags: init-workers
+      with_inventory_hostnames:
+        - new_node
+      when: ansible_architecture == "aarch64"
+
+    - name: Label worker nodes - x86_64
+      shell:
+        cmd:
+          kubectl label nodes {{item}} node-role.kubernetes.io/worker=worker;
+          kubectl label nodes {{item}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{item}} host-arch=huawei-x86 --overwrite=true
+      tags: init-workers
+      with_inventory_hostnames:
+        - new_node
+      when: ansible_architecture == "x86_64"
+
+    - name: Label inference node
+      shell:
+        cmd:
+          kubectl label nodes {{item}} accelerator={{npu_type}} --overwrite
+      tags: init-workers
+      with_inventory_hostnames:
+        - new_node
+
+    - name: Deploy device plugin
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl apply -f ascendplugin.yaml;
+          kubectl apply -f ascendplugin-310.yaml
+      tags: dls_core

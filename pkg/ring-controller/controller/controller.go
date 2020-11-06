@@ -1,17 +1,17 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Package controller responsibilities:business worker for each job according to job events
@@ -46,6 +46,9 @@ import (
 
 // Controller initialize business agent
 type Controller struct {
+	// component for recycle resources
+	businessAgent *businessAgent
+
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
@@ -56,9 +59,6 @@ type Controller struct {
 	jobsSynced  cache.InformerSynced
 	jobsIndexer cache.Indexer
 
-	// component for recycle resources
-	businessAgent *businessAgent
-
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -67,46 +67,51 @@ type Controller struct {
 	workqueue workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
-	recorder record.EventRecorder
+	recorder           record.EventRecorder
+	workAgentInterface WorkAgentInterface
+}
+
+// Config controller init configure
+type Config struct {
+	DryRun           bool
+	DisplayStatistic bool
+	PodParallelism   int
+	CmCheckInterval  int
+	CmCheckTimeout   int
 }
 
 // NewController returns a new sample controller
 func NewController(
 	kubeclientset kubernetes.Interface,
 	jobclientset clientset.Interface,
-	dryRun bool,
-	displayStatistic bool,
-	podParallelism int,
-	cmCheckInterval int,
-	cmCheckTimeout int,
+	config *Config,
 	jobInformer v1alpha1informers.JobInformer,
 	stopCh <-chan struct{}) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
 	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
-	klog.V(loggerTypeOne).Info("Creating event broadcaster")
+	klog.V(L1).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
-	businessAgent, err := newBusinessAgent(kubeclientset, recorder, dryRun, displayStatistic, podParallelism,
-		cmCheckInterval, cmCheckTimeout, stopCh)
+	businessAgent, err := newBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
 		klog.Fatalf("Error creating business agent: %s", err.Error())
 	}
-
 	controller := &Controller{
-		kubeclientset: kubeclientset,
-		jobclientset:  jobclientset,
-		jobsSynced:    jobInformer.Informer().HasSynced,
-		jobsIndexer:   jobInformer.Informer().GetIndexer(),
-		businessAgent: businessAgent,
-		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-		recorder:      recorder,
+		kubeclientset:      kubeclientset,
+		jobclientset:       jobclientset,
+		jobsSynced:         jobInformer.Informer().HasSynced,
+		jobsIndexer:        jobInformer.Informer().GetIndexer(),
+		businessAgent:      businessAgent,
+		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
+		recorder:           recorder,
+		workAgentInterface: businessAgent,
 	}
 
-	klog.V(loggerTypeOne).Info("Setting up event handlers")
+	klog.V(L1).Info("Setting up event handlers")
 	// Set up an event handler for when Job resources change
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -138,20 +143,22 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 	}
 
 	// Wait for the caches to be synced before starting workers
-	klog.V(loggerTypeFour).Info("Waiting for informer caches to sync")
+	klog.V(L4).Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.jobsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(loggerTypeFour).Info("Starting workers")
+	klog.V(L4).Info("Starting workers")
 
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runMasterWorker, time.Second, stopCh)
 	}
 
-	klog.V(loggerTypeFour).Info("Started workers")
-	<-stopCh
-	klog.V(loggerTypeFour).Info("Shutting down workers")
+	klog.V(L4).Info("Started workers")
+	if stopCh != nil {
+		<-stopCh
+	}
+	klog.V(L4).Info("Shutting down workers")
 
 	return nil
 }
@@ -167,7 +174,7 @@ func (c *Controller) runMasterWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
 func (c *Controller) processNextWorkItem() bool {
-	klog.V(loggerTypeFour).Info("star to get workqueue", c.workqueue.Len())
+	klog.V(L4).Info("start to get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
@@ -206,7 +213,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(loggerTypeTwo).Infof("Successfully synced '%s'", key)
+		klog.V(L2).Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 
@@ -255,13 +262,13 @@ func (c *Controller) SplitKeyFunc(key string) (namespace, name, eventType string
 	case 3:
 		// namespace and name
 		return parts[0], parts[1], parts[2], nil
+	default:
+		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
 	}
-
-	return "", "", "", fmt.Errorf("unexpected key format: %q", key)
 }
 
 func (c *Controller) syncHandler(key string) error {
-	klog.V(loggerTypeTwo).Infof("syncHandler start, current key is %s", key)
+	klog.V(L2).Infof("syncHandler start, current key is %s", key)
 
 	namespace, name, eventType, err := c.SplitKeyFunc(key)
 	if err != nil {
@@ -275,38 +282,34 @@ func (c *Controller) syncHandler(key string) error {
 
 	switch eventType {
 	case EventAdd:
-		err := eventAdd(exists, namespace, name, tempObj, c, key)
+		err := c.eventAdd(exists, namespace, name, tempObj, key)
 		if err != nil {
 			return err
 		}
-
 	case EventDelete:
 		if exists {
-			// abnormal
-			klog.V(loggerTypeTwo).Infof("undefined condition, exist + delete, current key is %s", key)
-			return nil
+			klog.V(L2).Infof("undefined condition, exist + delete, current key is %s", key)
+			return fmt.Errorf("undefined condition, exist + delete, current key is %s", key)
 		}
-		// delete job worker from businessAgent
-		klog.V(loggerTypeTwo).Infof("not exist + delete, current job is %s/%s", namespace, name)
-		c.businessAgent.deleteBusinessWorker(namespace, name)
-
+		c.businessAgent.DeleteBusinessWorker(namespace, name)
 	case EventUpdate:
 		// unnecessary to handle
-		err := eventUpdate(exists, tempObj, c, namespace, name, key)
+		err := c.eventUpdate(exists, tempObj, namespace, name, key)
 		if err != nil {
 			return err
 		}
 	default:
 		// abnormal
-		klog.V(loggerTypeTwo).Infof("undefined condition, eventType is %s, current key is %s", eventType, key)
+		klog.V(L2).Infof("undefined condition, eventType is %s, current key is %s", eventType, key)
+		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
 
 	return nil
 }
 
-func eventAdd(exists bool, namespace string, name string, tempObj interface{}, c *Controller, key string) error {
+func (c *Controller) eventAdd(exists bool, namespace string, name string, tempObj interface{}, key string) error {
 	if exists {
-		klog.V(loggerTypeTwo).Infof("exist + add, current job is %s/%s", namespace, name)
+		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
 		// check if job's corresponding configmap is created successfully via volcano controller
 		job, ok := tempObj.(*v1alpha1apis.Job)
 		if !ok {
@@ -318,21 +321,21 @@ func eventAdd(exists bool, namespace string, name string, tempObj interface{}, c
 		}
 	}
 	// abnormal
-	klog.V(loggerTypeTwo).Infof("undefined condition, not exist + add, current key is %s", key)
+	klog.V(L2).Infof("undefined condition, not exist + add, current key is %s", key)
 	return nil
 }
 
-func eventUpdate(exists bool, tempObj interface{}, c *Controller, namespace string, name string, key string) error {
+func (c *Controller) eventUpdate(exists bool, tempObj interface{}, namespace string, name string, key string) error {
 	if exists {
 		job, ok := tempObj.(*v1alpha1apis.Job)
 		if !ok {
 			klog.Error("update event -> failed")
 		}
 		if string(job.Status.State.Phase) == JobRestartPhase {
-			c.businessAgent.deleteBusinessWorker(namespace, name)
-		} else if !c.businessAgent.isBusinessWorkerExist(namespace, name) {
-			// TODO: more restrictions? outdated job update event is not suitable here
-			// TODO: although a job update event won't enqueue twice up to now
+			c.workAgentInterface.DeleteBusinessWorker(namespace, name)
+			return nil
+		}
+		if !c.businessAgent.IsBusinessWorkerExist(namespace, name) {
 			// for job update, if create business worker at job restart phase, the version will be incorrect
 			err := c.createBusinessWorker(job)
 			if err != nil {
@@ -340,13 +343,13 @@ func eventUpdate(exists bool, tempObj interface{}, c *Controller, namespace stri
 			}
 		}
 	}
-	klog.V(loggerTypeTwo).Infof("undefined condition, not exist + update, current key is %s", key)
+	klog.V(L2).Infof("undefined condition, not exist + update, current key is %s", key)
 	return nil
 }
 
 func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	// check if job's corresponding configmap is created successfully via volcano controller
-	cm, err := c.businessAgent.checkConfigmapCreation(job)
+	cm, err := c.workAgentInterface.CheckConfigmapCreation(job)
 	if err != nil {
 		return err
 	}
@@ -355,7 +358,7 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	var configmapData RankTable
 	jobStartString := cm.Data[ConfigmapKey]
 	//
-	klog.V(loggerTypeFour).Info("jobstarting==>", jobStartString)
+	klog.V(L4).Info("jobstarting==>", jobStartString)
 	err = json.Unmarshal([]byte(jobStartString), &configmapData)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
@@ -365,7 +368,7 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	}
 
 	// create a business worker for current job
-	err = c.businessAgent.createBusinessWorker(job)
+	err = c.workAgentInterface.CreateBusinessWorker(job)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,180 @@
+---
+# This playbook is used to install offline downloaded software packages, including NFS, Docker, K8S and Go.
+# Before running the script, ensure that the required software packages has been uploaded to the 'dls_root_dir' directory defined in /etc/ansible/hosts.
+
+# scp install package to workers
+- hosts: workers
+  remote_user: root
+  tasks:
+    - name: scp install package from master to workers - arm64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "aarch64"
+
+    - name: scp install package from master to workers - x86_64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "x86_64"
+
+    - name: scp go package from master to workers - arm64
+      copy:
+        src: "{{dls_root_dir}}/go1.14.3.linux-arm64.tar.gz"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "aarch64"
+
+    - name: scp go package from master to workers - x86_64
+      copy:
+        src: "{{dls_root_dir}}/go1.14.3.linux-amd64.tar.gz"
+        dest: "{{dls_root_dir}}/"
+      when: ansible_architecture == "x86_64"
+
+# unzip offline package
+- hosts: cluster
+  remote_user: root
+  tasks:
+    - name: create offline package directory
+      shell:
+        cmd: mkdir -p {{dls_root_dir}}/base_software
+
+    - name: unarchive offline package - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "aarch64"
+
+    - name: unarchive offline package - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "x86_64"
+
+# install nfs server
+- hosts: nfs_server
+  remote_user: root
+
+  tasks:
+    - name: Install nfs-server
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i libtirpc* libtirpc-dev*;
+          dpkg -i rpcbind*;
+          dpkg -i libnfsidmap2*;
+          dpkg -i keyutils*;
+          dpkg -i nfs-common*;
+          dpkg -i nfs-kernel-server*
+      tags: nfs
+
+    # change configure
+    - name: Create a shared directory and change it's permission
+      shell:
+        cmd:
+          mkdir -p {{nfs_shared_dir}};
+          chmod 755 {{nfs_shared_dir}};
+          chown hwMindX:hwMindX {{nfs_shared_dir}}
+
+    - name: Add NFS config info
+      lineinfile:
+        path: /etc/exports
+        line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
+        state: present
+
+    # start service
+    - name: Start rpcbind service
+      shell:
+        cmd:
+          systemctl start rpcbind;
+          systemctl enable rpcbind
+
+    - name: Start NFS service
+      shell:
+        cmd:
+          systemctl start nfs-server;
+          systemctl enable nfs-server;
+          systemctl restart nfs-kernel-server
+
+# install docker, k8s, go in cluster
+- hosts: cluster
+  remote_user: root
+
+  tasks:
+    - name: Install prerequisite software
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i libltdl7*;
+          dpkg -i git*
+
+    - name: Install docker engine
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i docker-ce_18.06.3*
+
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "https://docker-hub.tools.huawei.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+          EOF
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker
+
+    - name: Install k8s server
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/"
+        cmd:
+          dpkg -i cri-tools* conntrack* socat*;
+          dpkg -i kubernetes-cni*;
+          dpkg -i kubelet_1.17.3*;
+          dpkg -i kubectl_1.17.3*;
+          dpkg -i kubeadm_1.17.3*
+
+    - name: Hold version
+      shell:
+        cmd: apt-mark hold kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
+      tags: kubernetes
+
+    - name: Unzip go tar file - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/go1.14.3.linux-amd64.tar.gz"
+        dest: /usr/local/
+      when: ansible_architecture == "x86_64"
+      tags: go
+
+    - name: Unzip go tar file - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/go1.14.3.linux-arm64.tar.gz"
+        dest: /usr/local/
+      when: ansible_architecture == "aarch64"
+      tags: go
+
+    - name: Add ENV
+      blockinfile:
+        path: /etc/profile
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Add ENV for non-login shell
+      blockinfile:
+        path: ~/.bashrc
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go

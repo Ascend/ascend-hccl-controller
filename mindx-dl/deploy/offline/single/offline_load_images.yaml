@@ -1,0 +1,69 @@
+---
+# This playbook is used to load the Docker image offline.
+# Before running the script, ensure that the required image list has been uploaded to the 'dls_root_dir' directory defined in /etc/ansible/hosts.
+
+# Load docker images on master
+- hosts: localnode
+  remote_user: root
+  vars_prompt:
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
+    - name: Load kubernetes basic images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < kube-apiserver_arm64.tar.gz;
+          docker load < kube-controller-manager_arm64.tar.gz;
+          docker load < kube-scheduler_arm64.tar.gz;
+          docker load < kube-proxy_arm64.tar.gz;
+          docker load < etcd_arm64.tar.gz;
+          docker load < pause_arm64.tar.gz;
+          docker load < coredns_arm64.tar.gz;
+          docker load < calico-node_arm64.tar.gz;
+          docker load < calico-pod2daemon-flexvol_arm64.tar.gz;
+          docker load < calico-cni_arm64.tar.gz;
+          docker load < calico-kube-controllers_arm64.tar.gz;
+      when: ansible_architecture == "aarch64"
+
+    - name: Load kubernetes basic images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < kube-apiserver_amd64.tar.gz;
+          docker load < kube-controller-manager_amd64.tar.gz;
+          docker load < kube-scheduler_amd64.tar.gz;
+          docker load < kube-proxy_amd64.tar.gz;
+          docker load < etcd_amd64.tar.gz;
+          docker load < pause_amd64.tar.gz;
+          docker load < coredns_amd64.tar.gz;
+          docker load < calico-node_amd64.tar.gz;
+          docker load < calico-pod2daemon-flexvol_amd64.tar.gz;
+          docker load < calico-cni_amd64.tar.gz;
+          docker load < calico-kube-controllers_amd64.tar.gz;
+      when: ansible_architecture == "x86_64"
+
+    - name: Load mindx images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < vc-controller-manager_arm64.tar.gz;
+          docker load < vc-scheduler_arm64.tar.gz;
+          docker load < vc-webhook-manager_arm64.tar.gz;
+          docker load < hccl-controller_arm64.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-V20.1.0-arm64-Docker.tar.gz;
+          docker load < huawei-cadvisor-beta_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+
+    - name: Load mindx images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < vc-controller-manager_amd64.tar.gz;
+          docker load < vc-scheduler_amd64.tar.gz;
+          docker load < vc-webhook-manager_amd64.tar.gz;
+          docker load < hccl-controller_amd64.tar.gz;
+          docker load < Ascend-K8sDevicePlugin-V20.1.0-x86-Docker.tar.gz;
+          docker load < huawei-cadvisor-beta_amd64.tar.gz
+      when: ansible_architecture == "x86_64"

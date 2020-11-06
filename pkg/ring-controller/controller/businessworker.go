@@ -1,17 +1,17 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Package controller for logic
@@ -71,7 +71,7 @@ func newBusinessWorker(kubeclientset kubernetes.Interface, podsIndexer cache.Ind
 	for _, taskSpec := range job.Spec.Tasks {
 		var deviceTotal int32
 		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[ReeourceName]
+			quantity, exist := container.Resources.Limits[ResourceName]
 			quantityValue := int32(quantity.Value())
 			if exist && quantityValue > 0 {
 				deviceTotal += quantityValue
@@ -115,49 +115,45 @@ func (b *businessWorker) tableConstructionFinished() bool {
 	return b.cachedPodNum == b.taskReplicasTotal
 }
 
-func (b *businessWorker) syncHandler(pod *apiCoreV1.Pod, podExist bool, namespace, name, eventType string) error {
-	klog.V(loggerTypeThree).Infof("syncHandler start, current pod is %s/%s, event type is %s", namespace, name,
-		eventType)
+func (b *businessWorker) syncHandler(pod *apiCoreV1.Pod, podExist bool, podInfo *podIdentifier) error {
+	klog.V(L3).Infof("syncHandler start, current pod is %s", podInfo)
 
 	// if use 0 chip, end pod sync
 	if b.taskReplicasTotal == 0 && b.tableConstructionFinished() {
-		klog.V(loggerTypeTwo).Infof("job %s/%s doesn't use d chip, rank table construction is finished",
+		klog.V(L2).Infof("job %s/%s doesn't use d chip, rank table construction is finished",
 			b.jobNamespace, b.jobName)
 		if err := b.endRankTableConstruction(); err != nil {
 			return err
 		}
+		return nil //  need return directly
 	}
 
 	// dryRun is for test
 	if b.dryRun {
-		klog.V(loggerTypeThree).Infof("I'am handling %s/%s, event type: %s, exist: %t", namespace, name,
-			eventType, podExist)
+		klog.V(L3).Infof("I'am handling %s, exist: %t", podInfo, podExist)
 		return nil
 	}
 
-	var err error
-	if (eventType == EventAdd) && podExist {
-		err := eventAddUpdate(eventType, namespace, name, pod, err, b)
-		if err != nil {
-			return err
-		}
-	} else if eventType == EventDelete && !podExist {
-		err := eventDelete(namespace, name, b, err)
+	if (podInfo.eventType == EventAdd) && podExist {
+		err := b.handleAddUpdateEvent(podInfo, pod)
 		if err != nil {
 			return err
 		}
 	}
-	klog.V(loggerTypeThree).Infof("undefined condition, pod: %s/%s, event type: %s, exist: %t", namespace,
-		name, eventType, podExist)
-
+	if podInfo.eventType == EventDelete && !podExist {
+		err := b.handleDeleteEvent(podInfo)
+		if err != nil {
+			return err
+		}
+	}
+	klog.V(L3).Infof("undefined condition, pod: %s, exist: %t", podInfo, podExist)
 	return nil
 }
 
-func eventDelete(namespace string, name string, b *businessWorker, err error) error {
-	klog.V(loggerTypeThree).Infof("not exist + delete, current pod is %s/%s", namespace, name)
+func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
+	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
 	if !b.dryRun {
-		// TODO: add task name to key for better forloop efficiency ??
-		err = b.removePodInfo(namespace, name)
+		err := b.removePodInfo(podInfo.namespace, podInfo.name)
 		if err != nil {
 			return err
 		}
@@ -165,34 +161,25 @@ func eventDelete(namespace string, name string, b *businessWorker, err error) er
 	return nil
 }
 
-func eventAddUpdate(eventType string, namespace string, name string, pod *apiCoreV1.Pod, err error, b *businessWorker) error {
-	klog.V(loggerTypeThree).Infof("exist + %s, current pod is %s/%s", eventType, namespace, name)
+func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
+	klog.V(L3).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
 	// it can be used to identify if pod use chip here
-	err = addUpdateEvent(pod, err, b)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func addUpdateEvent(pod *apiCoreV1.Pod, err error, b *businessWorker) error {
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
-	klog.V(loggerTypeThree).Info("deviceId =>", deviceInfo)
-	klog.V(loggerTypeFour).Info("isExist ==>", exist)
+	klog.V(L3).Info("deviceId =>", deviceInfo)
+	klog.V(L4).Info("isExist ==>", exist)
 	if exist {
-		err = b.cachePodInfo(pod, deviceInfo)
+		err := b.cachePodInfo(pod, deviceInfo)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-
-	err = b.cacheZeroChipPodInfo(pod)
+	err := b.cacheZeroChipPodInfo(pod)
 	if err != nil {
 		return err
 	}
-	return err
+	return nil
 }
 
 // when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
@@ -201,35 +188,35 @@ func (b *businessWorker) cachePodInfo(pod *apiCoreV1.Pod, deviceInfo string) err
 	defer b.cmMu.Unlock()
 
 	for _, group := range b.configmapData.GroupList {
-		// find pod's belonging task
-		if group.GroupName == pod.Annotations[PodGroupKey] {
-			// check if current pod's info is already cached
-			for _, instance := range group.InstanceList {
-				if instance.PodName == pod.Name {
-					klog.V(loggerTypeThree).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-						pod.Name)
-					return nil
-				}
-			}
-			// if pod use D chip, cache its info
-			var instance Instance
-			klog.V(loggerTypeThree).Info("devicedInfo  from pod => %v", deviceInfo)
-			err := json.Unmarshal([]byte(deviceInfo), &instance)
-			klog.V(loggerTypeThree).Info("instace  from pod => %v", instance)
-			if err != nil {
-				return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-			}
-			group.InstanceList = append(group.InstanceList, &instance)
-			b.modifyStatistics(1)
-
-			// update configmap if finishing caching all pods' info
-			if b.tableConstructionFinished() {
-				if err := b.endRankTableConstruction(); err != nil {
-					return err
-				}
-			}
-			break
+		if group.GroupName != pod.Annotations[PodGroupKey] {
+			return nil
 		}
+		// check if current pod's info is already cached
+		for _, instance := range group.InstanceList {
+			if instance.PodName == pod.Name {
+				klog.V(L3).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
+					pod.Name)
+				return nil
+			}
+		}
+		// if pod use D chip, cache its info
+		var instance Instance
+		klog.V(L3).Infof("devicedInfo  from pod => %v", deviceInfo)
+		err := json.Unmarshal([]byte(deviceInfo), &instance)
+		klog.V(L3).Infof("instace  from pod => %v", instance)
+		if err != nil {
+			return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+		}
+		group.InstanceList = append(group.InstanceList, &instance)
+		b.modifyStatistics(1)
+
+		// update configmap if finishing caching all pods' info
+		if b.tableConstructionFinished() {
+			if err := b.endRankTableConstruction(); err != nil {
+				return err
+			}
+		}
+		break
 	}
 
 	return nil
@@ -278,7 +265,7 @@ func updateWithFinish(b *businessWorker) error {
 func checkPodCache(group *Group, pod *apiCoreV1.Pod) bool {
 	for _, instance := range group.InstanceList {
 		if instance.PodName == pod.Name {
-			klog.V(loggerTypeThree).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
+			klog.V(L3).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
 				pod.Name)
 			return true
 		}
@@ -308,17 +295,17 @@ func (b *businessWorker) removePodInfo(namespace string, name string) error {
 		}
 	}
 	if !hasInfoToRemove {
-		klog.V(loggerTypeThree).Infof("no data of pod %s/%s can be removed", namespace, name)
+		klog.V(L3).Infof("no data of pod %s/%s can be removed", namespace, name)
 		return nil
 	}
 
-	klog.V(loggerTypeThree).Infof("start to remove data of pod %s/%s", namespace, name)
+	klog.V(L3).Infof("start to remove data of pod %s/%s", namespace, name)
 	err := b.updateConfigmap()
 	if err != nil {
 		return err
 	}
 	b.modifyStatistics(-1)
-	klog.V(loggerTypeThree).Infof("data of pod %s/%s is removed", namespace, name)
+	klog.V(L3).Infof("data of pod %s/%s is removed", namespace, name)
 
 	return nil
 }
@@ -330,7 +317,7 @@ func (b *businessWorker) endRankTableConstruction() error {
 		klog.Error("update configmap failed")
 		return err
 	}
-	klog.V(loggerTypeTwo).Infof("rank table for job %s/%s has finished construction", b.jobNamespace, b.jobName)
+	klog.V(L2).Infof("rank table for job %s/%s has finished construction", b.jobNamespace, b.jobName)
 	return nil
 }
 
@@ -339,7 +326,7 @@ func (b *businessWorker) modifyStatistics(diff int32) {
 	b.statisticMu.Lock()
 	defer b.statisticMu.Unlock()
 	b.cachedPodNum += diff
-	klog.V(loggerTypeThree).Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
+	klog.V(L3).Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
 		"pods already cached = %d", b.jobNamespace, b.jobName, b.taskReplicasTotal, b.cachedPodNum)
 }
 
@@ -377,7 +364,7 @@ func (b *businessWorker) closeStatistic() {
 }
 
 // no need to add lock here, deviation from true value is acceptable
-func (b *businessWorker) statistic() {
+func (b *businessWorker) statistic(stopTime time.Duration) {
 	for {
 		select {
 		case c, ok := <-b.statisticSwitch:
@@ -387,13 +374,14 @@ func (b *businessWorker) statistic() {
 			return
 		default:
 			if b.taskReplicasTotal == b.cachedPodNum {
-				klog.V(loggerTypeOne).Infof("rank table build progress for %s/%s is completed",
+				klog.V(L1).Infof("rank table build progress for %s/%s is completed",
 					b.jobNamespace, b.jobName)
 				b.closeStatistic()
+				return
 			}
-			klog.V(loggerTypeOne).Infof("rank table build progress for %s/%s:"+
-				" pods need to be cached = %d,pods already cached = %d", b.jobNamespace, b.jobName, b.taskReplicasTotal, b.cachedPodNum)
-			time.Sleep(BuildStatInterval)
+			klog.V(L1).Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
+				"pods already cached = %d", b.jobNamespace, b.jobName, b.taskReplicasTotal, b.cachedPodNum)
+			time.Sleep(stopTime)
 		}
 	}
 
