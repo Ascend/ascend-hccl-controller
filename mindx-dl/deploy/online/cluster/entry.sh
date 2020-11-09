@@ -11,8 +11,8 @@ SKIP_INSTALL_SOFTWARE=""
 GET_MINDXDL_IMAGE_METHOD="ascend-hub"
 
 ansible-playbook -vv set_global_env.yaml
-ansible-playbook -vv --skip-tags=$SKIP_INSTALL_SOFTWARE online_install_package.yaml
-ansible-playbook -vv --tags=$GET_MINDXDL_IMAGE_METHOD online_load_images.yaml
+ansible-playbook -vv --skip-tags=${SKIP_INSTALL_SOFTWARE} online_install_package.yaml
+ansible-playbook -vv --tags=${GET_MINDXDL_IMAGE_METHOD} online_load_images.yaml
 ansible-playbook -vv init_kubernetes.yaml
 ansible-playbook -vv clean_services.yaml
 ansible-playbook -vv online_deploy_service.yaml
