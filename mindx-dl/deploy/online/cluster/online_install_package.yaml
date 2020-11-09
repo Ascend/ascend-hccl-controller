@@ -1,0 +1,428 @@
+---
+# This playbook is used to online install software packages, including NFS.
+
+- hosts: cluster
+  remote_user: root
+
+  tasks:
+    - name: Install prerequisite software - Ubuntu
+      shell:
+        cmd:
+          apt install -y {{item}}
+      with_items:
+        - curl
+        - apt-transport-https
+        - ca-certificates
+        - gnupg-agent
+        - software-properties-common
+        - libltdl7
+        - nfs-common
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags:
+        - go
+        - kubernetes
+        - nfs
+        - docker
+
+    - name: Install prerequisite software - CentOS
+      shell:
+        cmd:
+          yum install -y {{item}}
+      with_items: 
+        - nfs-utils
+        - yum-plugin-versionlock
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      when:
+        - ansible_distribution == 'CentOS'
+      tags:
+        - go
+        - kubernetes
+        - nfs
+        - docker
+
+    ############################## Install Go #########################################
+    - name: Go tar file status
+      stat:
+        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+      register: go_file_status
+      tags: go
+
+    - name: Download go tar file - arm64
+      get_url:
+        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+        url: https://dl.google.com/go/go1.14.3.linux-arm64.tar.gz
+      when:
+        - ansible_architecture == "aarch64"
+        - go_file_status.stat.exists == False
+      tags: go
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+
+    - name: Download go tar file - x86_64
+      get_url:
+        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+        url: https://dl.google.com/go/go1.14.3.linux-amd64.tar.gz
+      when:
+        - ansible_architecture == "x86_64"
+        - go_file_status.stat.exists == False
+      tags: go
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+
+    - name: Unzip go tar file
+      unarchive:
+        src: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+      tags: go
+
+    # configure the Go environment
+    - name: Add Go ENV
+      blockinfile:
+        path: /etc/profile
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Add Go ENV for non-login shell
+      blockinfile:
+        path: ~/.bashrc
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=/home/gopath
+          export PATH=$PATH:/usr/local/go/bin
+      tags: go
+
+    - name: Enable config
+      shell:
+        cmd:
+          source /etc/profile;
+      args:
+        executable: "/bin/bash"
+      tags: go
+    ###################################################################################
+
+    ############################## Install Docker #####################################
+    # ============================== Ubuntu 18.04 =====================================
+    - name: Docker install package file status - Ubuntu
+      stat:
+        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+      register: docker_file_status
+      tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Download docker - Ubuntu/arm64
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/arm64/docker-ce_18.06.3~ce~3-0~ubuntu_arm64.deb
+        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        validate_certs: no
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_distribution == 'Ubuntu'
+        - docker_file_status.stat.exists == False
+      tags: docker
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+
+    - name: Download docker - Ubuntu/x86_64
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~ubuntu_amd64.deb
+        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        validate_certs: no
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_distribution == 'Ubuntu'
+        - docker_file_status.stat.exists == False
+      tags: docker
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+
+    - name: Install docker - Ubuntu
+      shell:
+        chdir: "{{dls_root_dir}}"
+        cmd:
+          dpkg -i docker-ce_18.06.3_ce_3-0.deb
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: docker
+    # =================================================================================
+
+    # ===================== CentOS 7.6 ================================================
+    - name: Add docker repo
+      shell:
+        cmd:
+          yum install -y yum-utils device-mapper-persistent-data lvm2;
+          yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+      when:
+        - ansible_distribution == 'CentOS'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      tags: docker
+      
+    - name: Install docker - CentOS
+      shell:
+        cmd:
+          yum install -y docker-ce-18.06.3.ce
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: docker
+    # =================================================================================
+    
+    - name: Docker daemon.json file
+      file:
+        path: /etc/docker
+        state: directory
+      tags: docker
+      
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags: always
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags: always
+    ###################################################################################
+
+    ############################## Install Kubernetes #################################
+    # ============================== Ubuntu 18.04 =====================================
+    - name: Create kubernetes apt source
+      lineinfile:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        line: "deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main"
+        create: yes
+      tags: kubernetes
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Add kubernetes source gpg key
+      get_url:
+        dest: "{{dls_root_dir}}/apt-key.gpg"
+        url: https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg
+      tags: kubernetes
+      when:
+        - ansible_distribution == 'Ubuntu'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+
+    - name: Add kubernetes source gpg key
+      shell:
+        chdir: "{{dls_root_dir}}"
+        cmd: apt-key add apt-key.gpg
+      tags: kubernetes
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install kubelet kubeadm kubectl
+      shell:
+        cmd:
+          apt-get update;
+          apt-get install -y kubelet=1.17.3-00  kubeadm=1.17.3-00 kubectl=1.17.3-00
+      when:
+        - ansible_distribution == 'Ubuntu'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      tags: kubernetes
+
+    - name: Hold version
+      shell:
+        cmd: apt-mark hold kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: kubernetes
+    # =================================================================================
+
+    # ===================== CentOS 7.6 ================================================
+    - name: Create kubernetes repo source - arm64
+      lineinfile:
+        path: /etc/yum.repos.d/kubernetes.repo
+        line: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-aarch64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+        create: yes
+      tags: kubernetes
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_distribution == 'CentOS'
+
+    - name: Create kubernetes repo source - x86_64
+      lineinfile:
+        path: /etc/yum.repos.d/kubernetes.repo
+        line: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+        create: yes
+      tags: kubernetes
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_distribution == 'CentOS'
+
+    - name: Install kubelet kubeadm kubectl
+      shell:
+        cmd:
+          yum install -y kubelet-1.17.3 kubeadm-1.17.3 kubectl-1.17.3 --disableexcludes=kubernetes
+      when:
+        - ansible_distribution == 'CentOS'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      tags: kubernetes
+
+    - name: Hold version
+      shell:
+        cmd: yum versionlock kubelet-1.17.3 kubeadm-1.17.3 kubectl-1.17.3
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: kubernetes
+    # =================================================================================
+
+    - name: Start kubernets service
+      shell:
+        cmd:
+          systemctl enable kubelet && systemctl start kubelet
+      tags: kubernetes
+    ###################################################################################
+
+# install nfs server
+- hosts: nfs_server
+  remote_user: root
+
+  tasks:
+    - name: Install Linux NFS - Ubuntu
+      shell:
+        chdir: "{{dls_root_dir}}"
+        cmd: apt-get install nfs-kernel-server -y
+      when:
+        - ansible_distribution == 'Ubuntu'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      tags: nfs
+
+    - name: Install Linux NFS - CentOS
+      shell:
+        cmd:
+          yum install -y nfs-utils
+      when:
+        - ansible_distribution == 'CentOS'
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      tags: nfs
+
+    - name: Check NFS directory
+      stat:
+        path: /etc/exports
+      register: nfs_config_folder
+      tags: nfs
+
+    - name: Create nfs mount directory
+      file:
+        path: /etc/exports
+        state: directory
+      when: nfs_config_folder.stat.exists == false
+      tags: nfs
+
+    - name: Check NFS directory
+      stat:
+        path: "{{nfs_shared_dir}}"
+      register: nfs_mount_folder
+      tags: nfs
+
+    - name: Create nfs mount directory
+      file:
+        path: "{{nfs_shared_dir}}"
+        state: directory
+      when: nfs_mount_folder.stat.exists == false
+      tags: nfs
+
+    - name: Set right
+      shell:
+        cmd:
+          chmod 755 {{nfs_shared_dir}};
+          chown hwMindX:hwMindX {{nfs_shared_dir}}
+      tags: nfs
+
+    - name: Add NFS config info
+      lineinfile:
+        path: /etc/exports
+        line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
+        state: present
+      tags: nfs
+
+    # start service
+    - name: Start rpcbind service
+      shell:
+        cmd:
+          systemctl start rpcbind;
+          systemctl enable rpcbind
+      tags: nfs
+
+    - name: Start NFS service - Ubuntu
+      shell:
+        cmd:
+          systemctl start nfs-server;
+          systemctl enable nfs-server;
+          systemctl restart nfs-kernel-server
+      tags: nfs
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Start NFS service - CentOS
+      shell:
+        cmd:
+          systemctl enable nfs;
+          systemctl start nfs
+      tags: nfs
+      when:
+        - ansible_distribution == 'CentOS'

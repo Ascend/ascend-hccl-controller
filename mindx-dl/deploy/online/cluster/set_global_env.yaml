@@ -1,0 +1,127 @@
+---
+# This playbook is used to modify system configurations on the master and worker nodes before all deployment.
+# Make sure that this script is executed first.
+
+- hosts: cluster
+  remote_user: root
+
+  tasks:
+    - name: Close firewall - Ubuntu
+      shell:
+        cmd:
+          ufw disable
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install selinux - CentOS
+      shell:
+        cmd:
+          yum install -y libselinux-python3 libselinux-python;
+          pip3.7 install selinux
+      environment:
+        http_proxy: "{{proxy}}"
+        https_proxy: "{{proxy}}"
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close firwall - CentOS
+      shell:
+        cmd:
+          systemctl stop firewalld.service;
+          systemctl disable firewalld.service
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close SELinux - CentOS
+      shell:
+        cmd:
+          setenforce 0;
+          sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config;
+          sysctl --system
+      when:
+        - ansible_distribution == 'CentOS'
+
+    # delete router forward config
+    - name: Delete restrictive forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        regexp: "net.ipv4.ip_forward(.*)=(.*)0"
+        state: absent
+
+    # add router forward config
+    - name: Allow packet forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "net.ipv4.ip_forward = 1"
+        state: present
+
+    - name: Allow packet forwarding next
+      lineinfile:
+        path: /etc/rc.local
+        line: "/usr/sbin/iptables -P FORWARD ACCEPT"
+        create: yes
+
+    - name: Network config
+      blockinfile:
+        path: /etc/sysctl.d/k8s.conf
+        block: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+        create: yes
+
+    # close swap and remove swap mount
+    - name: Network config step && Close swap && Remove swap mount
+      shell:
+        cmd:
+          modprobe br_netfilter;
+          swapoff -a;
+          sed -i 's/.*swap.*/#&/' /etc/fstab;
+
+    # find no_proxy var
+    - name: register var
+      shell: grep "export no_proxy" /etc/profile
+      ignore_errors: True
+      register: has_no_proxy_var
+      tags: init-master
+
+    # add when no_proxy exists
+    - name: Set no proxy ip
+      replace:
+        path: /etc/profile
+        regexp: '(export no_proxy)(.*)'
+        replace: '\1\2,{{ master_ip }}'
+      when: has_no_proxy_var.stdout != ""
+      tags: init-master
+
+    # create no_proxy when no_proxy exists
+    - name: Add no proxy ip
+      lineinfile:
+        path: /etc/profile
+        line: 'export no_proxy={{ master_ip }}'
+      when: has_no_proxy_var.stdout == ""
+      tags: init-master
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile
+      args:
+        executable: "/bin/bash"
+      tags: init-master
+
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          usermod -a -G HwHiAiUser hwMindX
+
+- hosts: nfs_server
+  remote_user: root
+
+  tasks:
+  - name: Add User
+    shell:
+      cmd:
+        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+        useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
+        usermod -a -G HwHiAiUser hwMindX

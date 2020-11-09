@@ -1,0 +1,77 @@
+---
+# This playbook is used to cleaning up services.
+
+- hosts: master
+  remote_user: root
+  vars:
+    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+
+  tasks:
+  - name: remove volcano
+    shell:
+      chdir: "{{deploy_yaml_dir}}"
+      cmd:
+        kubectl delete -f volcano-*.yaml
+    tags: volcano
+    ignore_errors: yes
+
+  - name: remove cadvisor
+    shell:
+      chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
+      cmd:
+        kubectl delete -k huawei
+    tags: cadvisor
+    ignore_errors: yes
+
+  - name: remove hccl-controller
+    shell:
+      chdir: "{{deploy_yaml_dir}}"
+      cmd:
+        kubectl delete -f hccl-controller.yaml
+    tags: hccl-controller
+    ignore_errors: yes
+
+  - name: remove device-plugin
+    shell:
+      chdir: "{{deploy_yaml_dir}}"
+      cmd:
+        kubectl delete -f ascendplugin-310.yaml;
+        kubectl delete -f ascendplugin-volcano.yaml
+    tags: device-plugin
+    ignore_errors: yes
+
+  - name: Check whether all service component services are terminated
+    shell:
+      cmd:
+        kubectl get pods --all-namespaces -o wide
+        | grep Terminating >/dev/null 2>&1;
+        echo $?
+    register: return_value
+    until: "'1' in return_value.stdout"
+    retries: 6
+    delay: 5
+    ignore_errors: yes
+
+  - name: remove go tar file
+    file:
+      path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+      state: absent
+    ignore_errors: yes
+
+- hosts: workers
+  remote_user: root
+
+  tasks:
+    - name: remove go tar file
+      file:
+        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
+        state: absent
+      ignore_errors: yes
+
+    - name: remove docker deb file
+      file:
+        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        state: absent
+      when: ansible_distribution == 'Ubuntu'
+      ignore_errors: yes
+

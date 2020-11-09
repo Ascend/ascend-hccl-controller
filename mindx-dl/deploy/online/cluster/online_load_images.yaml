@@ -1,0 +1,478 @@
+---
+- hosts: master
+  remote_user: root
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
+    - name: Pull kubernetes basic images - arm64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - cruse/kube-apiserver-arm64:v1.17.3
+        - cruse/kube-controller-manager-arm64:v1.17.3
+        - cruse/kube-scheduler-arm64:v1.17.3-beta.0
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+        - cruse/etcd-arm64:3.4.3-0
+        - coredns/coredns:1.6.5
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
+      when: ansible_architecture == "aarch64"
+      tags: always
+
+    - name: Pull kubernetes basic images - x86_64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - kubesphere/kube-apiserver:v1.17.3
+        - kubesphere/kube-controller-manager:v1.17.3
+        - kubesphere/kube-scheduler:v1.17.3
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+        - cruse/etcd-amd64:3.4.3-0
+        - coredns/coredns:1.6.5
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
+      when: ansible_architecture == "x86_64"
+      tags: always
+
+    - name: Tag images - arm64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - cruse/kube-apiserver-arm64:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - cruse/kube-controller-manager-arm64:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - cruse/kube-scheduler-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-scheduler:v1.17.3
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-arm64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+      when: ansible_architecture == "aarch64"
+      tags: always
+
+    - name: Tag images - x86_64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - kubesphere/kube-apiserver:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - kubesphere/kube-controller-manager:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - kubesphere/kube-scheduler:v1.17.3 k8s.gcr.io/kube-scheduler:v1.17.3
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-amd64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+      when: ansible_architecture == "x86_64"
+      tags: always
+
+    # ======================= Don't use ascend-hub ===========================
+    - name: Load mindx images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < {{item}}
+      with_items:
+        - vc-controller-manager_arm64.tar.gz
+        - vc-scheduler_arm64.tar.gz
+        - vc-webhook-manager_arm64.tar.gz
+        - hccl-controller_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+      tags:
+        - no_ascend-hub
+
+    - name: Load mindx images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < {{item}}
+      with_items:
+        - vc-controller-manager_amd64.tar.gz
+        - vc-scheduler_amd64.tar.gz
+        - vc-webhook-manager_amd64.tar.gz
+        - hccl-controller_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+      tags:
+        - no_ascend-hub
+    # ========================================================================
+
+    # =========================== Use ascend-hub =============================
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags:
+        - ascend-hub
+
+    - name: Restart docker service
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker
+      tags:
+        - ascend-hub
+
+    - name: Ascend-hub docker login
+      shell:
+        cmd:
+          "{{ascendhub_login_command}}"
+      tags:
+        - ascend-hub
+
+    - name: Pull mindx images - arm64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - vc-controller-manager_arm64:{{volcano_version}}
+        - vc-scheduler_arm64:{{volcano_version}}
+        - vc-webhook-manager_arm64:{{volcano_version}}
+        - hccl-controller_arm64:{{hccl_version}}
+      when: ansible_architecture == "aarch64"
+      tags:
+        - ascend-hub
+
+    - name: Pull mindx images - x86_64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - vc-controller-manager_amd64:{{volcano_version}}
+        - vc-scheduler_amd64:{{volcano_version}}
+        - vc-webhook-manager_amd64:{{volcano_version}}
+        - hccl-controller_amd64:{{hccl_version}}
+      when: ansible_architecture == "x86_64"
+      tags:
+        - ascend-hub
+
+    - name: Tag mindx images - arm64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - "vc-controller-manager_arm64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
+        - "vc-scheduler_arm64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
+        - "vc-webhook-manager_arm64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "hccl-controller_arm64:{{hccl_version}} hccl-controller:{{hccl_version}}"
+      when: ansible_architecture == "aarch64"
+      tags:
+        - ascend-hub
+
+    - name: Tag mindx images - x86_64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - "vc-controller-manager_amd64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
+        - "vc-scheduler_amd64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
+        - "vc-webhook-manager_amd64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "hccl-controller_amd64:{{hccl_version}} hccl-controller:{{hccl_version}}"
+      when: ansible_architecture == "x86_64"
+      tags:
+        - ascend-hub
+    # ========================================================================
+
+# Load docker images on worker
+- hosts: workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
+    - name: Workers pull kubernetes basic images - arm64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags: always
+
+    - name: Workers pull kubernetes basic images - x86_64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags: always
+
+    - name: Workers tag images - arm64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags: always
+
+    - name: Workers tag images - x86_64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags: always
+
+    # ======================= Don't use ascend-hub ===========================
+    - name: scp docker images from master to workers - arm64
+      copy:
+        src: "{{docker_images_dir}}/{{item}}"
+        dest: "{{docker_images_dir}}/"
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
+        - huawei-cadvisor-beta_arm64.tar.gz
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - no_ascend-hub
+
+    - name: scp docker images from master to workers - x86_64
+      copy:
+        src: "{{docker_images_dir}}/{{item}}"
+        dest: "{{docker_images_dir}}/"
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
+        - huawei-cadvisor-beta_amd64.tar.gz
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - no_ascend-hub
+
+    - name: Load images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < {{item}}
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
+        - huawei-cadvisor-beta_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+      tags:
+        - no_ascend-hub
+
+    - name: Load images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load < {{item}}
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
+        - huawei-cadvisor-beta_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+      tags:
+        - no_ascend-hub
+    # ========================================================================
+
+    # =========================== Use ascend-hub =============================
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - ascend-hub
+
+    - name: Restart docker service
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - ascend-hub
+
+    - name: Ascend-hub docker login
+      shell:
+        cmd:
+          "{{ascendhub_login_command}}"
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - ascend-hub
+
+    - name: Pull mindx images - arm64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
+        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+      when: ansible_architecture == "aarch64"
+      tags:
+        - ascend-hub
+
+    - name: Pull mindx images - x86_64
+      shell:
+        cmd:
+          docker pull {{item}}
+      with_items:
+        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
+        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+      when: ansible_architecture == "x86_64"
+      tags:
+        - ascend-hub
+
+    - name: Tag mindx images - arm64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - "ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
+        - "huawei-cadvisor-beta_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+      when: ansible_architecture == "aarch64"
+      tags:
+        - ascend-hub
+
+    - name: Tag mindx images - x86_64
+      shell:
+        cmd:
+          docker tag {{item}}
+      with_items:
+        - "ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
+        - "huawei-cadvisor-beta_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+      when: ansible_architecture == "x86_64"
+      tags:
+        - ascend-hub
+    # ========================================================================
+
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Remove redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{item}}
+      with_items:
+        - cruse/kube-apiserver-arm64:v1.17.3
+        - cruse/kube-controller-manager-arm64:v1.17.3
+        - cruse/kube-scheduler-arm64:v1.17.3-beta.0
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+        - cruse/etcd-arm64:3.4.3-0
+        - coredns/coredns:1.6.5
+        - vc-controller-manager_arm64:{{volcano_version}}
+        - vc-scheduler_arm64:{{volcano_version}}
+        - vc-webhook-manager_arm64:{{volcano_version}}
+        - hccl-controller_arm64:{{hccl_version}}
+      when: ansible_architecture == "aarch64"
+      tags: always
+      ignore_errors: yes
+
+    - name: Remove redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{item}}
+      with_items:
+        - kubesphere/kube-apiserver:v1.17.3
+        - kubesphere/kube-controller-manager:v1.17.3
+        - kubesphere/kube-scheduler:v1.17.3
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+        - cruse/etcd-amd64:3.4.3-0
+        - coredns/coredns:1.6.5
+        - vc-controller-manager_amd64:{{volcano_version}}
+        - vc-scheduler_amd64:{{volcano_version}}
+        - vc-webhook-manager_amd64:{{volcano_version}}
+        - hccl-controller_amd64:{{hccl_version}}
+      when: ansible_architecture == "x86_64"
+      tags: always
+      ignore_errors: yes
+
+- hosts: workers
+  remote_user: root
+
+  tasks:
+    - name: Workers remove redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{item}}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
+        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+      when: ansible_architecture == "aarch64"
+      tags: always
+      ignore_errors: yes
+
+    - name: Workers remove redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{item}}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
+        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+      when: ansible_architecture == "x86_64"
+      tags: always
+      ignore_errors: yes
+
