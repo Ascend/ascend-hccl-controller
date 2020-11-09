@@ -3,6 +3,7 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
+    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Pull kubernetes basic images - arm64
@@ -148,10 +149,10 @@
         cmd:
           docker pull {{item}}
       with_items:
-        - vc-controller-manager_arm64:{{volcano_version}}
-        - vc-scheduler_arm64:{{volcano_version}}
-        - vc-webhook-manager_arm64:{{volcano_version}}
-        - hccl-controller_arm64:{{hccl_version}}
+        - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -161,10 +162,10 @@
         cmd:
           docker pull {{item}}
       with_items:
-        - vc-controller-manager_amd64:{{volcano_version}}
-        - vc-scheduler_amd64:{{volcano_version}}
-        - vc-webhook-manager_amd64:{{volcano_version}}
-        - hccl-controller_amd64:{{hccl_version}}
+        - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -174,10 +175,10 @@
         cmd:
           docker tag {{item}}
       with_items:
-        - "vc-controller-manager_arm64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
-        - "vc-scheduler_arm64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
-        - "vc-webhook-manager_arm64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
-        - "hccl-controller_arm64:{{hccl_version}} hccl-controller:{{hccl_version}}"
+        - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}} hccl-controller:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -187,10 +188,10 @@
         cmd:
           docker tag {{item}}
       with_items:
-        - "vc-controller-manager_amd64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
-        - "vc-scheduler_amd64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
-        - "vc-webhook-manager_amd64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
-        - "hccl-controller_amd64:{{hccl_version}} hccl-controller:{{hccl_version}}"
+        - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}} hccl-controller:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -201,6 +202,7 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
+    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64
@@ -362,8 +364,8 @@
         cmd:
           docker pull {{item}}
       with_items:
-        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_arm64:{{cadvisor_version}}"
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -373,8 +375,8 @@
         cmd:
           docker pull {{item}}
       with_items:
-        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_amd64:{{cadvisor_version}}"
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -384,8 +386,8 @@
         cmd:
           docker tag {{item}}
       with_items:
-        - "ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -395,8 +397,8 @@
         cmd:
           docker tag {{item}}
       with_items:
-        - "ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -404,6 +406,8 @@
 
 - hosts: master
   remote_user: root
+  vars:
+    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Remove redundant images - arm64
@@ -418,10 +422,10 @@
         - cruse/pause-arm64:3.1
         - cruse/etcd-arm64:3.4.3-0
         - coredns/coredns:1.6.5
-        - vc-controller-manager_arm64:{{volcano_version}}
-        - vc-scheduler_arm64:{{volcano_version}}
-        - vc-webhook-manager_arm64:{{volcano_version}}
-        - hccl-controller_arm64:{{hccl_version}}
+        - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags: always
       ignore_errors: yes
@@ -438,16 +442,18 @@
         - kubesphere/pause:3.1
         - cruse/etcd-amd64:3.4.3-0
         - coredns/coredns:1.6.5
-        - vc-controller-manager_amd64:{{volcano_version}}
-        - vc-scheduler_amd64:{{volcano_version}}
-        - vc-webhook-manager_amd64:{{volcano_version}}
-        - hccl-controller_amd64:{{hccl_version}}
+        - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags: always
       ignore_errors: yes
 
 - hosts: workers
   remote_user: root
+  vars:
+    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers remove redundant images - arm64
@@ -457,8 +463,8 @@
       with_items:
         - cruse/kube-proxy-arm64:v1.17.3-beta.0
         - cruse/pause-arm64:3.1
-        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_arm64:{{cadvisor_version}}"
       when: ansible_architecture == "aarch64"
       tags: always
       ignore_errors: yes
@@ -470,8 +476,8 @@
       with_items:
         - kubesphere/kube-proxy:v1.17.3
         - kubesphere/pause:3.1
-        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_amd64:{{cadvisor_version}}"
       when: ansible_architecture == "x86_64"
       tags: always
       ignore_errors: yes
