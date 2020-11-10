@@ -28,6 +28,7 @@
     shell:
       chdir: "{{deploy_yaml_dir}}"
       cmd:
+        kubectl delete -f rbac.yaml;
         kubectl delete -f hccl-controller.yaml
     tags: hccl-controller
     ignore_errors: yes
