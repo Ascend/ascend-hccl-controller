@@ -60,7 +60,8 @@ function mv_file()
 function build_docker_image() {
     cp ${TOP_DIR}/build/${DOCKER_FILE_NAME}     ${TOP_DIR}/output
     cd ${TOP_DIR}/output
-    docker build -t ${docker_images_name} .
+    docker rmi ${docker_images_name} || true
+    docker build -t ${docker_images_name} --no-cache .
     docker save ${docker_images_name} | gzip > ${docker_zip_name}
     rm -f ${DOCKER_FILE_NAME}
 }
