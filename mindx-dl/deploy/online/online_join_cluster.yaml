@@ -45,6 +45,7 @@
         cmd:
           systemctl stop firewalld.service;
           systemctl disable firewalld.service
+      ignore_errors: True
       when:
         - ansible_distribution == 'CentOS'
 
@@ -106,7 +107,9 @@
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
         replace: '\1\2,{{ master_ip }}'
-      when: has_no_proxy_var.stdout != ""
+      when:
+        - has_no_proxy_var.stdout != ""
+        - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
       tags: init-master
 
     # create no_proxy when no_proxy exists
@@ -469,6 +472,7 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
+    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64
@@ -628,10 +632,10 @@
     - name: Pull mindx images - arm64
       shell:
         cmd:
-          docker pull {{item}}
+          docker pull {{ascend_hub_prefix}}/{{item}}
       with_items:
         - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - cadvisor_arm64:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -639,10 +643,10 @@
     - name: Pull mindx images - x86_64
       shell:
         cmd:
-          docker pull {{item}}
+          docker pull {{ascend_hub_prefix}}/{{item}}
       with_items:
         - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - cadvisor_amd64:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -650,10 +654,10 @@
     - name: Tag mindx images - arm64
       shell:
         cmd:
-          docker tag {{item}}
+          docker tag {{ascend_hub_prefix}}/{{item}}
       with_items:
-        - "ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}
+        - cadvisor_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
         - ascend-hub
@@ -661,10 +665,10 @@
     - name: Tag mindx images - x86_64
       shell:
         cmd:
-          docker tag {{item}}
+          docker tag {{ascend_hub_prefix}}/{{item}}
       with_items:
-        - "ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}
+        - cadvisor_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
         - ascend-hub
@@ -676,8 +680,8 @@
       with_items:
         - cruse/kube-proxy-arm64:v1.17.3-beta.0
         - cruse/pause-arm64:3.1
-        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_arm64:{{cadvisor_version}}"
       when: ansible_architecture == "aarch64"
       tags: always
       ignore_errors: yes
@@ -689,8 +693,8 @@
       with_items:
         - kubesphere/kube-proxy:v1.17.3
         - kubesphere/pause:3.1
-        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - "{{ascend_hub_prefix}}/ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}"
+        - "{{ascend_hub_prefix}}/cadvisor_amd64:{{cadvisor_version}}"
       when: ansible_architecture == "x86_64"
       tags: always
       ignore_errors: yes
