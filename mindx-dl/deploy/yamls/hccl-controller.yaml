@@ -31,17 +31,12 @@ spec:
         volumeMounts:
           - name: device-hcclcontroller
             mountPath: /var/log/atlas_dls/hccl-controller
-          - name: timezone
-            mountPath: /etc/timezone
           - name: localtime
             mountPath: /etc/localtime
       volumes:
         - name: device-hcclcontroller
           hostPath:
             path: /var/log/atlas_dls/hccl-controller
-        - name: timezone
-          hostPath:
-            path: /etc/timezone
         - name: localtime
           hostPath:
             path: /etc/localtime
