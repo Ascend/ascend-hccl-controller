@@ -1,0 +1,256 @@
+# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+---
+# This playbook is used to initialize the K8S cluster.
+# Before running this script, ensure that Docker has been installed and the basic image of K8S has been imported.
+
+- hosts: cluster
+  remote_user: root
+
+  tasks:
+    - name: unset proxy
+      shell:
+        cmd:
+          unset http_proxy https_proxy
+      tags: common
+
+# init master
+- hosts: master
+  remote_user: root
+  vars:
+    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+
+  tasks:
+    - name: reset k8s
+      shell:
+        cmd:
+          kubeadm reset -f;
+          rm -rf /etc/cni/net.d /root/.kube/
+      tags: init-master
+
+    - name: Init cluster
+      shell:
+        cmd:
+          kubeadm init --kubernetes-version=v1.17.3
+            --node-name={{ansible_hostname}}
+            --pod-network-cidr=192.168.0.0/16
+            --apiserver-advertise-address={{ master_ip }}
+      tags: init-master
+
+    - name: Set kubernetes config file
+      shell:
+        cmd:
+          mkdir -p $HOME/.kube;
+          cp -f /etc/kubernetes/admin.conf $HOME/.kube/config;
+          chown $(id -u):$(id -g) $HOME/.kube/config
+      tags: init-master
+
+    # apply deploy/yaml/calico.yaml
+    - name: Apply calico yaml file
+      shell:
+        chdir: "{{deploy_yaml_dir}}"
+        cmd:
+          kubectl apply -f calico.yaml
+      tags: init-master
+
+    # use command: kubectl get pods -n kube-system
+    # it's successful for releasing node if pod status is "Running"
+    - name: Release master node quarantine
+      shell:
+        cmd:
+          kubectl taint nodes --all node-role.kubernetes.io/master-
+      tags: init-master
+
+    # add kubeconfig file.  Replaces it if exists or add it if not exists.
+    - name: Add kubeconfig file
+      lineinfile:
+        path: /etc/profile
+        regexp: 'export KUBECONFIG(.*)=(.*)/etc'
+        line: 'export KUBECONFIG=/etc/kubernetes/admin.conf'
+      tags: init-master
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile
+      args:
+        executable: "/bin/bash"
+      tags: init-master
+
+    - name: Label master node
+      shell:
+        cmd:
+          kubectl label nodes {{ansible_hostname}} masterselector=dls-master-node
+      tags: init-master
+
+
+# print join cluster command
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Register join commomd
+      shell:
+        cmd:
+          kubeadm token create --print-join-command
+      register: join_command
+      tags: init-workers
+
+    - name: Print join cluster command
+      debug: var=join_command.stdout
+      tags: init-workers
+
+
+# init workers
+- hosts: workers
+  remote_user: root
+  vars_prompt:
+    - name: "join_cluster_command"
+      prompt: "Input the command shown above for adding to the cluster"
+      default: ""
+      private: no
+
+  tasks:
+    - name: Check join cluster command
+      fail:
+        msg: "The command you entered for adding to the cluster is incorrect. Please enter the command shown above for adding to the cluster."
+      when:
+        - not join_cluster_command.startswith('kubeadm join')
+
+    - name: reset k8s
+      shell:
+        cmd:
+          kubeadm reset -f;
+          rm -rf /etc/cni/net.d /root/.kube/
+      tags: init-master
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+      ignore_errors: True
+
+    - name: Join into cluster
+      shell:
+        cmd: "{{join_cluster_command}}"
+      tags: init-workers
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    # copy local admin.conf to workers
+    - name: copy local kubelet.conf to workers
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /etc/kubernetes/
+        force: yes
+      tags: init-workers
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Replace config
+      shell:
+        cmd:
+          mkdir -p ~/.kube;
+          cp -f /etc/kubernetes/admin.conf ~/.kube/config
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Delete config
+      lineinfile:
+        path: /etc/profile
+        line: "export KUBECONFIG=/etc/kubernetes/kubelet.conf"
+        state: absent
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Add config
+      lineinfile:
+        path: /etc/profile
+        line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
+        state: present
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile;
+          systemctl daemon-reload;
+          systemctl restart kubelet
+      args:
+        executable: "/bin/bash"
+      tags: init-workers
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Label training nodes - arm64
+      shell:
+        cmd:
+          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
+      tags: init-workers
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_hostname in groups['training_node']
+
+    - name: Label training nodes - x86_64
+      shell:
+        cmd:
+          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
+      tags: init-workers
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_hostname in groups['training_node']
+
+    - name: Label inference nodes - arm64
+      shell:
+        cmd:
+          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
+      tags: init-workers
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_hostname in groups['inference_node']
+
+    - name: Label inference nodes - x86_64
+      shell:
+        cmd:
+          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
+          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
+      tags: init-workers
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_hostname in groups['inference_node']
+
+    - name: Replace config
+      shell:
+        cmd:
+          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Add worker kubeconfig file
+      lineinfile:
+        path: /etc/profile
+        regexp: 'export KUBECONFIG(.*)=(.*)/etc'
+        line: 'export KUBECONFIG=/etc/kubernetes/kubelet.conf'
+      tags: init-workers
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile;
+          systemctl daemon-reload;
+          systemctl restart kubelet
+      args:
+        executable: "/bin/bash"
+      tags: init-workers
+      when:
+        - ansible_default_ipv4['address'] != master_ip
