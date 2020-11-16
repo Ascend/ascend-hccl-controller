@@ -1,4 +1,4 @@
-# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 - hosts: new_node
   remote_user: root
