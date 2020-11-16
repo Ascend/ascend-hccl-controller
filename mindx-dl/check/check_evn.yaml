@@ -1,0 +1,11 @@
+---
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Check master kubernetes version
+      shell:
+        cmd:
+
+      when:
+        - ansible_distribution == 'Ubuntu'
