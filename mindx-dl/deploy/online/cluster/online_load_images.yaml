@@ -75,69 +75,7 @@
       when: ansible_architecture == "x86_64"
       tags: always
 
-    # ======================= Don't use ascend-hub ===========================
-    - name: Load mindx images - arm64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - vc-controller-manager_arm64.tar.gz
-        - vc-scheduler_arm64.tar.gz
-        - vc-webhook-manager_arm64.tar.gz
-        - hccl-controller_arm64.tar.gz
-      when: ansible_architecture == "aarch64"
-      tags:
-        - no_ascend-hub
-
-    - name: Load mindx images - x86_64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - vc-controller-manager_amd64.tar.gz
-        - vc-scheduler_amd64.tar.gz
-        - vc-webhook-manager_amd64.tar.gz
-        - hccl-controller_amd64.tar.gz
-      when: ansible_architecture == "x86_64"
-      tags:
-        - no_ascend-hub
-    # ========================================================================
-
     # =========================== Use ascend-hub =============================
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "swr.cn-south-1.myhuaweicloud.com"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-            },
-            "default-runtime": "ascend"
-          }
-          EOF
-      tags:
-        - ascend-hub
-
-    - name: Restart docker service
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker
-      tags:
-        - ascend-hub
-
     - name: Ascend-hub docker login
       shell:
         cmd:
@@ -262,59 +200,7 @@
         - ansible_default_ipv4['address'] != master_ip
       tags: always
 
-    # ======================= Don't use ascend-hub ===========================
-    - name: scp docker images from master to workers - arm64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: scp docker images from master to workers - x86_64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - arm64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
-      when: ansible_architecture == "aarch64"
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - x86_64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
-      when: ansible_architecture == "x86_64"
-      tags:
-        - no_ascend-hub
-    # ========================================================================
-
-    # =========================== Use ascend-hub =============================
+    # =========================== Use ascend-docker ==========================
     - name: Modify docker runtime
       shell:
         cmd: |
@@ -337,20 +223,18 @@
             "default-runtime": "ascend"
           }
           EOF
-      when:
-        - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - ascend-docker
 
     - name: Restart docker service
       shell:
         cmd:
           systemctl daemon-reload && systemctl restart docker
-      when:
-        - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - ascend-docker
+    # ========================================================================
 
+    # =========================== Use ascend-hub =============================
     - name: Ascend-hub docker login
       shell:
         cmd:

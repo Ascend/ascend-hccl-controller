@@ -24,7 +24,6 @@
       when:
         - ansible_distribution == 'Ubuntu'
       tags:
-        - go
         - kubernetes
         - nfs
         - docker
@@ -42,76 +41,9 @@
       when:
         - ansible_distribution == 'CentOS'
       tags:
-        - go
         - kubernetes
         - nfs
         - docker
-
-    ############################## Install Go #########################################
-    - name: Go tar file status
-      stat:
-        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-      register: go_file_status
-      tags: go
-
-    - name: Download go tar file - arm64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Download go tar file - x86_64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Unzip go tar file
-      unarchive:
-        src: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        dest: /usr/local
-        remote_src: yes
-      tags: go
-
-    # configure the Go environment
-    - name: Add Go ENV
-      blockinfile:
-        path: /etc/profile
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Add Go ENV for non-login shell
-      blockinfile:
-        path: ~/.bashrc
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Enable config
-      shell:
-        cmd:
-          source /etc/profile;
-      args:
-        executable: "/bin/bash"
-      tags: go
-    ###################################################################################
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
@@ -200,17 +132,9 @@
             "registry-mirrors": ["https://dockerhub.azk8s.cn",
                                  "https://docker.mirrors.ustc.edu.cn",
                                  "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-            },
-            "default-runtime": "ascend"
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"]
           }
           EOF
       tags: always

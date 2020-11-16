@@ -54,22 +54,10 @@
     delay: 5
     ignore_errors: yes
 
-  - name: remove go tar file
-    file:
-      path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-      state: absent
-    ignore_errors: yes
-
 - hosts: workers
   remote_user: root
 
   tasks:
-    - name: remove go tar file
-      file:
-        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        state: absent
-      ignore_errors: yes
-
     - name: remove docker deb file
       file:
         path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"

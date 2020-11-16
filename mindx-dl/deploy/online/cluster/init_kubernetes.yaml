@@ -82,12 +82,6 @@
           kubectl label nodes {{ansible_hostname}} masterselector=dls-master-node
       tags: init-master
 
-
-# print join cluster command
-- hosts: master
-  remote_user: root
-
-  tasks:
     - name: Register join commomd
       shell:
         cmd:
@@ -95,27 +89,16 @@
       register: join_command
       tags: init-workers
 
-    - name: Print join cluster command
-      debug: var=join_command.stdout
-      tags: init-workers
-
+    - name: Set join facts
+      add_host:
+        name: "KUBERNETES_JOIN_COMMAND"
+        join_command: "{{join_command.stdout}}"
 
 # init workers
 - hosts: workers
   remote_user: root
-  vars_prompt:
-    - name: "join_cluster_command"
-      prompt: "Input the command shown above for adding to the cluster"
-      default: ""
-      private: no
 
   tasks:
-    - name: Check join cluster command
-      fail:
-        msg: "The command you entered for adding to the cluster is incorrect. Please enter the command shown above for adding to the cluster."
-      when:
-        - not join_cluster_command.startswith('kubeadm join')
-
     - name: reset k8s
       shell:
         cmd:
@@ -128,7 +111,8 @@
 
     - name: Join into cluster
       shell:
-        cmd: "{{join_cluster_command}}"
+        cmd:
+          unset http_proxy https_proxy && hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"]
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
@@ -182,6 +166,7 @@
     - name: Label training nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -194,6 +179,7 @@
     - name: Label training nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -206,6 +192,7 @@
     - name: Label inference nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
@@ -218,6 +205,7 @@
     - name: Label inference nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
