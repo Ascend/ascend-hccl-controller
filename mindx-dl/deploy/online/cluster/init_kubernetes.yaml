@@ -112,7 +112,7 @@
     - name: Join into cluster
       shell:
         cmd:
-          unset http_proxy https_proxy && hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"]
+          unset http_proxy https_proxy && {{hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"]}}
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
