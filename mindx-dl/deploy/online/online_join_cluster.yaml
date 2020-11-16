@@ -1,23 +1,4 @@
 # Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
-# Please Read the following instructions first.
-#
-# use command to run this yaml:
-#   ansible-playbook --skip-tags="" online_join_cluster.yaml
-#
-#   params:
-#     skip-tags
-#     The "skip-tags" parameter consists of the following two parts:
-#     1. (Optional)don't install software list.
-#        Four options:
-#          kubernetes/go/nfs/docker
-#        For example:
-#         --skip-tags="kubernetes,docker" will install nfs,go but dont' install kubernetes，docker
-#         --skip-tags="" will install kubernetes/go/nfs/docker
-#     2. (required)choose one method to get mindx-dl images.
-#         Tow options:
-#           no_ansible-hub/ansible-hub.
-#        If skip-tags contains "no_ascend-hub",playbook will use "no_ascend-hub" to get images, otherwise, use "ascend-hub".
-
 ---
 - hosts: new_node
   remote_user: root
@@ -157,7 +138,6 @@
       when:
         - ansible_distribution == 'Ubuntu'
       tags:
-        - go
         - kubernetes
         - nfs
         - docker
@@ -175,76 +155,9 @@
       when:
         - ansible_distribution == 'CentOS'
       tags:
-        - go
         - kubernetes
         - nfs
         - docker
-
-    ############################## Install Go #########################################
-    - name: Go tar file status
-      stat:
-        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-      register: go_file_status
-      tags: go
-
-    - name: Download go tar file - arm64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Download go tar file - x86_64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Unzip go tar file
-      unarchive:
-        src: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        dest: /usr/local
-        remote_src: yes
-      tags: go
-
-    # configure the Go environment
-    - name: Add Go ENV
-      blockinfile:
-        path: /etc/profile
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Add Go ENV for non-login shell
-      blockinfile:
-        path: ~/.bashrc
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Enable config
-      shell:
-        cmd:
-          source /etc/profile;
-      args:
-        executable: "/bin/bash"
-      tags: go
-    ###################################################################################
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
@@ -325,6 +238,7 @@
         state: directory
       tags: docker
 
+    # =========================== Use ascend-docker ==========================
     - name: Modify docker runtime
       shell:
         cmd: |
@@ -333,7 +247,8 @@
             "registry-mirrors": ["https://dockerhub.azk8s.cn",
                                  "https://docker.mirrors.ustc.edu.cn",
                                  "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
             "exec-opts": ["native.cgroupdriver=systemd"],
             "runtimes":
             {
@@ -342,11 +257,12 @@
                 "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
                 "runtimeArgs": []
               }
-                  },
-                  "default-runtime": "ascend"
-                }
-                EOF
-      tags: always
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags:
+        - ascend-docker
 
     - name: Effect modification for docker
       shell:
@@ -531,95 +447,7 @@
         - ansible_default_ipv4['address'] != master_ip
       tags: always
 
-    # ======================= Don't use ascend-hub ===========================
-    - name: scp docker images from master to workers - arm64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: scp docker images from master to workers - x86_64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - arm64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
-      when: ansible_architecture == "aarch64"
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - x86_64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
-      when: ansible_architecture == "x86_64"
-      tags:
-        - no_ascend-hub
-    # ========================================================================
-
     # =========================== Use ascend-hub =============================
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "swr.cn-south-1.myhuaweicloud.com"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-            },
-            "default-runtime": "ascend"
-          }
-          EOF
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - ascend-hub
-
-    - name: Restart docker service
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - ascend-hub
-
     - name: Ascend-hub docker login
       shell:
         cmd:
@@ -712,9 +540,10 @@
       register: join_command
       tags: init-workers
 
-    - name: Print join cluster command
-      debug: var=join_command.stdout
-      tags: init-workers
+    - name: Set join facts
+      add_host:
+        name: "KUBERNETES_JOIN_COMMAND"
+        join_command: "{{join_command.stdout}}"
 
 
 # init workers
@@ -727,12 +556,6 @@
       private: no
 
   tasks:
-    - name: Check join cluster command
-      fail:
-        msg: "The command you entered for adding to the cluster is incorrect. Please enter the command shown above for adding to the cluster."
-      when:
-        - not join_cluster_command.startswith('kubeadm join')
-
     - name: reset k8s
       shell:
         cmd:
@@ -745,7 +568,8 @@
 
     - name: Join into cluster
       shell:
-        cmd: "{{join_cluster_command}}"
+        cmd:
+          unset http_proxy https_proxy && {{hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"]}}
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
@@ -799,6 +623,7 @@
     - name: Label training nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -811,6 +636,7 @@
     - name: Label training nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -823,6 +649,7 @@
     - name: Label inference nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
@@ -835,6 +662,7 @@
     - name: Label inference nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
