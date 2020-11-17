@@ -388,7 +388,6 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
-    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64

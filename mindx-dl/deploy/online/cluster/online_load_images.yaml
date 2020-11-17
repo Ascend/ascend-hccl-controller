@@ -4,7 +4,6 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
-    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Pull kubernetes basic images - arm64
@@ -24,7 +23,8 @@
         - calico/cni:v3.11.3
         - calico/kube-controllers:v3.11.3
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Pull kubernetes basic images - x86_64
       shell:
@@ -43,7 +43,8 @@
         - calico/cni:v3.11.3
         - calico/kube-controllers:v3.11.3
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Tag images - arm64
       shell:
@@ -58,7 +59,8 @@
         - cruse/etcd-arm64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
         - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Tag images - x86_64
       shell:
@@ -73,7 +75,8 @@
         - cruse/etcd-amd64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
         - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags:
+        - kubernetes_basic
 
     # =========================== Use ascend-hub =============================
     - name: Ascend-hub docker login
@@ -81,7 +84,7 @@
         cmd:
           "{{ascendhub_login_command}}"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - arm64
       shell:
@@ -91,10 +94,11 @@
         - vc-controller-manager_arm64:{{volcano_version}}
         - vc-scheduler_arm64:{{volcano_version}}
         - vc-webhook-manager_arm64:{{volcano_version}}
+        - vc-webhook-manager-base_arm64:{{volcano_version}}
         - hccl-controller_arm64:{{hccl_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - x86_64
       shell:
@@ -104,10 +108,11 @@
         - vc-controller-manager_amd64:{{volcano_version}}
         - vc-scheduler_amd64:{{volcano_version}}
         - vc-webhook-manager_amd64:{{volcano_version}}
+        - vc-webhook-manager-base_amd64:{{volcano_version}}
         - hccl-controller_amd64:{{hccl_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - arm64
       shell:
@@ -117,10 +122,11 @@
         - vc-controller-manager_arm64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}
         - vc-scheduler_arm64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}
         - vc-webhook-manager_arm64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}
+        - vc-webhook-manager-base_arm64:{{volcano_version}} volcanosh/vc-webhook-manager-base:{{volcano_version}}
         - hccl-controller_arm64:{{hccl_version}} hccl-controller:{{hccl_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - x86_64
       shell:
@@ -130,10 +136,11 @@
         - vc-controller-manager_amd64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}
         - vc-scheduler_amd64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}
         - vc-webhook-manager_amd64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}
+        - vc-webhook-manager-base_amd64:{{volcano_version}} volcanosh/vc-webhook-manager-base:{{volcano_version}}
         - hccl-controller_amd64:{{hccl_version}} hccl-controller:{{hccl_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
     # ========================================================================
 
 # Load docker images on worker
@@ -141,7 +148,6 @@
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
-    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64
@@ -158,7 +164,8 @@
       when:
         - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers pull kubernetes basic images - x86_64
       shell:
@@ -174,7 +181,8 @@
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers tag images - arm64
       shell:
@@ -186,7 +194,8 @@
       when:
         - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers tag images - x86_64
       shell:
@@ -198,7 +207,8 @@
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     # =========================== Use ascend-docker ==========================
     - name: Modify docker runtime
@@ -242,7 +252,7 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - arm64
       shell:
@@ -253,7 +263,7 @@
         - cadvisor_arm64:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - x86_64
       shell:
@@ -264,7 +274,7 @@
         - cadvisor_amd64:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - arm64
       shell:
@@ -275,7 +285,7 @@
         - cadvisor_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - x86_64
       shell:
@@ -286,13 +296,11 @@
         - cadvisor_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
     # ========================================================================
 
 - hosts: master
   remote_user: root
-  vars:
-    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Remove redundant images - arm64
@@ -310,6 +318,7 @@
         - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags: always
@@ -330,6 +339,7 @@
         - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags: always
@@ -337,8 +347,6 @@
 
 - hosts: workers
   remote_user: root
-  vars:
-    ascend_hub_prefix: "swr.cn-south-1.myhuaweicloud.com/public-ascendhub"
 
   tasks:
     - name: Workers remove redundant images - arm64
