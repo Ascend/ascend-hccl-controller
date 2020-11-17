@@ -153,9 +153,9 @@
           docker pull {{item}}
       with_items:
         - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags:
@@ -167,9 +167,9 @@
           docker pull {{item}}
       with_items:
         - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags:
@@ -181,9 +181,9 @@
           docker tag {{item}}
       with_items:
         - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_arm64:{{volcano_version}} volcanosh/vc-controller-manager-base:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_arm64:{{volcano_version}} volcanosh/vc-webhook-manager-base:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}} hccl-controller:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags:
@@ -195,9 +195,9 @@
           docker tag {{item}}
       with_items:
         - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}} volcanosh/vc-controller-manager:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_amd64:{{volcano_version}} volcanosh/vc-controller-manager-base:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}} volcanosh/vc-scheduler:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}} volcanosh/vc-webhook-manager:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_amd64:{{volcano_version}} volcanosh/vc-webhook-manager-base:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}} hccl-controller:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags:
@@ -430,9 +430,9 @@
         - cruse/etcd-arm64:3.4.3-0
         - coredns/coredns:1.6.5
         - "{{ascend_hub_prefix}}/vc-controller-manager_arm64:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_arm64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_arm64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_arm64:{{hccl_version}}"
       when: ansible_architecture == "aarch64"
       tags: always
@@ -451,9 +451,9 @@
         - cruse/etcd-amd64:3.4.3-0
         - coredns/coredns:1.6.5
         - "{{ascend_hub_prefix}}/vc-controller-manager_amd64:{{volcano_version}}"
-        - "{{ascend_hub_prefix}}/vc-controller-manager-base_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-scheduler_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/vc-webhook-manager_amd64:{{volcano_version}}"
+        - "{{ascend_hub_prefix}}/vc-webhook-manager-base_amd64:{{volcano_version}}"
         - "{{ascend_hub_prefix}}/hccl-controller_amd64:{{hccl_version}}"
       when: ansible_architecture == "x86_64"
       tags: always
