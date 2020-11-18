@@ -313,7 +313,7 @@
         cmd:
           docker load < {{item}}
       with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
         - huawei-cadvisor-beta-{{cadvisor_version}}-arm64.tar.gz
       when: ansible_architecture == "aarch64"
       tags:
@@ -325,7 +325,7 @@
         cmd:
           docker load < {{item}}
       with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
         - huawei-cadvisor-beta-{{cadvisor_version}}-amd64.tar.gz
       when: ansible_architecture == "x86_64"
       tags:
