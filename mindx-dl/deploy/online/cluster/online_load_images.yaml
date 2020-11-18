@@ -76,35 +76,47 @@
       tags: always
 
     # ======================= Don't use ascend-hub ===========================
-    - name: Load mindx images - arm64
+    - name: Load Volcano images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
-          docker load < {{item}}
-      with_items:
-        - vc-controller-manager_arm64.tar.gz
-        - vc-scheduler_arm64.tar.gz
-        - vc-webhook-manager_arm64.tar.gz
-        - vc-webhook-manager-base_arm64.tar.gz
-        - hccl-controller_arm64.tar.gz
+          docker load -i vc-webhook-manager-base*-arm64.tar.gz;
+          docker load -i vc-controller-manager*-arm64.tar.gz;
+          docker load -i vc-scheduler*-arm64.tar.gz;
+          docker load -i vc-webhook-manager-v*-arm64.tar.gz
       when: ansible_architecture == "aarch64"
       tags:
         - no_ascend-hub
 
-    - name: Load mindx images - x86_64
+    - name: Load Volcano images - x86_64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
-          docker load < {{item}}
-      with_items:
-        - vc-controller-manager_amd64.tar.gz
-        - vc-scheduler_amd64.tar.gz
-        - vc-webhook-manager_amd64.tar.gz
-        - vc-webhook-manager-base_amd64.tar.gz
-        - hccl-controller_amd64.tar.gz
+          docker load -i vc-webhook-manager-base*-amd64.tar.gz;
+          docker load -i vc-controller-manager*-amd64.tar.gz;
+          docker load -i vc-scheduler*-amd64.tar.gz;
+          docker load -i vc-webhook-manager-v*-amd64.tar.gz
       when: ansible_architecture == "x86_64"
       tags:
         - no_ascend-hub
+
+    - name: Load hccl-controller images - arm64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load -i hccl-controller*-arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+        tags:
+          - no_ascend-hub
+
+    - name: Load hccl-controller images - x86_64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load -i hccl-controller*-amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+        tags:
+          - no_ascend-hub
     # ========================================================================
 
     # =========================== Use ascend-hub =============================
@@ -274,8 +286,8 @@
         src: "{{docker_images_dir}}/{{item}}"
         dest: "{{docker_images_dir}}/"
       with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
+        - huawei-cadvisor-beta-{{hccl_version}}-arm64.tar.gz
       when:
         - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
@@ -287,8 +299,8 @@
         src: "{{docker_images_dir}}/{{item}}"
         dest: "{{docker_images_dir}}/"
       with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
+        - huawei-cadvisor-beta-{{hccl_version}}-amd64.tar.gz
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
@@ -302,7 +314,7 @@
           docker load < {{item}}
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-beta_arm64.tar.gz
+        - huawei-cadvisor-beta-{{hccl_version}}-arm64.tar.gz
       when: ansible_architecture == "aarch64"
       tags:
         - no_ascend-hub
@@ -314,7 +326,7 @@
           docker load < {{item}}
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_pkg_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-beta_amd64.tar.gz
+        - huawei-cadvisor-beta-{{hccl_version}}-amd64.tar.gz
       when: ansible_architecture == "x86_64"
       tags:
         - no_ascend-hub
