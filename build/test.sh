@@ -81,8 +81,11 @@ file_detail_output='hcclCoverageReport.html'
 echo "start generate mock files"
 mockgen_files
 echo "finish generate mock files"
-
-cd  "${TOP_DIR}"/output
+if  [ -f "${TOP_DIR}"/test ]; then
+  rm -rf "${TOP_DIR}"/test
+fi
+mkdir -p "${TOP_DIR}"/test
+cd  "${TOP_DIR}"/test
 echo "clean old version  test results"
 if  [ -f "$file_input" ]; then
   rm -rf "$file_input"

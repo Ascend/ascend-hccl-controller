@@ -95,14 +95,14 @@
     - name: Deploy hccl-controller
       shell:
         chdir: "{{deploy_yaml_dir}}"
-        cmd: kubectl apply -f hccl-controller.yaml
+        cmd: kubectl apply -f hccl-controller*.yaml
 
     - name: Deploy device plugin
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd:
-          kubectl apply -f ascendplugin-volcano.yaml;
-          kubectl apply -f ascendplugin-310.yaml
+          kubectl apply -f ascendplugin-volcano*.yaml;
+          kubectl apply -f ascendplugin-310*.yaml
 
     # directory contains three yamls:
     #   cadvisor-args.yaml
@@ -112,16 +112,6 @@
       shell:
         chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
         cmd: kubectl apply -k huawei
-
-    # deploy volcano services
-    - name: Create volcano environment
-      shell:
-        chdir: "{{deploy_yaml_dir}}"
-        cmd:
-          kubectl delete namespace volcano-system;
-          kubectl create namespace volcano-system;
-          tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh;
-          bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret
 
     - name: Deploy volcano
       shell:
