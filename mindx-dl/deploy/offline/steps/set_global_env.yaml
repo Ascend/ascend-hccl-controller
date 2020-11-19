@@ -1,0 +1,190 @@
+# Copyright ? Huawei Technologies Co., Ltd. 2020. All rights reserved.
+---
+# This playbook is used to modify system configurations on the master and worker nodes before all deployment.
+# Make sure that this script is executed first.
+- hosts: localnode, master
+  remote_user: root
+
+  tasks:
+    - name: Check master IP
+      fail:
+        msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
+               Step 1, edit {{playbook_dir}}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
+               Step 2, edit {{dls_root_dir}}/yaml/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+               At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
+      when:
+        - ansible_default_ipv4['address'].startswith("192.168")
+
+# scp install package to workers
+- hosts: workers
+  remote_user: root
+  tasks:
+    - name: scp install package from master to workers - arm64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/"
+      when:
+        - ansible_architecture == "aarch64"
+
+    - name: scp install package from master to workers - x86_64
+      copy:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/"
+      when:
+        - ansible_architecture == "x86_64"
+
+# unzip offline package
+- hosts: localnode, cluster
+  remote_user: root
+  tasks:
+    - name: create offline package directory
+      file:
+        path: "{{dls_root_dir}}/base_software"
+        state: directory
+
+    - name: unarchive offline package - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "aarch64"
+
+    - name: unarchive offline package - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/base_software/"
+      when: ansible_architecture == "x86_64"
+
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    - name: Close firewall
+      shell:
+        cmd:
+          ufw disable
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install selinux with pip - CentOS
+      shell:
+        chdir: "{{dls_root_dir}}/base_software/selinux"
+        cmd:
+          pip3.7 install distro-1.5.0* setuptools-50.3.2* selinux-0.2.1*
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close firwall - CentOS
+      shell:
+        cmd:
+          systemctl stop firewalld.service;
+          systemctl disable firewalld.service
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close SELinux - CentOS
+      shell:
+        cmd:
+          setenforce 0;
+          sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config;
+          sysctl --system
+      when:
+        - ansible_distribution == 'CentOS'
+
+    # delete router forward config
+    - name: Delete restrictive forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        regexp: "net.ipv4.ip_forward(.*)=(.*)0"
+        state: absent
+
+    # add router forward config
+    - name: Allow packet forwarding
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "net.ipv4.ip_forward = 1"
+        state: present
+
+    - name: Allow packet forwarding next
+      lineinfile:
+        path: /etc/rc.local
+        line: "/usr/sbin/iptables -P FORWARD ACCEPT"
+        create: yes
+
+    - name: Network config
+      blockinfile:
+        path: /etc/sysctl.d/k8s.conf
+        block: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+        create: yes
+
+    # close swap and remove swap mount
+    - name: Network config step && Close swap && Remove swap mount
+      shell:
+        cmd:
+          modprobe br_netfilter;
+          swapoff -a;
+          sed -i 's/.*swap.*/#&/' /etc/fstab;
+
+    # find no_proxy var
+    - name: register var
+      shell: grep "export no_proxy" /etc/profile
+      ignore_errors: True
+      register: has_no_proxy_var
+      tags:
+        - basic_only
+        - init-master
+
+    # add when no_proxy exists
+    - name: Set no proxy ip
+      replace:
+        path: /etc/profile
+        regexp: '(export no_proxy)(.*)'
+        replace: '\1\2,{{ master_ip }}'
+      when:
+        - has_no_proxy_var.stdout != ""
+        - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
+      tags:
+        - basic_only
+        - init-master
+
+    # create no_proxy when no_proxy exists
+    - name: Add no proxy ip
+      lineinfile:
+        path: /etc/profile
+        line: 'export no_proxy={{ master_ip }}'
+      when:
+        - has_no_proxy_var.stdout == ""
+      tags:
+        - basic_only
+        - init-master
+
+    - name: Enable /etc/profile
+      shell:
+        cmd:
+          source /etc/profile
+      args:
+        executable: "/bin/bash"
+      tags:
+        - basic_only
+        - init-master
+
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
+
+- hosts: nfs_server
+  remote_user: root
+
+  tasks:
+  - name: Add User
+    shell:
+      cmd:
+        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+        useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
+        usermod -a -G HwHiAiUser hwMindX
+    tags: basic_only
