@@ -44,14 +44,28 @@
           docker load < calico-kube-controllers_amd64.tar.gz;
       when: ansible_architecture == "x86_64"
 
-    - name: Load mindx images
+    - name: Load mindx images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
-          docker load -i vc-webhook-manager-base*;
-          docker load -i vc-controller-manager*;
-          docker load -i vc-scheduler*;
-          docker load -i vc-webhook-manager-v*;
-          docker load -i hccl-controller*;
-          docker load -i Ascend-K8sDevicePlugin*Docker*;
-          docker load -i huawei-cadvisor-beta*;
+          docker load -i vc-webhook-manager-base*arm64.tar.gz;
+          docker load -i vc-controller-manager*arm64.tar.gz;
+          docker load -i vc-scheduler*arm64.tar.gz;
+          docker load -i vc-webhook-manager-v*arm64.tar.gz;
+          docker load -i hccl-controller*arm64.tar.gz;
+          docker load -i Ascend-K8sDevicePlugin*arm64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*arm64.tar.gz;
+      when: ansible_architecture == "aarch64"
+
+    - name: Load mindx images - amd64
+      shell:
+        chdir: "{{docker_images_dir}}"
+        cmd:
+          docker load -i vc-webhook-manager-base*amd64.tar.gz;
+          docker load -i vc-controller-manager*amd64.tar.gz;
+          docker load -i vc-scheduler*amd64.tar.gz;
+          docker load -i vc-webhook-manager-v*amd64.tar.gz;
+          docker load -i hccl-controller*amd64.tar.gz;
+          docker load -i Ascend-K8sDevicePlugin*amd64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*amd64.tar.gz;
+      when: ansible_architecture == "x86_64"
