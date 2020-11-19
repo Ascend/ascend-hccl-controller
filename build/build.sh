@@ -55,7 +55,7 @@ function mv_file()
 {
     mv ${TOP_DIR}/${OUTPUT_NAME}   ${TOP_DIR}/output
     cp "${TOP_DIR}"/build/hccl-controller.yaml "${TOP_DIR}"/output/hccl-controller-"${build_version}".yaml
-    cp "${TOP_DIR}"/build/rbac.yaml "${TOP_DIR}"/output/rbac.yaml
+
 }
 
 function build_docker_image() {
