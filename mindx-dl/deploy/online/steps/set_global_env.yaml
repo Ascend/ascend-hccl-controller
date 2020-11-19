@@ -2,7 +2,7 @@
 ---
 # This playbook is used to modify system configurations on the master and worker nodes before all deployment.
 # Make sure that this script is executed first.
-- hosts: master
+- hosts: localnode, master
   remote_user: root
 
   tasks:
@@ -15,7 +15,7 @@
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
 
-- hosts: cluster
+- hosts: localnode, cluster
   remote_user: root
 
   tasks:
@@ -96,7 +96,9 @@
       shell: grep "export no_proxy" /etc/profile
       ignore_errors: True
       register: has_no_proxy_var
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # add when no_proxy exists
     - name: Set no proxy ip
@@ -107,7 +109,9 @@
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # create no_proxy when no_proxy exists
     - name: Add no proxy ip
@@ -115,7 +119,9 @@
         path: /etc/profile
         line: 'export no_proxy={{ master_ip }}'
       when: has_no_proxy_var.stdout == ""
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Enable /etc/profile
       shell:
@@ -123,13 +129,17 @@
           source /etc/profile
       args:
         executable: "/bin/bash"
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
+
 
     - name: Add User
       shell:
         cmd:
           useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
           usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
 
 - hosts: nfs_server
   remote_user: root
@@ -141,3 +151,4 @@
         useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
         useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
         usermod -a -G HwHiAiUser hwMindX
+    tags: basic_only
