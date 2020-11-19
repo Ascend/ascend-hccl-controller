@@ -76,7 +76,7 @@
         chdir: "{{docker_images_dir}}"
         cmd:
           docker load -i hccl-controller*amd64.tar.gz
-      when: ansible_architecture == "aarch64"
+      when: ansible_architecture == "x86_64"
 
 # Load docker images on worker
 - hosts: workers
