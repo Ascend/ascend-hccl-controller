@@ -28,7 +28,7 @@
     shell:
       chdir: "{{deploy_yaml_dir}}"
       cmd:
-        kubectl delete -f hccl-controller.yaml
+        kubectl delete -f hccl-controller*.yaml
     tags: hccl-controller
     ignore_errors: yes
 
@@ -36,8 +36,8 @@
     shell:
       chdir: "{{deploy_yaml_dir}}"
       cmd:
-        kubectl delete -f ascendplugin-310.yaml;
-        kubectl delete -f ascendplugin-volcano.yaml
+        kubectl delete -f ascendplugin-310*.yaml;
+        kubectl delete -f ascendplugin-volcano*.yaml
     tags: device-plugin
     ignore_errors: yes
 

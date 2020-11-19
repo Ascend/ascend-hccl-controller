@@ -1,3 +1,22 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-list-test
+subjects:
+  - kind: ServiceAccount
+    name: hccl-controller
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hccl-controller
+  namespace: default
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,9 +33,10 @@ spec:
     spec:
       nodeSelector:
         masterselector: dls-master-node
+      serviceAccountName: hccl-controller
       containers:
       - name: hccl-controller
-        image: hccl-controller:v20.1.0
+        image: hccl-controller:v20.2.0
         resources:
           requests:
               memory: 300Mi
