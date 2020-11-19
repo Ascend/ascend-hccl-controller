@@ -85,12 +85,6 @@
         state: present
         create: yes
 
-    - name: Deploy rbac
-      shell:
-        chdir: "{{yaml_dir}}"
-        cmd:
-          kubectl apply -f rbac.yaml
-
     - name: Deploy hccl-controller
       shell:
         chdir: "{{yaml_dir}}"
