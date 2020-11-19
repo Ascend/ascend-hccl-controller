@@ -40,7 +40,7 @@ const (
 	// PodJobVersion to get job version
 	PodJobVersion = "volcano.sh/job-version"
 	// PodDeviceKey Pod annoation Key
-	PodDeviceKey = "atlas.kubectl.kubernetes.io/ascend-910-configuration"
+	PodDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
 	// PodGroupKey to get Group key
 	PodGroupKey = "volcano.sh/task-spec"
 	// JobRestartPhase restart flage
