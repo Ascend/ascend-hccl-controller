@@ -1,6 +1,6 @@
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
@@ -144,7 +144,7 @@
     # ========================================================================
 
 # Load docker images on worker
-- hosts: workers
+- hosts: localnode, workers
   remote_user: root
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
@@ -210,47 +210,11 @@
       tags:
         - kubernetes_basic
 
-    # =========================== Use ascend-docker ==========================
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "swr.cn-south-1.myhuaweicloud.com"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-            },
-            "default-runtime": "ascend"
-          }
-          EOF
-      tags:
-        - ascend-docker
-
-    - name: Restart docker service
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker
-      tags:
-        - ascend-docker
-    # ========================================================================
-
     # =========================== Use ascend-hub =============================
     - name: Ascend-hub docker login
       shell:
         cmd:
           "{{ascendhub_login_command}}"
-      when:
-        - ansible_default_ipv4['address'] != master_ip
       tags:
         - basic_only
 
