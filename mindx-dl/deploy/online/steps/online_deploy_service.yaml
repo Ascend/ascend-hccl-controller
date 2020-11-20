@@ -2,13 +2,13 @@
 ---
 # This playbook is used to deploy the MindX DL.
 # Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts.
-- hosts: workers
+- hosts: localnode, workers
   remote_user: root
 
   tasks:
     - name: Create log directory for cadvisor and device-plugin
       file:
-        path: /var/log/{{ item }}
+        path: /var/log/{{item}}
         state: directory
         mode: "0750"
       with_items:
@@ -41,7 +41,7 @@
         state: present
         create: yes
 
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   vars:
     deploy_yaml_dir: "{{dls_root_dir}}/yaml"
@@ -55,7 +55,7 @@
 
     - name: Create dls_core log directory
       file:
-        path: /var/log/atlas_dls/{{ item }}
+        path: /var/log/atlas_dls/{{item}}
         state: directory
         mode: "0750"
         owner: 'hwMindX'
@@ -106,10 +106,22 @@
 
     - name: Deploy cadvisor
       shell:
-        chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
-        cmd: kubectl apply -k huawei
+        chdir: "{{deploy_yaml_dir}}"
+        cmd: kubectl apply -f cadvisor-*.yaml
 
     - name: Deploy volcano
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd: kubectl apply -f volcano-*.yaml
+
+# After the deployment is successful, delete the installation package.
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
+    - name: remove docker deb file
+      file:
+        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        state: absent
+      when: ansible_distribution == 'Ubuntu'
+      ignore_errors: yes

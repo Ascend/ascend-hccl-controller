@@ -2,8 +2,6 @@
 ---
 - hosts: localnode, master
   remote_user: root
-  vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
 
   tasks:
     - name: Pull kubernetes basic images - arm64
@@ -143,11 +141,9 @@
         - basic_only
     # ========================================================================
 
-# Load docker images on worker
-- hosts: localnode, workers
+# Pull k8s base images on worker
+- hosts: workers
   remote_user: root
-  vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64
@@ -210,7 +206,11 @@
       tags:
         - kubernetes_basic
 
-    # =========================== Use ascend-hub =============================
+# Pull MindX DL images on worker
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
     - name: Ascend-hub docker login
       shell:
         cmd:
@@ -261,9 +261,8 @@
       when: ansible_architecture == "x86_64"
       tags:
         - basic_only
-    # ========================================================================
 
-- hosts: master
+- hosts: localnode, master
   remote_user: root
 
   tasks:
@@ -309,7 +308,7 @@
       tags: always
       ignore_errors: yes
 
-- hosts: workers
+- hosts: localnode, workers
   remote_user: root
 
   tasks:

@@ -2,7 +2,7 @@
 ---
 # This playbook is used to cleaning up services.
 
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   vars:
     deploy_yaml_dir: "{{dls_root_dir}}/yaml"
@@ -18,9 +18,9 @@
 
   - name: remove cadvisor
     shell:
-      chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
+      chdir: "{{deploy_yaml_dir}}"
       cmd:
-        kubectl delete -k huawei
+        kubectl delete -f cadvisor-*.yaml
     tags: cadvisor
     ignore_errors: yes
 
@@ -52,15 +52,3 @@
     retries: 6
     delay: 5
     ignore_errors: yes
-
-- hosts: workers
-  remote_user: root
-
-  tasks:
-    - name: remove docker deb file
-      file:
-        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
-        state: absent
-      when: ansible_distribution == 'Ubuntu'
-      ignore_errors: yes
-

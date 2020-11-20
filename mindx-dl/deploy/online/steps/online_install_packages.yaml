@@ -2,7 +2,7 @@
 ---
 # This playbook is used to online install software packages, including NFS.
 
-- hosts: cluster
+- hosts: localnode, cluster
   remote_user: root
 
   tasks:
@@ -23,10 +23,6 @@
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'Ubuntu'
-      tags:
-        - kubernetes
-        - nfs
-        - docker
 
     - name: Install prerequisite software - CentOS
       shell:
@@ -40,10 +36,6 @@
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'CentOS'
-      tags:
-        - kubernetes
-        - nfs
-        - docker
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
@@ -117,34 +109,6 @@
         - ansible_distribution == 'CentOS'
       tags: docker
     # =================================================================================
-    
-    - name: Docker daemon.json file
-      file:
-        path: /etc/docker
-        state: directory
-      tags: docker
-      
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "swr.cn-south-1.myhuaweicloud.com"],
-            "exec-opts": ["native.cgroupdriver=systemd"]
-          }
-          EOF
-      tags: always
-
-    - name: Effect modification for docker
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker;
-          systemctl enable docker
-      tags: always
     ###################################################################################
 
     ############################## Install Kubernetes #################################
@@ -258,8 +222,78 @@
       tags: kubernetes
     ###################################################################################
 
+    - name: Docker daemon.json file
+      file:
+        path: /etc/docker
+        state: directory
+      tags: always
+
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+          EOF
+      tags:
+        - docker
+        - basic_only
+
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags:
+        - docker
+        - basic_only
+
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags:
+        - docker
+        - basic_only
+
 # install nfs server
-- hosts: nfs_server
+- hosts: localnode, nfs_server
   remote_user: root
 
   tasks:

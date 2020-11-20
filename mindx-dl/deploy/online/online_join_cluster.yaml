@@ -87,7 +87,7 @@
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{ master_ip }}'
+        replace: '\1\2,{{master_ip}}'
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
@@ -97,7 +97,7 @@
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{ master_ip }}'
+        line: 'export no_proxy={{master_ip}}'
       when: has_no_proxy_var.stdout == ""
       tags: init-master
 
@@ -701,7 +701,7 @@
 
     - name: Create log directory for cadvisor and device-plugin
       file:
-        path: /var/log/{{ item }}
+        path: /var/log/{{item}}
         state: directory
         mode: "0750"
       with_items:

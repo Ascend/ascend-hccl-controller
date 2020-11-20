@@ -3,7 +3,7 @@
 # This playbook is used to initialize the K8S cluster.
 # Before running this script, ensure that Docker has been installed and the basic image of K8S has been imported.
 
-- hosts: cluster
+- hosts: localnode, cluster
   remote_user: root
 
   tasks:
@@ -13,8 +13,8 @@
           unset http_proxy https_proxy
       tags: common
 
-# init master
-- hosts: master
+# Init k8s cluster
+- hosts: localnode, master
   remote_user: root
   vars:
     deploy_yaml_dir: "{{dls_root_dir}}/yaml"
@@ -33,7 +33,7 @@
           kubeadm init --kubernetes-version=v1.17.3
             --node-name={{ansible_hostname}}
             --pod-network-cidr=192.168.0.0/16
-            --apiserver-advertise-address={{ master_ip }}
+            --apiserver-advertise-address={{master_ip}}
       tags: init-master
 
     - name: Set kubernetes config file
@@ -82,6 +82,11 @@
           kubectl label nodes {{ansible_hostname}} masterselector=dls-master-node
       tags: init-master
 
+# Register join cluster command
+- hosts: master
+  remote_user: root
+
+  tasks:
     - name: Register join commomd
       shell:
         cmd:
@@ -94,7 +99,7 @@
         name: "KUBERNETES_JOIN_COMMAND"
         join_command: "{{join_command.stdout}}"
 
-# init workers
+# Add the worker node to the cluster and grant the Kubernetes administrator permission to the worker node.
 - hosts: workers
   remote_user: root
 
@@ -163,6 +168,11 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
+# Labeling Work Nodes
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
     - name: Label training nodes - arm64
       shell:
         cmd:
@@ -215,6 +225,11 @@
         - ansible_architecture == "x86_64"
         - ansible_hostname in groups['inference_node']
 
+# Restore the K8s permission of the worker node.
+- hosts: workers
+  remote_user: root
+
+  tasks:
     - name: Replace config
       shell:
         cmd:
