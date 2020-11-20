@@ -1,8 +1,6 @@
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
----
 # This playbook is used to online install software packages, including NFS.
-# Register join cluster command
-
+---
 - hosts: localnode, cluster
   remote_user: root
   vars:
@@ -12,7 +10,11 @@
   tasks:
     - name: Register package_list - Ubuntu
       set_fact:
-        apt_package_list: "{{ apt_package_list.append(item) }}{{apt_package_list}}"
+        apt_package_list: "{{  apt_package_list.append(item)  }}{{ apt_package_list }}"
+      tags:
+        - docker
+        - nfs
+        - kubernetes
       when:
         - ansible_distribution == 'Ubuntu'
       with_items:
@@ -26,7 +28,11 @@
 
     - name: Register package_list - CentOS
       set_fact:
-        yum_package_list: "{{ yum_package_list.append(item) }}{{yum_package_list}}"
+        yum_package_list: "{{  yum_package_list.append(item)  }}{{ yum_package_list }}"
+      tags:
+        - docker
+        - nfs
+        - kubernetes
       when:
         - ansible_distribution == 'CentOS'
       with_items:
@@ -36,10 +42,10 @@
     - name: Install prerequisite software - Ubuntu
       shell:
         cmd:
-          apt install -y {{" ".join(apt_package_list)}}
+          apt install -y {{ " ".join(apt_package_list) }}
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'Ubuntu'
       tags:
@@ -50,10 +56,10 @@
     - name: Install prerequisite software - CentOS
       shell:
         cmd:
-          yum install -y {{" ".join(yum_package_list)}}
+          yum install -y {{ " ".join(yum_package_list) }}
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
       tags:
@@ -65,7 +71,7 @@
     # ============================== Ubuntu 18.04 =====================================
     - name: Docker install package file status - Ubuntu
       stat:
-        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        path: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
       register: docker_file_status
       tags: docker
       when:
@@ -74,7 +80,7 @@
     - name: Download docker - Ubuntu/arm64
       get_url:
         url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/arm64/docker-ce_18.06.3~ce~3-0~ubuntu_arm64.deb
-        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
         validate_certs: no
       when:
         - ansible_architecture == "aarch64"
@@ -82,13 +88,13 @@
         - docker_file_status.stat.exists == False
       tags: docker
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Download docker - Ubuntu/x86_64
       get_url:
         url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~ubuntu_amd64.deb
-        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
         validate_certs: no
       when:
         - ansible_architecture == "x86_64"
@@ -96,12 +102,12 @@
         - docker_file_status.stat.exists == False
       tags: docker
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Install docker - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}"
+        chdir: "{{ dls_root_dir }}"
         cmd:
           dpkg -i docker-ce_18.06.3_ce_3-0.deb
       when:
@@ -118,8 +124,8 @@
       when:
         - ansible_distribution == 'CentOS'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: docker
       
     - name: Install docker - CentOS
@@ -127,8 +133,8 @@
         cmd:
           yum install -y docker-ce-18.06.3.ce
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
       tags: docker
@@ -148,18 +154,18 @@
 
     - name: Add kubernetes source gpg key
       get_url:
-        dest: "{{dls_root_dir}}/apt-key.gpg"
+        dest: "{{ dls_root_dir }}/apt-key.gpg"
         url: https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg
       tags: kubernetes
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Add kubernetes source gpg key
       shell:
-        chdir: "{{dls_root_dir}}"
+        chdir: "{{ dls_root_dir }}"
         cmd: apt-key add apt-key.gpg
       tags: kubernetes
       when:
@@ -173,8 +179,8 @@
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: kubernetes
 
     - name: Hold version
@@ -227,8 +233,8 @@
       when:
         - ansible_distribution == 'CentOS'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: kubernetes
 
     - name: Hold version
@@ -323,13 +329,13 @@
   tasks:
     - name: Install Linux NFS - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}"
+        chdir: "{{ dls_root_dir }}"
         cmd: apt-get install nfs-kernel-server -y
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: nfs
 
     - name: Install Linux NFS - CentOS
@@ -339,8 +345,8 @@
       when:
         - ansible_distribution == 'CentOS'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: nfs
 
     - name: Check NFS directory
@@ -358,13 +364,13 @@
 
     - name: Check NFS directory
       stat:
-        path: "{{nfs_shared_dir}}"
+        path: "{{ nfs_shared_dir }}"
       register: nfs_mount_folder
       tags: nfs
 
     - name: Create nfs mount directory
       file:
-        path: "{{nfs_shared_dir}}"
+        path: "{{ nfs_shared_dir }}"
         state: directory
       when: nfs_mount_folder.stat.exists == false
       tags: nfs
@@ -372,14 +378,14 @@
     - name: Set right
       shell:
         cmd:
-          chmod 755 {{nfs_shared_dir}};
-          chown hwMindX:hwMindX {{nfs_shared_dir}}
+          chmod 755 {{ nfs_shared_dir }};
+          chown hwMindX:hwMindX {{ nfs_shared_dir }}
       tags: nfs
 
     - name: Add NFS config info
       lineinfile:
         path: /etc/exports
-        line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
+        line: "{{ nfs_shared_dir }} *(rw,sync,no_root_squash)"
         state: present
       tags: nfs
 

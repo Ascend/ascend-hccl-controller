@@ -8,7 +8,7 @@
   tasks:
     - name: Create log directory for cadvisor and device-plugin
       file:
-        path: /var/log/{{item}}
+        path: /var/log/{{ item }}
         state: directory
         mode: "0750"
       with_items:
@@ -44,7 +44,7 @@
 - hosts: localnode, master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yaml"
 
   tasks:
     - name: Remove /var/log/atlas_dls
@@ -55,7 +55,7 @@
 
     - name: Create dls_core log directory
       file:
-        path: /var/log/atlas_dls/{{item}}
+        path: /var/log/atlas_dls/{{ item }}
         state: directory
         mode: "0750"
         owner: 'hwMindX'
@@ -94,24 +94,24 @@
 
     - name: Deploy hccl-controller
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f hccl-controller*.yaml
 
     - name: Deploy device plugin
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl apply -f ascendplugin-volcano*.yaml;
           kubectl apply -f ascendplugin-310*.yaml
 
     - name: Deploy cadvisor
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f cadvisor-*.yaml
 
     - name: Deploy volcano
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f volcano-*.yaml
 
 # After the deployment is successful, delete the installation package.
@@ -121,7 +121,7 @@
   tasks:
     - name: remove docker deb file
       file:
-        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        path: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
         state: absent
       when: ansible_distribution == 'Ubuntu'
       ignore_errors: yes

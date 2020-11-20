@@ -11,13 +11,15 @@
       shell:
         cmd:
           unset http_proxy https_proxy
-      tags: common
+      tags:
+        - common
+        - basic_only
 
 # Init k8s cluster
 - hosts: localnode, master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yaml"
 
   tasks:
     - name: reset k8s
@@ -31,9 +33,9 @@
       shell:
         cmd:
           kubeadm init --kubernetes-version=v1.17.3
-            --node-name={{ansible_hostname}}
+            --node-name={{ ansible_hostname }}
             --pod-network-cidr=192.168.0.0/16
-            --apiserver-advertise-address={{master_ip}}
+            --apiserver-advertise-address={{ master_ip }}
       tags: init-master
 
     - name: Set kubernetes config file
@@ -47,7 +49,7 @@
     # apply deploy/yaml/calico.yaml
     - name: Apply calico yaml file
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl apply -f calico.yaml
       tags: init-master
@@ -79,8 +81,10 @@
     - name: Label master node
       shell:
         cmd:
-          kubectl label nodes {{ansible_hostname}} masterselector=dls-master-node
-      tags: init-master
+          kubectl label nodes {{ ansible_hostname }} masterselector=dls-master-node
+      tags:
+        - init-master
+        - basic_only
 
 # Register join cluster command
 - hosts: master
@@ -97,7 +101,8 @@
     - name: Set join facts
       add_host:
         name: "KUBERNETES_JOIN_COMMAND"
-        join_command: "{{join_command.stdout}}"
+        join_command: "{{ join_command.stdout }}"
+      tags: init-workers
 
 # Add the worker node to the cluster and grant the Kubernetes administrator permission to the worker node.
 - hosts: workers
@@ -109,7 +114,7 @@
         cmd:
           kubeadm reset -f;
           rm -rf /etc/cni/net.d /root/.kube/
-      tags: init-master
+      tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
       ignore_errors: True
@@ -117,7 +122,7 @@
     - name: Join into cluster
       shell:
         cmd:
-          unset http_proxy https_proxy && {{hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"]}}
+          unset http_proxy https_proxy && {{ hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"] }}
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
@@ -128,7 +133,9 @@
         src: /etc/kubernetes/admin.conf
         dest: /etc/kubernetes/
         force: yes
-      tags: init-workers
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -136,7 +143,11 @@
       shell:
         cmd:
           mkdir -p ~/.kube;
+          cp -f ~/.kube/config ~/.kube/config_bak || true;
           cp -f /etc/kubernetes/admin.conf ~/.kube/config
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -145,6 +156,9 @@
         path: /etc/profile
         line: "export KUBECONFIG=/etc/kubernetes/kubelet.conf"
         state: absent
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -153,6 +167,9 @@
         path: /etc/profile
         line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
         state: present
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -164,7 +181,9 @@
           systemctl restart kubelet
       args:
         executable: "/bin/bash"
-      tags: init-workers
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -177,11 +196,13 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
+          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-arm --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_architecture == "aarch64"
         - ansible_hostname in groups['training_node']
@@ -190,11 +211,13 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
+          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-x86 --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_architecture == "x86_64"
         - ansible_hostname in groups['training_node']
@@ -203,11 +226,13 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
+          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend310 --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-arm --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_architecture == "aarch64"
         - ansible_hostname in groups['inference_node']
@@ -216,11 +241,13 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
+          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend310 --overwrite=true;
+          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-x86 --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_architecture == "x86_64"
         - ansible_hostname in groups['inference_node']
@@ -233,7 +260,10 @@
     - name: Replace config
       shell:
         cmd:
-          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config
+          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config || mv ~/.kube/config_bak ~/.kube/config
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -242,7 +272,9 @@
         path: /etc/profile
         regexp: 'export KUBECONFIG(.*)=(.*)/etc'
         line: 'export KUBECONFIG=/etc/kubernetes/kubelet.conf'
-      tags: init-workers
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -254,6 +286,8 @@
           systemctl restart kubelet
       args:
         executable: "/bin/bash"
-      tags: init-workers
+      tags:
+        - init-workers
+        - basic_only
       when:
         - ansible_default_ipv4['address'] != master_ip

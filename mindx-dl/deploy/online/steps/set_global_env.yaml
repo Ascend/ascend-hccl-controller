@@ -9,8 +9,8 @@
     - name: Check master IP
       fail:
         msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
-               Step 1, edit {{playbook_dir}}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
-               Step 2, edit {{dls_root_dir}}/yaml/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+               Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
+               Step 2, edit {{ dls_root_dir }}/yaml/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
                At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
@@ -32,8 +32,8 @@
           yum install -y libselinux-python3 libselinux-python;
           pip3.7 install selinux
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
 
@@ -105,7 +105,7 @@
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{master_ip}}'
+        replace: '\1\2,{{ master_ip }}'
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
@@ -117,7 +117,7 @@
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{master_ip}}'
+        line: 'export no_proxy={{ master_ip }}'
       when: has_no_proxy_var.stdout == ""
       tags:
         - basic_only
