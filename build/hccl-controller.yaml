@@ -1,7 +1,7 @@
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pods-list-test
+  name: hccl-controller-rolebinding
 subjects:
   - kind: ServiceAccount
     name: hccl-controller
