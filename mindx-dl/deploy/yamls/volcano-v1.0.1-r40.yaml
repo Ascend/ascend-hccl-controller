@@ -10,7 +10,7 @@ metadata:
   name: volcano-scheduler-configmap
   namespace: volcano-system
 data:
-  volcano-scheduler.conf: |
+  volcano-scheduler.conf: |-
     actions: "enqueue, allocate, backfill"
     tiers:
     - plugins:
@@ -25,6 +25,9 @@ data:
       - name: proportion
       - name: nodeorder
       - name: binpack
+    configurations:
+      - arguments: {"host-arch":"huawei-arm|huawei-x86",
+      "accelerator":"huawei-Ascend910|nvidia-tesla-v100|nvidia-tesla-p40"}
   
 ---
 apiVersion: v1
@@ -52,7 +55,7 @@ rules:
     verbs: ["create", "list", "watch", "update", "patch"]
   - apiGroups: [""]
     resources: ["pods", "pods/status"]
-    verbs: ["create", "get", "list", "watch", "update", "bind", "updateStatus", "delete"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "bind", "updateStatus", "delete"]
   - apiGroups: [""]
     resources: ["pods/binding"]
     verbs: ["create"]
@@ -122,15 +125,14 @@ spec:
       nodeSelector:
         masterselector: dls-master-node
       serviceAccount: volcano-scheduler
-      
       containers:
         - name: volcano-scheduler
-          image: volcanosh/vc-scheduler:v0.4.0-r03
+          image: volcanosh/vc-scheduler:v1.0.1-r40
           imagePullPolicy: "IfNotPresent"
-          command: [ "/bin/bash", "-c", "--"]
+          command: [ "/bin/ash", "-c", "--"]
           args: [ "umask 027;/vc-scheduler
           --scheduler-conf=/volcano.scheduler/volcano-scheduler.conf
-          --logtostderr=false --log_dir=/var/log/ --log_file=/var/log/volcano-scheduler.log -v=3" ]
+          --logtostderr=false --log_dir=/var/log/ --log_file=/var/log/volcano-scheduler.log -v=3 2>&1" ]
           resources:
             requests:
               memory: 300Mi
@@ -143,24 +145,18 @@ spec:
               mountPath: /var/log
             - name: scheduler-config
               mountPath: /volcano.scheduler
-            - name: timezone
-              mountPath: /etc/timezone
             - name: localtime
               mountPath: /etc/localtime
       volumes:
         - name: scheduler-config-log
           hostPath:
             path: /var/log/atlas_dls/volcano-scheduler
-        - name: timezone
-          hostPath:
-            path: /etc/timezone
         - name: localtime
           hostPath:
             path: /etc/localtime
         - name: scheduler-config
           configMap:
             name: volcano-scheduler-configmap
-
 
 ---
 # Source: volcano/templates/admission.yaml
@@ -236,21 +232,22 @@ spec:
       nodeSelector:
         masterselector: dls-master-node
       serviceAccount: volcano-admission
-      
       containers:
-        - args:
-            - --tls-cert-file=/admission.local.config/certificates/tls.crt
-            - --tls-private-key-file=/admission.local.config/certificates/tls.key
-            - --ca-cert-file=/admission.local.config/certificates/ca.crt
-            - --webhook-namespace=volcano-system
-            - --webhook-service-name=volcano-admission-service
-            - --port=443
-            - --logtostderr=false
-            - --log_dir=/var/log/
-            - --log_file=/var/log/volcano-admission.log
-            - -v=4
-          image: volcanosh/vc-webhook-manager:v0.4.0-r03
+        - name: admission
+          image: volcanosh/vc-webhook-manager:v1.0.1-r40
           imagePullPolicy: IfNotPresent
+          command: [ "/bin/ash", "-c", "--"]
+          args: [ "umask 027;/vc-webhook-manager
+                  --tls-cert-file=/admission.local.config/certificates/tls.crt
+                  --tls-private-key-file=/admission.local.config/certificates/tls.key
+                  --ca-cert-file=/admission.local.config/certificates/ca.crt
+                  --webhook-namespace=volcano-system
+                  --webhook-service-name=volcano-admission-service
+                  --logtostderr=false
+                  --port=8443
+                  --log_dir=/var/log/
+                  --log_file=/var/log/volcano-admission.log
+                  -v=4 2>&1" ]
           resources:
             requests:
               memory: 300Mi
@@ -258,15 +255,12 @@ spec:
             limits:
               memory: 300Mi
               cpu: 500m
-          name: admission
           volumeMounts:
             - mountPath: /admission.local.config/certificates
               name: admission-certs
               readOnly: true
             - name: admission-log
               mountPath: /var/log
-            - name: timezone
-              mountPath: /etc/timezone
             - name: localtime
               mountPath: /etc/localtime
       volumes:
@@ -277,13 +271,9 @@ spec:
         - name: admission-log
           hostPath:
             path: /var/log/atlas_dls/volcano-admission
-        - name: timezone
-          hostPath:
-            path: /etc/timezone
         - name: localtime
           hostPath:
             path: /etc/localtime
-
 
 ---
 apiVersion: v1
@@ -297,7 +287,7 @@ spec:
   ports:
     - port: 443
       protocol: TCP
-      targetPort: 443
+      targetPort: 8443
   selector:
     app: volcano-admission
   sessionAffinity: None
@@ -314,11 +304,13 @@ spec:
   backoffLimit: 3
   template:
     spec:
+      nodeSelector:
+        masterselector: dls-master-node
       serviceAccountName: volcano-admission
       restartPolicy: Never
       containers:
         - name: main
-          image: volcanosh/vc-webhook-manager:v0.4.0-r03
+          image: volcanosh/vc-webhook-manager:v1.0.1-r40
           imagePullPolicy: IfNotPresent
           command: ["./gen-admission-secret.sh", "--service", "volcano-admission-service", "--namespace",
                     "volcano-system", "--secret", "volcano-admission-secret"]
@@ -340,14 +332,11 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["create", "get", "list", "watch", "delete"]
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["create", "get", "list", "watch", "delete", "update"]
   - apiGroups: ["batch.volcano.sh"]
     resources: ["jobs"]
     verbs: ["get", "list", "watch", "update", "delete"]
   - apiGroups: ["batch.volcano.sh"]
-    resources: ["jobs/status"]
+    resources: ["jobs/status", "jobs/finalizers"]
     verbs: ["update", "patch"]
   - apiGroups: ["bus.volcano.sh"]
     resources: ["commands"]
@@ -415,14 +404,13 @@ spec:
       nodeSelector:
         masterselector: dls-master-node
       serviceAccount: volcano-controllers
-      
       containers:
           - name: volcano-controllers
-            image: volcanosh/vc-controller-manager:v0.4.0-r03
+            image: volcanosh/vc-controller-manager:v1.0.1-r40
             imagePullPolicy: "IfNotPresent"
-            command: [ "/bin/bash", "-c", "--"]
+            command: [ "/bin/ash", "-c", "--"]
             args: [ "umask 027;/vc-controller-manager
-                    --logtostderr=false --log_dir=/var/log/ --log_file=/var/log/volcano-controller.log -v=4" ]
+                    --logtostderr=false --log_dir=/var/log/ --log_file=/var/log/volcano-controller.log -v=4 2>&1" ]
             resources:
               requests:
                 memory: 300Mi
@@ -433,17 +421,12 @@ spec:
             volumeMounts:
               - name: device-volcanocontroller
                 mountPath: /var/log
-              - name: timezone
-                mountPath: /etc/timezone
               - name: localtime
                 mountPath: /etc/localtime
       volumes:
           - name: device-volcanocontroller
             hostPath:
               path: /var/log/atlas_dls/volcano-controller
-          - name: timezone
-            hostPath:
-              path: /etc/timezone
           - name: localtime
             hostPath:
               path: /etc/localtime
@@ -590,7 +573,7 @@ spec:
         status:
           description: Current status of Job
           properties:
-            Succeeded:
+            succeeded:
               description: The number of pods which reached phase Succeeded.
               format: int32
               type: integer
@@ -618,7 +601,7 @@ spec:
               description: The number that volcano retried to submit the job.
               format: int32
               type: integer
-            ControlledResources:
+            controlledResources:
               description: All of the resources that are controlled by this job.
               type: object
               additionalProperties:
@@ -636,6 +619,10 @@ spec:
                 reason:
                   description: Unique, one-word, CamelCase reason for the condition's
                     last transition.
+                  type: string
+                lastTransitionTime:
+                  description: The time of last state transition.
+                  format: date-time
                   type: string
               type: object
           type: object

@@ -128,7 +128,8 @@
 
     - name: Join into cluster
       shell:
-        cmd: "{{join_cluster_command}}"
+        cmd:
+          unset http_proxy https_proxy && {{join_cluster_command}}
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
@@ -182,6 +183,7 @@
     - name: Label training nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -194,6 +196,7 @@
     - name: Label training nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
@@ -206,6 +209,7 @@
     - name: Label inference nodes - arm64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
@@ -218,6 +222,7 @@
     - name: Label inference nodes - x86_64
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
           kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
           kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
