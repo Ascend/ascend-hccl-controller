@@ -1,15 +1,20 @@
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # This playbook is used to online install software packages, including NFS.
+# Register join cluster command
 
 - hosts: localnode, cluster
   remote_user: root
+  vars:
+    apt_package_list: []
+    yum_package_list: []
 
   tasks:
-    - name: Install prerequisite software - Ubuntu
-      shell:
-        cmd:
-          apt install -y {{item}}
+    - name: Register package_list - Ubuntu
+      set_fact:
+        apt_package_list: "{{ apt_package_list.append(item) }}{{apt_package_list}}"
+      when:
+        - ansible_distribution == 'Ubuntu'
       with_items:
         - curl
         - apt-transport-https
@@ -18,24 +23,43 @@
         - software-properties-common
         - libltdl7
         - nfs-common
+
+    - name: Register package_list - CentOS
+      set_fact:
+        yum_package_list: "{{ yum_package_list.append(item) }}{{yum_package_list}}"
+      when:
+        - ansible_distribution == 'CentOS'
+      with_items:
+        - nfs-utils
+        - yum-plugin-versionlock
+
+    - name: Install prerequisite software - Ubuntu
+      shell:
+        cmd:
+          apt install -y {{" ".join(apt_package_list)}}
       environment:
         http_proxy: "{{proxy}}"
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'Ubuntu'
+      tags:
+        - docker
+        - nfs
+        - kubernetes
 
     - name: Install prerequisite software - CentOS
       shell:
         cmd:
-          yum install -y {{item}}
-      with_items: 
-        - nfs-utils
-        - yum-plugin-versionlock
+          yum install -y {{" ".join(yum_package_list)}}
       environment:
         http_proxy: "{{proxy}}"
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'CentOS'
+      tags:
+        - docker
+        - nfs
+        - kubernetes
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================

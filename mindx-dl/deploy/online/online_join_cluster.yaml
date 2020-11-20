@@ -11,10 +11,11 @@
       when:
         - ansible_distribution == 'Ubuntu'
 
-    - name: Install libselinux-python3 - CentOS
+    - name: Install selinux - CentOS
       shell:
         cmd:
-          yum install -y libselinux-python3
+          yum install -y libselinux-python3 libselinux-python;
+          pip3.7 install selinux
       environment:
         http_proxy: "{{proxy}}"
         https_proxy: "{{proxy}}"
@@ -80,7 +81,9 @@
       shell: grep "export no_proxy" /etc/profile
       ignore_errors: True
       register: has_no_proxy_var
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # add when no_proxy exists
     - name: Set no proxy ip
@@ -91,7 +94,9 @@
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # create no_proxy when no_proxy exists
     - name: Add no proxy ip
@@ -99,7 +104,9 @@
         path: /etc/profile
         line: 'export no_proxy={{master_ip}}'
       when: has_no_proxy_var.stdout == ""
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Enable /etc/profile
       shell:
@@ -107,23 +114,30 @@
           source /etc/profile
       args:
         executable: "/bin/bash"
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Add User
       shell:
         cmd:
           useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
           usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
 
 # Install packages
 - hosts: new_node
   remote_user: root
+  vars:
+    apt_package_list: []
+    yum_package_list: []
 
   tasks:
-    - name: Install prerequisite software - Ubuntu
-      shell:
-        cmd:
-          apt install -y {{item}}
+    - name: Register package_list - Ubuntu
+      set_fact:
+        apt_package_list: "{{ apt_package_list.append(item) }}{{apt_package_list}}"
+      when:
+        - ansible_distribution == 'Ubuntu'
       with_items:
         - curl
         - apt-transport-https
@@ -132,32 +146,43 @@
         - software-properties-common
         - libltdl7
         - nfs-common
+
+    - name: Register package_list - CentOS
+      set_fact:
+        yum_package_list: "{{ yum_package_list.append(item) }}{{yum_package_list}}"
+      when:
+        - ansible_distribution == 'CentOS'
+      with_items:
+        - nfs-utils
+        - yum-plugin-versionlock
+
+    - name: Install prerequisite software - Ubuntu
+      shell:
+        cmd:
+          apt install -y {{" ".join(apt_package_list)}}
       environment:
         http_proxy: "{{proxy}}"
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'Ubuntu'
       tags:
-        - kubernetes
-        - nfs
         - docker
+        - nfs
+        - kubernetes
 
     - name: Install prerequisite software - CentOS
       shell:
         cmd:
-          yum install -y {{item}}
-      with_items:
-        - nfs-utils
-        - yum-plugin-versionlock
+          yum install -y {{" ".join(yum_package_list)}}
       environment:
         http_proxy: "{{proxy}}"
         https_proxy: "{{proxy}}"
       when:
         - ansible_distribution == 'CentOS'
       tags:
-        - kubernetes
-        - nfs
         - docker
+        - nfs
+        - kubernetes
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
@@ -231,45 +256,6 @@
         - ansible_distribution == 'CentOS'
       tags: docker
     # =================================================================================
-
-    - name: Docker daemon.json file
-      file:
-        path: /etc/docker
-        state: directory
-      tags: docker
-
-    # =========================== Use ascend-docker ==========================
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "swr.cn-south-1.myhuaweicloud.com"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-            },
-            "default-runtime": "ascend"
-          }
-          EOF
-      tags:
-        - ascend-docker
-
-    - name: Effect modification for docker
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker;
-          systemctl enable docker
-      tags: always
     ###################################################################################
 
     ############################## Install Kubernetes #################################
@@ -383,11 +369,50 @@
       tags: kubernetes
     ###################################################################################
 
+    - name: Docker daemon.json file
+      file:
+        path: /etc/docker
+        state: directory
+      tags: always
+
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
+                                    "swr.cn-south-1.myhuaweicloud.com"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags:
+        - docker
+        - basic_only
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags:
+        - docker
+        - basic_only
+
 # Load docker images on worker
 - hosts: new_node
   remote_user: root
-  vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
 
   tasks:
     - name: Workers pull kubernetes basic images - arm64
@@ -404,7 +429,8 @@
       when:
         - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers pull kubernetes basic images - x86_64
       shell:
@@ -420,7 +446,8 @@
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers tag images - arm64
       shell:
@@ -432,7 +459,8 @@
       when:
         - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     - name: Workers tag images - x86_64
       shell:
@@ -444,17 +472,16 @@
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
-      tags: always
+      tags:
+        - kubernetes_basic
 
     # =========================== Use ascend-hub =============================
     - name: Ascend-hub docker login
       shell:
         cmd:
           "{{ascendhub_login_command}}"
-      when:
-        - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - arm64
       shell:
@@ -465,7 +492,7 @@
         - cadvisor_arm64:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - x86_64
       shell:
@@ -476,7 +503,7 @@
         - cadvisor_amd64:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - arm64
       shell:
@@ -487,7 +514,7 @@
         - cadvisor_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - x86_64
       shell:
@@ -498,7 +525,7 @@
         - cadvisor_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Workers remove redundant images - arm64
       shell:
@@ -527,7 +554,7 @@
       ignore_errors: yes
     # ========================================================================
 
-# print join cluster command
+# Register join cluster command
 - hosts: master
   remote_user: root
 
@@ -548,11 +575,6 @@
 # init workers
 - hosts: new_node
   remote_user: root
-  vars_prompt:
-    - name: "join_cluster_command"
-      prompt: "Input the command shown above for adding to the cluster"
-      default: ""
-      private: no
 
   tasks:
     - name: reset k8s
@@ -699,6 +721,10 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
+- hosts: new_node
+  remote_user: root
+
+  tasks:
     - name: Create log directory for cadvisor and device-plugin
       file:
         path: /var/log/{{item}}
@@ -744,5 +770,5 @@
       shell:
         chdir: "{{deploy_yaml_dir}}"
         cmd:
-          kubectl apply -f ascendplugin-volcano.yaml;
-          kubectl apply -f ascendplugin-310.yaml
+          kubectl apply -f ascendplugin-volcano*.yaml;
+          kubectl apply -f ascendplugin-310*.yaml
