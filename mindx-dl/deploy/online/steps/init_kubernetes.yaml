@@ -260,7 +260,7 @@
     - name: Replace config
       shell:
         cmd:
-          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config || mv ~/.kube/config_bak ~/.kube/config
+          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config || mv -f ~/.kube/config_bak ~/.kube/config
       tags:
         - init-workers
         - basic_only
