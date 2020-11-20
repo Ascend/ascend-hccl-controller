@@ -82,56 +82,6 @@
           kubectl label nodes {{ansible_hostname}} masterselector=dls-master-node
       tags: init-master
 
-- hosts: localnode
-  remote_user: root
-  vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
-
-  tasks:
-    - name: Label training nodes - arm64
-      shell:
-        cmd:
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['training_node']
-
-    - name: Label training nodes - x86_64
-      shell:
-        cmd:
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['training_node']
-
-    - name: Label inference nodes - arm64
-      shell:
-        cmd:
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['inference_node']
-
-    - name: Label inference nodes - x86_64
-      shell:
-        cmd:
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['inference_node']
-
 # print join cluster command
 - hosts: master
   remote_user: root
@@ -222,6 +172,11 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
+# init workers
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
     - name: Label training nodes - arm64
       shell:
         cmd:
@@ -270,6 +225,11 @@
         - ansible_architecture == "x86_64"
         - ansible_hostname in groups['inference_node']
 
+# init workers
+- hosts: workers
+  remote_user: root
+
+  tasks:
     - name: Replace config
       shell:
         cmd:
