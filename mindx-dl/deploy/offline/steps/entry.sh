@@ -10,9 +10,10 @@ then
   ansible-playbook -vv set_global_env.yaml --tags=basic_only
   ansible-playbook -vv offline_install_packages.yaml --tags=basic_only
   ansible-playbook -vv offline_load_images.yaml --tags=basic_only
+  ansible-playbook -vv init_kubernetes.yaml --tags=basic_only
   ansible-playbook -vv clean_services.yaml
   ansible-playbook -vv offline_deploy_service.yaml
-elif [ $scope == "additional" ]
+elif [ $scope == "full" ]
 then
   ansible-playbook -vv set_global_env.yaml
   ansible-playbook -vv offline_install_packages.yaml
