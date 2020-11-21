@@ -142,7 +142,7 @@
       file:
         path: /etc/docker
         state: directory
-      tags: docker
+      tags: always
     ###################################################################################
 
 # Set docker runtime on master nodes
@@ -158,8 +158,7 @@
             "registry-mirrors": ["https://dockerhub.azk8s.cn",
                                  "https://docker.mirrors.ustc.edu.cn",
                                  "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "https://docker-hub.tools.huawei.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
             "exec-opts": ["native.cgroupdriver=systemd"]
           }
           EOF
@@ -189,8 +188,7 @@
             "registry-mirrors": ["https://dockerhub.azk8s.cn",
                                  "https://docker.mirrors.ustc.edu.cn",
                                  "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn",
-                                    "https://docker-hub.tools.huawei.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
             "exec-opts": ["native.cgroupdriver=systemd"],
             "runtimes":
             {

@@ -45,7 +45,7 @@
           docker load -i calico-kube-controllers_amd64.tar.gz
       when: ansible_architecture == "x86_64"
 
-    - name: Load mindx images - arm64
+    - name: Load mindxdl images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -57,7 +57,7 @@
       tags: basic_only
       when: ansible_architecture == "aarch64"
 
-    - name: Load mindx images - x86_64
+    - name: Load mindxdl images - x86_64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -66,30 +66,6 @@
           docker load -i vc-scheduler*amd64.tar.gz;
           docker load -i vc-webhook-manager-v*amd64.tar.gz;
           docker load -i hccl-controller*amd64.tar.gz;
-      tags: basic_only
-      when: ansible_architecture == "x86_64"
-
-- hosts: localnode
-  remote_user: root
-  vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
-
-  tasks:
-    - name: Load mindx images - arm64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load -i Ascend-K8sDevicePlugin*arm64-Docker.tar.gz;
-          docker load -i huawei-cadvisor*arm64.tar.gz;
-      tags: basic_only
-      when: ansible_architecture == "aarch64"
-
-    - name: Load mindx images - x86_64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load -i Ascend-K8sDevicePlugin*amd64-Docker.tar.gz;
-          docker load -i huawei-cadvisor*amd64.tar.gz;
       tags: basic_only
       when: ansible_architecture == "x86_64"
 
@@ -108,7 +84,9 @@
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
         - huawei-cadvisor-{{hccl_version}}-arm64.tar.gz
       tags: basic_only
-      when: ansible_architecture == "aarch64"
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
 
     - name: scp basic images from master to workers - x86_64
       copy:
@@ -118,9 +96,19 @@
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
         - huawei-cadvisor-{{hccl_version}}-amd64.tar.gz
       tags: basic_only
-      when: ansible_architecture == "x86_64"
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
 
-    - name: Load basic images - arm64
+
+# Copy docker images to workers
+- hosts: localnode, workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
+    - name: Load mindxdl images - arm64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -129,7 +117,7 @@
       tags: basic_only
       when: ansible_architecture == "aarch64"
 
-    - name: Load basic images - x86_64
+    - name: Load mindxdl images - x86_64
       shell:
         chdir: "{{docker_images_dir}}"
         cmd:
@@ -138,6 +126,13 @@
       tags: basic_only
       when: ansible_architecture == "x86_64"
 
+# Copy docker images to workers
+- hosts: workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{dls_root_dir}}/docker_images"
+
+  tasks:
     - name: scp additional images from master to workers - arm64
       copy:
         src: "{{docker_images_dir}}/{{item}}"
@@ -149,7 +144,9 @@
         - calico-pod2daemon-flexvol_arm64.tar.gz
         - calico-cni_arm64.tar.gz
         - calico-kube-controllers_arm64.tar.gz
-      when: ansible_architecture == "aarch64"
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
 
     - name: scp additional images from master to workers - x86_64
       copy:
@@ -162,7 +159,9 @@
         - calico-pod2daemon-flexvol_amd64.tar.gz
         - calico-cni_amd64.tar.gz
         - calico-kube-controllers_amd64.tar.gz
-      when: ansible_architecture == "x86_64"
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
 
     - name: Load additional images - arm64
       shell:
@@ -174,7 +173,9 @@
           docker load -i calico-pod2daemon-flexvol_arm64.tar.gz;
           docker load -i calico-cni_arm64.tar.gz;
           docker load -i calico-kube-controllers_arm64.tar.gz;
-      when: ansible_architecture == "aarch64"
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
 
     - name: Load additional images - x86_64
       shell:
@@ -186,4 +187,6 @@
           docker load -i calico-pod2daemon-flexvol_amd64.tar.gz;
           docker load -i calico-cni_amd64.tar.gz;
           docker load -i calico-kube-controllers_amd64.tar.gz;
-      when: ansible_architecture == "x86_64"
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
