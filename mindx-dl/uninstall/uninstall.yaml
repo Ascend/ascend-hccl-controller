@@ -20,8 +20,7 @@
       default: "no"
 
   vars:
-    deploy_dir: "{{dls_root_dir}}"
-    deploy_yaml_dir: "{{dls_root_dir}}/yamls"
+     deploy_yaml_dir : "{{ dls_root_dir }}/yamls"
 
   tasks:
     # check interactive input
@@ -42,30 +41,30 @@
 
     - name: Remove volcano service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl delete -f volcano-*.yaml
       ignore_errors: True
 
     - name: Remove hccl-controller service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_di  }}"
         cmd:
-          kubectl delete -f hccl-controller.yaml
+          kubectl delete -f hccl-controller*.yaml
       ignore_errors: True
 
     - name: Remove device-plugin service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
-          kubectl delete -f ascendplugin-volcano.yaml;
-          kubectl delete -f ascendplugin-310.yaml
+          kubectl delete -f ascendplugin-volcano*.yaml;
+          kubectl delete -f ascendplugin-310*.yaml
       ignore_errors: True
 
     - name: Remove cadvisor service
       shell:
-        chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
-        cmd: kubectl delete -k huawei
+        chdir: "{{ deploy_yaml_dir }}"
+        cmd: kubectl delete -f cadvisor-*.yaml
       ignore_errors: True
 
     - name: Check whether all service component services are terminated
@@ -88,7 +87,6 @@
 
     - name: Remove hccl-controller image
       shell:
-        chdir: "{{deploy_yaml_dir}}"
         cmd:
           docker rmi -f $(docker images | grep hccl-controller | awk '{print $3}')
       ignore_errors: True
