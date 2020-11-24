@@ -1,60 +1,93 @@
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 #!/usr/bin/env bash
 
-# 全局变量
-STATUS_NORMAL="normal"
-STATUS_ERROR="error"
-SERVER_NOT_INSTALL="not install"
-POD_STATUS_RUNNING="Running"
-SERVICE_STATUS_RUNNING="active (running)"
-GET_ALL_PODS_COMMAND="kubectl get pods -A -o wide"
-DESCRIBE_POD_COMMAND="kubectl describe pod"
-NPU_INFO_COMMAND="npu-smi info"
-DOCKER_IMAGES="docker images"
-MASTER_NODE="master"
-WORKER_NODE="worker"
-# 既是master又是worker
-MASTER_WORKER_NODE="master_worker"
-
+# 全局参数
+SERVICE_CHECK_STR_ARRAY=()
 # MindX DL服务名称
 DEVICE_PLUGIN_SERVICE_NAME="Ascend-Device-Plugin"
 CADVISOR_SERVICE_NAME="cAdvisor"
 HCCL_SERVICE_NAME="HCCL-Controller"
 VOLCANO_SERVICE_NAME="Volcano"
 
-# 检查的节点类型
+# 格式化输出参数
+SERVICE_MAX_LEN=0
+STATUS_MAX_LEN=0
+VERSION_MAX_LEN=0
+
+STATUS_NORMAL="normal"
+STATUS_ERROR="error"
+SERVER_NOT_INSTALL="not install"
+POD_STATUS_RUNNING="Running"
+SERVICE_STATUS_RUNNING="active (running)"
+NO_IMAGE="no image"
+
+GET_ALL_PODS_COMMAND="kubectl get pods -A -o wide"
+DESCRIBE_POD_COMMAND="kubectl describe pod"
+NPU_INFO_COMMAND="npu-smi info"
+DOCKER_IMAGES="docker images"
+
+MASTER_NODE="master"
+WORKER_NODE="worker"
+# 既是master又是worker
+MASTER_WORKER_NODE="master_worker"
+# 检查的节点类型，默认为检查worker
 if [[ $1 == "${MASTER_NODE}" ]]
 then
     CHECK_NODE_TYPE=${MASTER_NODE}
-elif [[ $1 == "${WORKER_NODE}" ]]
+elif [[ $1 == "${MASTER_WORKER_NODE}" ]]
 then
-    CHECK_NODE_TYPE=${WORKER_NODE}
-else
     CHECK_NODE_TYPE=${MASTER_WORKER_NODE}
+else
+    CHECK_NODE_TYPE=${WORKER_NODE}
 fi
+
+function set_max_len() {
+    service_name_len=`echo "$1" | awk -F '|' '{print length($1)}'`
+    status_len=`echo "$1" | awk -F '|' '{print length($2)}'`
+    version_len=`echo "$1" | awk -F '|' '{print length($3)}'`
+
+    if (( ${service_name_len} > ${SERVICE_MAX_LEN} ))
+    then
+        SERVICE_MAX_LEN=${service_name_len}
+    fi
+
+    if (( ${status_len} > ${STATUS_MAX_LEN} ))
+    then
+        STATUS_MAX_LEN=${status_len}
+    fi
+
+    if (( ${version_len} > ${VERSION_MAX_LEN} ))
+    then
+        VERSION_MAX_LEN=${version_len}
+    fi
+}
 
 # 检查NPU驱动状态和版本
 function check_npu() {
+    service_name="npu-driver"
     npu_driver_status=${SERVER_NOT_INSTALL}
     npu_driver_version=""
     NPU_INFO_COMMAND="npu-smi info"
-    ${NPU_INFO_COMMAND} > /dev/null
+    ${NPU_INFO_COMMAND} > /dev/null 2>&1
 
     if [ $? == 0 ]
     then
         npu_driver_version=`${NPU_INFO_COMMAND} 2>/dev/null | grep -E 'npu-smi(.*)Version:' \
                                                             | awk -F ':' '{print $2}' \
                                                             | awk -F ' ' '{print $1}' \
-                                                            | sed -e 's/[ \t]*$//g' \
-                                                            | sed -e 's/^[ \t]*//g'`
+                                                            | sed -e 's/[ ]*$//g' \
+                                                            | sed -e 's/^[ ]*//g'`
         npu_driver_status=${STATUS_NORMAL}
     fi
 
-    echo -e "npu-driver\t"${npu_driver_status}"\t"${npu_driver_version}
+    check_result_str="${service_name}|${npu_driver_status}|${npu_driver_version}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 # 检查docker状态和版本
 function check_docker() {
+    service_name="docker"
     docker_service_status=${SERVER_NOT_INSTALL}
     docker_version=""
     docker_version_command="docker --version"
@@ -63,8 +96,8 @@ function check_docker() {
     docker_status_str=`${docker_status_command} 2>/dev/null | grep -E "Active:" \
                                                             | awk -F ':' '{print $2}' \
                                                             | awk -F 'since' '{print $1}' \
-                                                            | sed -e 's/[ \t]*$//g' \
-                                                            | sed -e 's/^[ \t]*//g'`
+                                                            | sed -e 's/[ ]*$//g' \
+                                                            | sed -e 's/^[ ]*//g'`
     if [[ "${docker_status_str}" != "" ]]
     then
         if [[ "${docker_status_str}" == "${SERVICE_STATUS_RUNNING}" ]]
@@ -84,12 +117,16 @@ function check_docker() {
             docker_version="${STATUS_ERROR}[The Docker command cannot be found. The Docker environment may be damaged.]"
         fi
     fi
-    echo -e "docker\t"${docker_service_status}"\t"${docker_version}
+
+    check_result_str="${service_name}|${docker_service_status}|${docker_version}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 # 检查K8s状态和版本
 function check_kubelet_service() {
     # ========================================检测kubelet状态，版本 =======================
+    service_name="kubelet"
     kubelet_service_status=${SERVER_NOT_INSTALL}
     kubelet_version=""
     kubelet_version_command="kubelet --version"
@@ -98,8 +135,8 @@ function check_kubelet_service() {
     kubelet_status_str=`${kubelet_status_command} 2>/dev/null | grep -E "Active:" \
                                                                | awk -F ':' '{print $2}' \
                                                                | awk -F 'since' '{print $1}' \
-                                                               | sed 's/[ \t]*$//g' \
-                                                               | sed 's/^[ \t]*//g'`
+                                                               | sed 's/[ ]*$//g' \
+                                                               | sed 's/^[ ]*//g'`
 
     if [ "${kubelet_status_str}" != "" ]
     then
@@ -121,11 +158,14 @@ function check_kubelet_service() {
         fi
     fi
 
-    echo -e "kubelet\t"${kubelet_service_status}"\t"${kubelet_version}
+    check_result_str="${service_name}|${kubelet_service_status}|${kubelet_version}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 function check_kubeadm_service() {
     # ========================================检测kubeadm状态，版本 =======================
+    service_name="kubeadm"
     kubeadm_service_status=${SERVER_NOT_INSTALL}
     kubeadm_version=""
     kubeadm_version_command="kubeadm version"
@@ -139,11 +179,14 @@ function check_kubeadm_service() {
         kubeadm_version="${kubeadm_version}"
     fi
 
-    echo -e "kubeadm\t"${kubeadm_service_status}"\t"${kubeadm_version}
+    check_result_str="${service_name}|${kubeadm_service_status}|${kubeadm_version}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 function check_kubectl_service() {
     # ========================================检测kubectl状态，版本 =======================
+    service_name="kubectl"
     kubectl_service_status=${SERVER_NOT_INSTALL}
     kubectl_version=""
     kubectl_version_command="kubectl version"
@@ -158,7 +201,9 @@ function check_kubectl_service() {
         kubectl_version=${kubectl_version}
     fi
 
-    echo -e "kubectl\t"${kubectl_service_status}"\t"${kubectl_version}
+    check_result_str="${service_name}|${kubectl_service_status}|${kubectl_version}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 function check_k8s() {
@@ -179,24 +224,24 @@ function check_mindxdl_by_name() {
     service_status_str=`${GET_ALL_PODS_COMMAND} 2>/dev/null | grep \`hostname\` \
                                                                   | grep -E "${service_name_regexp}" \
                                                                   | head -n 1 \
-                                                                  | sed -e 's/[ \t]*$//g' \
-                                                                  | sed -e 's/^[ \t]*//g'`
+                                                                  | sed -e 's/[ ]*$//g' \
+                                                                  | sed -e 's/^[ ]*//g'`
     # 节点部署了服务
     if [[ "${service_status_str}" != "" ]]
     then
 
         # 使用的k8s命名空间
-        pod_namespace=`echo ${service_status_str} | awk -F ' ' '{print $1}'`
+        pod_namespace=`echo "${service_status_str}" | awk -F ' ' '{print $1}'`
         # pod名称
-        pod_name=`echo ${service_status_str} | awk -F ' ' '{print $2}'`
+        pod_name=`echo "${service_status_str}" | awk -F ' ' '{print $2}'`
         # pod状态
-        pod_status=`echo ${service_status_str} | awk -F ' ' '{print $4}'`
+        pod_status=`echo "${service_status_str}" | awk -F ' ' '{print $4}'`
         # 查询pod详情
         describe_pod_command="${DESCRIBE_POD_COMMAND} -n ${pod_namespace} ${pod_name}"
         # pod使用的镜像
         service_image=`${describe_pod_command} 2>/dev/null | grep "Image:" | awk -F ' ' '{print $2}' \
-                                                                   | sed -e 's/[ \t]*$//g' \
-                                                                   | sed -e 's/^[ \t]*//g'`
+                                                                   | sed -e 's/[ ]*$//g' \
+                                                                   | sed -e 's/^[ ]*//g'`
         if [[ "${pod_status}" != "${POD_STATUS_RUNNING}" ]]
         then
             status=${STATUS_ERROR}
@@ -206,9 +251,15 @@ function check_mindxdl_by_name() {
         service_status="${status}[$pod_status]"
     else
         service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name}" | awk -F ' ' '{print $1":"$2}' | xargs | sed -e 's/ /，/g'`
+        if [[ "${service_image}" == "" ]]
+        then
+            service_image=${NO_IMAGE}
+        fi
     fi
 
-    echo -e ${service_name}"\t"${service_status}"\t"${service_image}
+    check_result_str="${service_name}|${service_status}|${service_image}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 # 检查device-plugin状态，版本
@@ -292,10 +343,13 @@ function check_volcano_base_service() {
     then
         service_status=${STATUS_NORMAL}
     else
-        service_status="${STATUS_ERROR}[The image does not exist.]"
+        service_status=${SERVER_NOT_INSTALL}
+        service_image=${NO_IMAGE}
     fi
 
-    echo -e ${VOLCANO_SERVICE_NAME}"\t"${service_status}"\t"${service_image}
+    check_result_str="${VOLCANO_SERVICE_NAME}|${service_status}|${service_image}"
+    set_max_len "${check_result_str}"
+    SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
 # 检查MindX DL组件状态和版本
@@ -312,19 +366,85 @@ function check_mindxdl() {
     # worker节点
     if [[ "${CHECK_NODE_TYPE}" =~ (.*)${WORKER_NODE} ]]
     then
-        # echo 111 > /dev/null
         check_device_plugin_service
         check_cadvisor_service
     fi
 
 }
 
+function print_format() {
+    file_dir=$(dirname $0)
+    file_path=${file_dir}"/check_result.txt"
+    rm -rf ${file_path}
+    # 检查结果数组长度
+    arr_length=${#SERVICE_CHECK_STR_ARRAY[@]}
+    # 打印时设置的其他符号长度
+    other_symbel_length=18
+    hostname=`hostname`
+    # 主机名长度
+    os_hostname_length=`echo ${hostname} | awk '{print length($1)}'`
+    ip_addr=""
+    # “hostname”字符长度
+    table_head_hostname_length=8
+    if [[ ${os_hostname_length} > ${table_head_hostname_length} ]]
+    then
+        HOSTNAME_LENGTH=${os_hostname_length}
+    else
+        HOSTNAME_LENGTH=${table_head_hostname_length}
+    fi
+
+    text_max_length=$((${SERVICE_MAX_LEN}+${STATUS_MAX_LEN}+${VERSION_MAX_LEN}+${HOSTNAME_LENGTH}+${other_symbel_length}))
+
+    printf "%-${text_max_length}s\n" "-" | sed -e 's/ /-/g' >> ${file_path}
+    for((i=0; i<${arr_length}; i++));
+    do
+        if [[ $i == 0 ]]
+        then
+            table_hostname=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $1}'`
+            table_ip_addr=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $2}'`
+            table_service_name=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $3}'`
+            table_status=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $4}'`
+            table_version=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $5}'`
+        else
+            table_hostname=${hostname}
+            table_ip_addr=${ip_addr}
+            table_service_name=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $1}'`
+            table_status=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $2}'`
+            table_version=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $3}'`
+        fi
+
+        printf "| %-${HOSTNAME_LENGTH}s | %-2s | %-${SERVICE_MAX_LEN}s | %-${STATUS_MAX_LEN}s | %-${VERSION_MAX_LEN}s |\n" \
+                "${table_hostname}" "${table_ip_addr}" "${table_service_name}" "${table_status}" "${table_version}" >> ${file_path}
+        printf "%-${text_max_length}s\n" "-" | sed -e 's/ /-/g' >> ${file_path}
+    done
+}
+
 #执行检查
-function main() {
+function do_check() {
+    table_head="hostname|ip|service|status|version"
+    set_max_len ${table_head}
+    # head
+    SERVICE_CHECK_STR_ARRAY+=(${table_head})
+
+    # 检查npu
     check_npu
+    # 检查docker
     check_docker
+    # 检查k8s
     check_k8s
+
+    docker_info_str=`docker info`
+    # docker没启动就不检查MindX DL组件
+    if [[ "${docker_info_str}" =~ (.*Cannot connect to the Docker daemon) ]] \
+        || [[ "${docker_status}" =~(.*not install) ]]
+    then
+        return
+    fi
+    # 检查MindX DL组件
     check_mindxdl
 }
 
-main
+# 检查
+do_check >> /dev/null 2>&1
+# 格式化打印
+print_format
