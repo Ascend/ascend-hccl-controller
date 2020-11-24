@@ -48,7 +48,7 @@
 
     - name: Remove hccl-controller service
       shell:
-        chdir: "{{ deploy_yaml_di  }}"
+        chdir: "{{ deploy_yaml_dir  }}"
         cmd:
           kubectl delete -f hccl-controller*.yaml
       ignore_errors: True
@@ -184,12 +184,12 @@
       shell:
         cmd:
           kubeadm reset -f;
-          apt-mark unhold kubelet kubeadm kubectl
       when: whether_uninstall_k8s_and_docker == true
       ignore_errors: True
 
     - name: Uninstall kubernetes on every node - Ubuntu
       shell:
+        apt-mark unhold kubelet kubeadm kubectl;
         apt-get --purge remove -y kubeadm kubectl kubelet kubernetes-cni kube*;
         apt-get autoremove -y
       ignore_errors: True
@@ -235,7 +235,7 @@
     - name: Uninstall docker on every node - CentOS
       shell:
         cmd:
-          yum remove -y docker-engine;
+          yum remove -y docker-ce;
           yum autoremove -y
       ignore_errors: True
       when:
@@ -327,7 +327,7 @@
         cmd:
           yum remove -y nfs-utils rpcbind;
           yum autoremove -y
-      ignore_erors: True
+      ignore_errors: True
       when:
         - whether_uninstall_nfs == true
         - ansible_distribution == 'CentOS'
