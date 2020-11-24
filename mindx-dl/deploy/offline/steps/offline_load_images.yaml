@@ -82,7 +82,7 @@
         dest: "{{docker_images_dir}}/"
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-{{hccl_version}}-arm64.tar.gz
+        - huawei-cadvisor-{{cadvisor_version}}-arm64.tar.gz
       tags: basic_only
       when:
         - ansible_architecture == "aarch64"
@@ -94,7 +94,7 @@
         dest: "{{docker_images_dir}}/"
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-{{hccl_version}}-amd64.tar.gz
+        - huawei-cadvisor-{{cadvisor_version}}-amd64.tar.gz
       tags: basic_only
       when:
         - ansible_architecture == "x86_64"

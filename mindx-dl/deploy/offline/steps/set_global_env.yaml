@@ -15,33 +15,73 @@
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
 
+- hosts: localnode, cluster
+  remote_user: root
+  tasks:
+    - name: create offline package directory
+      file:
+        path: "{{ dls_root_dir }}/base_software"
+        state: directory
+
+- hosts: master
+  remote_user: root
+  tasks:
+    - name: Check if offline package for arm arch exists
+      stat:
+        path: "{{ dls_root_dir }}/offline-pkg-arm64.zip"
+      register: arm_file_status
+
+    - name: Check if offline package for amd arch exists
+      stat:
+        path: "{{ dls_root_dir }}/offline-pkg-amd64.zip"
+      register: amd_file_status
+
+    - name: create offline package directory - arm64
+      file:
+        path: "{{ dls_root_dir }}/base_software_arm64"
+        state: directory
+      when: arm_file_status.stat.exists == True
+
+    - name: unarchive offline package - arm64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
+        dest: "{{dls_root_dir}}/base_software_arm64/"
+      when: arm_file_status.stat.exists == True
+
+    - name: create offline package directory - amd64
+      file:
+        path: "{{ dls_root_dir }}/base_software_amd64"
+        state: directory
+      when: arm_file_status.stat.exists == True
+
+    - name: unarchive offline package - x86_64
+      unarchive:
+        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
+        dest: "{{dls_root_dir}}/base_software_amd64/"
+      when: amd_file_status.stat.exists == True
+
 # scp install package to workers
 - hosts: workers
   remote_user: root
   tasks:
     - name: scp install package from master to workers - arm64
       copy:
-        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
-        dest: "{{dls_root_dir}}/"
+        src: "{{ dls_root_dir }}/base_software_arm64/"
+        dest: "{{ dls_root_dir }}/base_software/"
       when:
         - ansible_architecture == "aarch64"
 
     - name: scp install package from master to workers - x86_64
       copy:
-        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
-        dest: "{{dls_root_dir}}/"
+        src: "{{dls_root_dir}}/base_software_amd64/"
+        dest: "{{dls_root_dir}}/base_software/"
       when:
         - ansible_architecture == "x86_64"
 
 # unzip offline package
-- hosts: localnode, cluster
+- hosts: localnode, master
   remote_user: root
   tasks:
-    - name: create offline package directory
-      file:
-        path: "{{dls_root_dir}}/base_software"
-        state: directory
-
     - name: unarchive offline package - arm64
       unarchive:
         src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
@@ -54,6 +94,7 @@
         dest: "{{dls_root_dir}}/base_software/"
       when: ansible_architecture == "x86_64"
 
+# Change settings.
 - hosts: localnode, cluster
   remote_user: root
 
@@ -69,7 +110,7 @@
       shell:
         chdir: "{{dls_root_dir}}/base_software/selinux"
         cmd:
-          pip3.7 install distro-1.5.0* setuptools-50.3.2* selinux-0.2.1*
+          pip3.7 install distro-1.5.0* selinux-0.2.1*
       when:
         - ansible_distribution == 'CentOS'
 
