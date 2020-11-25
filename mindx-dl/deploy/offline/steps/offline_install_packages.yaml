@@ -111,8 +111,7 @@
       shell:
         chdir: "{{dls_root_dir}}/base_software/docker"
         cmd:
-          dpkg -i libltdl7*;
-          dpkg -i git*
+          dpkg -i libltdl7*
       when:
         - ansible_distribution == 'Ubuntu'
       tags: docker

@@ -120,7 +120,7 @@
         chdir: "{{dls_root_dir}}/base_software/"
         cmd:
           rm libtirpc* rpcbind* libnfsidmap2* keyutils* nfs-common* nfs-kernel-server*;
-          rm libltdl7* git* docker-ce_18.06.3* cri-tools* conntrack* socat*;
+          rm libltdl7* docker-ce_18.06.3* cri-tools* conntrack* socat*;
           rm kubernetes-cni* kubelet_1.17.3* kubectl_1.17.3* kubeadm_1.17.3*;
       tags: clean_pkg
       ignore_errors: True
