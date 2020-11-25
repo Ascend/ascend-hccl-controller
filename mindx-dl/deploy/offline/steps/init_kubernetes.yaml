@@ -32,6 +32,7 @@
     - name: Init cluster
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubeadm init --kubernetes-version=v1.17.3
             --node-name={{ ansible_hostname }}
             --pod-network-cidr=192.168.0.0/16

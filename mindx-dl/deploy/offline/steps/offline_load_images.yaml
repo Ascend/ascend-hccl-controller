@@ -6,7 +6,6 @@
 # Load docker images on master
 - hosts: localnode, master
   remote_user: root
-  vars_prompt:
   vars:
     docker_images_dir: "{{dls_root_dir}}/docker_images"
 
@@ -43,6 +42,34 @@
           docker load -i calico-pod2daemon-flexvol_amd64.tar.gz;
           docker load -i calico-cni_amd64.tar.gz;
           docker load -i calico-kube-controllers_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+
+    - name: Tag images - arm64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - cruse/kube-apiserver-arm64:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - cruse/kube-controller-manager-arm64:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - cruse/kube-scheduler-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-scheduler:v1.17.3
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-arm64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+      when: ansible_architecture == "aarch64"
+
+    - name: Tag images - x86_64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - kubesphere/kube-apiserver:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - kubesphere/kube-controller-manager:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - kubesphere/kube-scheduler:v1.17.3 k8s.gcr.io/kube-scheduler:v1.17.3
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-amd64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
       when: ansible_architecture == "x86_64"
 
     - name: Load mindxdl images - arm64
@@ -190,3 +217,21 @@
       when:
         - ansible_architecture == "x86_64"
         - ansible_default_ipv4['address'] != master_ip
+
+    - name: Tag additional images on workers - arm64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+      when: ansible_architecture == "aarch64"
+
+    - name: Tag additional images on workers - x86_64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+      when: ansible_architecture == "x86_64"
