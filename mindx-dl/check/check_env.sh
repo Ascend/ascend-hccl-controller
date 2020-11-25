@@ -2,6 +2,10 @@
 #!/usr/bin/env bash
 
 # 全局参数
+# 输出文件
+file_dir=$(dirname $0)
+file_path=${file_dir}"/check_report.txt"
+
 SERVICE_CHECK_STR_ARRAY=()
 # MindX DL服务名称
 DEVICE_PLUGIN_SERVICE_NAME="Ascend-Device-Plugin"
@@ -9,11 +13,13 @@ CADVISOR_SERVICE_NAME="cAdvisor"
 HCCL_SERVICE_NAME="HCCL-Controller"
 VOLCANO_SERVICE_NAME="Volcano"
 
-# 格式化输出参数
-SERVICE_MAX_LEN=0
-STATUS_MAX_LEN=0
-VERSION_MAX_LEN=0
+# 格式化输出参数,列宽
+service_col_len=0
+status_col_len=0
+version_col_len=0
+default_ip_col_width=2
 
+# 信息常量
 STATUS_NORMAL="normal"
 STATUS_ERROR="error"
 SERVER_NOT_INSTALL="not install"
@@ -21,10 +27,12 @@ POD_STATUS_RUNNING="Running"
 SERVICE_STATUS_RUNNING="active (running)"
 NO_IMAGE="no image"
 
+# 操作命令
 GET_ALL_PODS_COMMAND="kubectl get pods -A -o wide"
 DESCRIBE_POD_COMMAND="kubectl describe pod"
 NPU_INFO_COMMAND="npu-smi info"
 DOCKER_IMAGES="docker images"
+DOKCER_INFO="docker info"
 
 MASTER_NODE="master"
 WORKER_NODE="worker"
@@ -33,12 +41,19 @@ MASTER_WORKER_NODE="master_worker"
 # 检查的节点类型，默认为检查worker
 if [[ $1 == "${MASTER_NODE}" ]]
 then
-    CHECK_NODE_TYPE=${MASTER_NODE}
+    check_node_type=${MASTER_NODE}
 elif [[ $1 == "${MASTER_WORKER_NODE}" ]]
 then
-    CHECK_NODE_TYPE=${MASTER_WORKER_NODE}
+    check_node_type=${MASTER_WORKER_NODE}
 else
-    CHECK_NODE_TYPE=${WORKER_NODE}
+    check_node_type=${WORKER_NODE}
+fi
+# 是否是使用ansible的方式
+if [[ $2 == "ansible" ]]
+then
+    use_anisble="yes"
+else
+    use_anisble="no"
 fi
 
 function set_max_len() {
@@ -46,19 +61,19 @@ function set_max_len() {
     status_len=`echo "$1" | awk -F '|' '{print length($2)}'`
     version_len=`echo "$1" | awk -F '|' '{print length($3)}'`
 
-    if (( ${service_name_len} > ${SERVICE_MAX_LEN} ))
+    if (( ${service_name_len} > ${service_col_len} ))
     then
-        SERVICE_MAX_LEN=${service_name_len}
+        service_col_len=${service_name_len}
     fi
 
-    if (( ${status_len} > ${STATUS_MAX_LEN} ))
+    if (( ${status_len} > ${status_col_len} ))
     then
-        STATUS_MAX_LEN=${status_len}
+        status_col_len=${status_len}
     fi
 
-    if (( ${version_len} > ${VERSION_MAX_LEN} ))
+    if (( ${version_len} > ${version_col_len} ))
     then
-        VERSION_MAX_LEN=${version_len}
+        version_col_len=${version_len}
     fi
 }
 
@@ -133,10 +148,10 @@ function check_kubelet_service() {
     kubelet_status_command="systemctl status kubelet"
 
     kubelet_status_str=`${kubelet_status_command} 2>/dev/null | grep -E "Active:" \
-                                                               | awk -F ':' '{print $2}' \
-                                                               | awk -F 'since' '{print $1}' \
-                                                               | sed 's/[ ]*$//g' \
-                                                               | sed 's/^[ ]*//g'`
+                                                              | awk -F ':' '{print $2}' \
+                                                              | awk -F 'since' '{print $1}' \
+                                                              | sed 's/[ ]*$//g' \
+                                                              | sed 's/^[ ]*//g'`
 
     if [ "${kubelet_status_str}" != "" ]
     then
@@ -222,10 +237,10 @@ function check_mindxdl_by_name() {
     # 服务状态
     service_status=${SERVER_NOT_INSTALL}
     service_status_str=`${GET_ALL_PODS_COMMAND} 2>/dev/null | grep \`hostname\` \
-                                                                  | grep -E "${service_name_regexp}" \
-                                                                  | head -n 1 \
-                                                                  | sed -e 's/[ ]*$//g' \
-                                                                  | sed -e 's/^[ ]*//g'`
+                                                            | grep -E "${service_name_regexp}" \
+                                                            | head -n 1 \
+                                                            | sed -e 's/[ ]*$//g' \
+                                                            | sed -e 's/^[ ]*//g'`
     # 节点部署了服务
     if [[ "${service_status_str}" != "" ]]
     then
@@ -239,9 +254,10 @@ function check_mindxdl_by_name() {
         # 查询pod详情
         describe_pod_command="${DESCRIBE_POD_COMMAND} -n ${pod_namespace} ${pod_name}"
         # pod使用的镜像
-        service_image=`${describe_pod_command} 2>/dev/null | grep "Image:" | awk -F ' ' '{print $2}' \
-                                                                   | sed -e 's/[ ]*$//g' \
-                                                                   | sed -e 's/^[ ]*//g'`
+        service_image=`${describe_pod_command} 2>/dev/null | grep "Image:" \
+                                                           | awk -F ' ' '{print $2}' \
+                                                           | sed -e 's/[ ]*$//g' \
+                                                           | sed -e 's/^[ ]*//g'`
         if [[ "${pod_status}" != "${POD_STATUS_RUNNING}" ]]
         then
             status=${STATUS_ERROR}
@@ -250,7 +266,10 @@ function check_mindxdl_by_name() {
         fi
         service_status="${status}[$pod_status]"
     else
-        service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name}" | awk -F ' ' '{print $1":"$2}' | xargs | sed -e 's/ /，/g'`
+        service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name}" \
+                                                    | awk -F ' ' '{print $1":"$2}' \
+                                                    | xargs \
+                                                    | sed -e 's/ /，/g'`
         if [[ "${service_image}" == "" ]]
         then
             service_image=${NO_IMAGE}
@@ -337,7 +356,10 @@ function check_volcano_scheduler_service() {
 # 检查volcano-base状态，版本
 function check_volcano_base_service() {
     image_name="volcanosh/vc-webhook-manager-base"
-    service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name}" | awk -F ' ' '{print $1":"$2}' | xargs | sed -e 's/ /，/g'`
+    service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name}" \
+                                                | awk -F ' ' '{print $1":"$2}' \
+                                                | xargs \
+                                                | sed -e 's/ /,/g'`
 
     if [[ "${service_image}" != "" ]]
     then
@@ -355,7 +377,7 @@ function check_volcano_base_service() {
 # 检查MindX DL组件状态和版本
 function check_mindxdl() {
     # master节点
-    if [[ "${CHECK_NODE_TYPE}" =~ ${MASTER_NODE}(.*) ]]
+    if [[ "${check_node_type}" =~ ${MASTER_NODE}(.*) ]]
     then
         check_hccl_service
         check_volcano_admission_service
@@ -364,7 +386,7 @@ function check_mindxdl() {
         check_volcano_scheduler_service
     fi
     # worker节点
-    if [[ "${CHECK_NODE_TYPE}" =~ (.*)${WORKER_NODE} ]]
+    if [[ "${check_node_type}" =~ (.*)${WORKER_NODE} ]]
     then
         check_device_plugin_service
         check_cadvisor_service
@@ -372,33 +394,35 @@ function check_mindxdl() {
 
 }
 
-function print_format() {
-    file_dir=$(dirname $0)
-    file_path=${file_dir}"/check_result.txt"
+function print_format_to_file() {
     rm -rf ${file_path}
+
     # 检查结果数组长度
     arr_length=${#SERVICE_CHECK_STR_ARRAY[@]}
     # 打印时设置的其他符号长度
-    other_symbel_length=18
+    other_symbel_length=16
     hostname=`hostname`
     # 主机名长度
-    os_hostname_length=`echo ${hostname} | awk '{print length($1)}'`
-    ip_addr=""
+    os_hostname_length=`echo ${hostname} | awk '{print length($0)}'`
     # “hostname”字符长度
     table_head_hostname_length=8
-    if [[ ${os_hostname_length} > ${table_head_hostname_length} ]]
+    ip_addr=""
+
+    if (( ${os_hostname_length} > ${table_head_hostname_length} ))
     then
         HOSTNAME_LENGTH=${os_hostname_length}
     else
         HOSTNAME_LENGTH=${table_head_hostname_length}
     fi
 
-    text_max_length=$((${SERVICE_MAX_LEN}+${STATUS_MAX_LEN}+${VERSION_MAX_LEN}+${HOSTNAME_LENGTH}+${other_symbel_length}))
+    text_max_length=$((${service_col_len} + ${default_ip_col_width} + \
+                        ${status_col_len} + ${version_col_len} + \
+                        ${HOSTNAME_LENGTH} + ${other_symbel_length}))
 
     printf "%-${text_max_length}s\n" "-" | sed -e 's/ /-/g' >> ${file_path}
     for((i=0; i<${arr_length}; i++));
     do
-        if [[ $i == 0 ]]
+        if (( $i == 0 ))
         then
             table_hostname=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $1}'`
             table_ip_addr=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $2}'`
@@ -413,7 +437,7 @@ function print_format() {
             table_version=`echo "${SERVICE_CHECK_STR_ARRAY[i]}" | awk -F '|' '{print $3}'`
         fi
 
-        printf "| %-${HOSTNAME_LENGTH}s | %-2s | %-${SERVICE_MAX_LEN}s | %-${STATUS_MAX_LEN}s | %-${VERSION_MAX_LEN}s |\n" \
+        printf "| %-${HOSTNAME_LENGTH}s | %-${default_ip_col_width}s | %-${service_col_len}s | %-${status_col_len}s | %-${version_col_len}s |\n" \
                 "${table_hostname}" "${table_ip_addr}" "${table_service_name}" "${table_status}" "${table_version}" >> ${file_path}
         printf "%-${text_max_length}s\n" "-" | sed -e 's/ /-/g' >> ${file_path}
     done
@@ -421,19 +445,20 @@ function print_format() {
 
 #执行检查
 function do_check() {
+    # 表头
     table_head="hostname|ip|service|status|version"
     set_max_len ${table_head}
-    # head
+    # 添加表头
     SERVICE_CHECK_STR_ARRAY+=(${table_head})
 
     # 检查npu
     check_npu
     # 检查docker
-    check_docker
+    # check_docker
     # 检查k8s
-    check_k8s
+    # check_k8s
 
-    docker_info_str=`docker info`
+    docker_info_str=`${DOKCER_INFO}`
     # docker没启动就不检查MindX DL组件
     if [[ "${docker_info_str}" =~ (.*Cannot connect to the Docker daemon) ]] \
         || [[ "${docker_status}" =~(.*not install) ]]
@@ -441,10 +466,57 @@ function do_check() {
         return
     fi
     # 检查MindX DL组件
-    check_mindxdl
+    # check_mindxdl
 }
 
-# 检查
-do_check >> /dev/null 2>&1
-# 格式化打印
-print_format
+function format_file_with_ip() {
+    # 含hostname的1行的内容
+    line_content=$(cat ${file_path} | grep `hostname` | head -n 1)
+    # 含hostname的行总长度
+    ip_line_length=${#line_content}
+    # ip字符串长度
+    ip_col_length=$(echo "${line_content}" | awk -F "|" '{print $3}' \
+                                           | sed -e 's/[ ]*$//g' \
+                                           | sed -e 's/^[ ]*//g' \
+                                           | awk '{print length($0)}')
+    # 没有Ip就不继续格式化
+    if (( ${ip_col_length} == 0 ))
+    then
+        return
+    fi
+    # default_ip_col_width=2
+    space_padding_length=$(( ${ip_col_length} - ${default_ip_col_width} ))
+    if (( ${space_padding_length} > 0 ))
+    then
+        space_padding_str=$(printf "%${space_padding_length}s" " ")
+        sed -i "s/ip |/ip ${space_padding_str}|/g" ${file_path}
+    fi
+
+    # 填充符号“-”
+    _line_length=$(cat ${file_path} | head -n 1 \
+                                    | sed -e 's/[ ]*$//g' \
+                                    | sed -e 's/^[ ]*//g' \
+                                    | awk '{print length($0)}')
+    _padding_length=$(( ${ip_line_length} - ${_line_length} ))
+    if (( ${_padding_length} > 0 ))
+    then
+        _padding_str=$(printf "%${_padding_length}s" "-" | sed 's/ /-/g')
+        sed -i -e "s/-$/-${_padding_str}/g" ${file_path}
+    fi
+}
+
+function main() {
+    if [[ ${use_anisble} != 'yes' ]]
+    then
+        # 检查
+        do_check
+        # 格式化打印
+        print_format_to_file
+    else
+        format_file_with_ip
+    fi
+
+    chmod 540 ${file_path}
+}
+
+main
