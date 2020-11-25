@@ -81,7 +81,7 @@
     - name: Label master node
       shell:
         cmd:
-          kubectl label nodes {{ ansible_hostname }} masterselector=dls-master-node
+          kubectl label nodes {{ ansible_hostname }} masterselector=dls-master-node --overwrite=true
       tags:
         - init-master
         - basic_only
