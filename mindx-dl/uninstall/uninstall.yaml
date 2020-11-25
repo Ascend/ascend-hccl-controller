@@ -1,3 +1,4 @@
+# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
 ---
 # This playbook is used to uninstall MindX DL platform.
 # Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts
