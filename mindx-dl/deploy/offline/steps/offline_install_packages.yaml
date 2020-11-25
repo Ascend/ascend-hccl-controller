@@ -1,4 +1,4 @@
-# Copyright ? Huawei Technologies Co., Ltd. 2020. All rights reserved.
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # This playbook is used to install offline downloaded software packages, including NFS, Docker and K8S.
 # Before running the script, ensure that the required software packages has been uploaded to the 'dls_root_dir' directory defined in /etc/ansible/hosts.

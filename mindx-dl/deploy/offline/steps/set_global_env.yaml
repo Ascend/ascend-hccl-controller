@@ -1,4 +1,4 @@
-# Copyright ? Huawei Technologies Co., Ltd. 2020. All rights reserved.
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # This playbook is used to modify system configurations on the master and worker nodes before all deployment.
 # Make sure that this script is executed first.
