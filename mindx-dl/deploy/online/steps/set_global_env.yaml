@@ -105,7 +105,7 @@
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{ master_ip }}'
+        replace: '\1\2,ansible_default_ipv4.address"
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
@@ -117,7 +117,7 @@
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{ master_ip }}'
+        line: 'export no_proxy={{ ansible_default_ipv4.address }}'
       when: has_no_proxy_var.stdout == ""
       tags:
         - basic_only
