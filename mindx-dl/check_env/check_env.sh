@@ -291,7 +291,6 @@ function check_mindxdl_by_name() {
                 || [[ "${docker_image_str}" =~(.*not install) ]]
             then
                 # docker没启动
-                service_status=${STATUS_ERROR}
                 service_image=${DOCKER_SERVICE_NOT_RUNNING}
             else
               service_image=`echo "${docker_image_str}" 2>/dev/null | grep -E "${image_name} " \
