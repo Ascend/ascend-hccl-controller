@@ -137,8 +137,8 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ items }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ items }} workerselector=dls-worker-node --overwrite=true
+          kubectl label nodes {{ item }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ item }} workerselector=dls-worker-node --overwrite=true
       tags:
         - init-workers
         - basic_only
@@ -148,7 +148,7 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ items }} accelerator=huawei-Ascend910 --overwrite=true
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true
       tags:
         - init-workers
         - basic_only
@@ -158,7 +158,7 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ items }} accelerator=huawei-Ascend310 --overwrite=true
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend310 --overwrite=true
       tags:
         - init-workers
         - basic_only
@@ -168,7 +168,7 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ items }} host-arch=huawei-arm --overwrite=true
+          kubectl label nodes {{ item }} host-arch=huawei-arm --overwrite=true
       tags:
         - init-workers
         - basic_only
@@ -178,7 +178,7 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ items }} host-arch=huawei-x86 --overwrite=true
+          kubectl label nodes {{ item }} host-arch=huawei-x86 --overwrite=true
       tags:
         - init-workers
         - basic_only
