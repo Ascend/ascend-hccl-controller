@@ -17,21 +17,24 @@ VOLCANO_ADMISSION_SERVICE="volcano-admission"
 VOLCANO_ADMISSION_INIT_SERVICE="volcano-admission-init"
 
 # 格式化输出参数,列宽
-service_col_length=0
-status_col_length=0
-version_col_length=0
+service_col_length=7
+status_col_length=6
+version_col_length=7
 default_ip_col_width=2
 
 # 信息常量
-STATUS_NORMAL="normal"
-STATUS_ERROR="error"
-SERVER_NOT_INSTALL="not install"
+STATUS_NORMAL="Normal"
+STATUS_ERROR="Error"
+STATUS_SERVER_NOT_INSTALL="Not install"
+STATUS_POD_COMPLETED="Completed"
+STATUS_PERMISSION_DENIED="Can't get service status, permission denied"
 POD_STATUS_RUNNING="Running"
-POD_STATUS_COMPLETED="Completed"
 SERVICE_STATUS_RUNNING="active (running)"
-NO_IMAGE="no image"
+NO_IMAGE="No image"
+DOCKER_SERVICE_NOT_RUNNING="Docker service not running"
 
 # 操作命令
+UNSET_PROXY="unset http_proxy https_proxy"
 GET_ALL_PODS_COMMAND="kubectl get pods -A -o wide"
 DESCRIBE_POD_COMMAND="kubectl describe pod"
 NPU_INFO_COMMAND="npu-smi info"
@@ -84,7 +87,7 @@ function set_max_len() {
 # 检查NPU驱动状态和版本
 function check_npu() {
     service_name="npu-driver"
-    npu_driver_status=${SERVER_NOT_INSTALL}
+    npu_driver_status=${STATUS_SERVER_NOT_INSTALL}
     npu_driver_version=""
     NPU_INFO_COMMAND="npu-smi info"
     ${NPU_INFO_COMMAND} > /dev/null 2>&1
@@ -107,7 +110,7 @@ function check_npu() {
 # 检查docker状态和版本
 function check_docker() {
     service_name="docker"
-    docker_service_status=${SERVER_NOT_INSTALL}
+    docker_service_status=${STATUS_SERVER_NOT_INSTALL}
     docker_version=""
     docker_version_command="docker --version"
     docker_status_command="systemctl status docker"
@@ -142,11 +145,10 @@ function check_docker() {
     SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
-# 检查K8s状态和版本
+# 检测kubelet状态，版本
 function check_kubelet_service() {
-    # ========================================检测kubelet状态，版本 =======================
     service_name="kubelet"
-    kubelet_service_status=${SERVER_NOT_INSTALL}
+    kubelet_service_status=${STATUS_SERVER_NOT_INSTALL}
     kubelet_version=""
     kubelet_version_command="kubelet --version"
     kubelet_status_command="systemctl status kubelet"
@@ -161,16 +163,16 @@ function check_kubelet_service() {
     then
         if [[ "${kubelet_status_str}" == "${SERVICE_STATUS_RUNNING}" ]]
         then
-            # kubeletr服务正常
+            # kubelet服务正常
             status=${STATUS_NORMAL}
         else
-            # kubeletr服务异常
+            # kubelet服务异常
             status=${STATUS_ERROR}
         fi
         kubelet_service_status="${status}[$kubelet_status_str]"
 
         kubelet_version=`${kubelet_version_command} 2>/dev/null | awk -F '[" ",]' '{print $2}'`
-        # 找不到kubeletr命令
+        # 找不到kubelet命令
         if [[ "${kubelet_version}" = "" ]]
         then
             kubelet_version="${STATUS_ERROR}[The kubelet command cannot be found. The kubelet environment may be damaged.]"
@@ -182,16 +184,16 @@ function check_kubelet_service() {
     SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
+# 检测kubeadm状态，版本
 function check_kubeadm_service() {
-    # ========================================检测kubeadm状态，版本 =======================
     service_name="kubeadm"
-    kubeadm_service_status=${SERVER_NOT_INSTALL}
+    kubeadm_service_status=${STATUS_SERVER_NOT_INSTALL}
     kubeadm_version=""
     kubeadm_version_command="kubeadm version"
 
     kubeadm_version=`${kubeadm_version_command} 2>/dev/null | awk -F '[,:]' '{print $7}' \
                                                             | sed -e 's/"//g'`
-    # 找不到kubeadmr命令
+    # 存在kubeadm命令
     if [[ "${kubeadm_version}" != "" ]]
     then
         kubeadm_service_status=${STATUS_NORMAL}
@@ -203,17 +205,17 @@ function check_kubeadm_service() {
     SERVICE_CHECK_STR_ARRAY+=("${check_result_str}")
 }
 
+# 检测kubectl状态，版本
 function check_kubectl_service() {
-    # ========================================检测kubectl状态，版本 =======================
     service_name="kubectl"
-    kubectl_service_status=${SERVER_NOT_INSTALL}
+    kubectl_service_status=${STATUS_SERVER_NOT_INSTALL}
     kubectl_version=""
     kubectl_version_command="kubectl version"
 
     kubectl_version=`${kubectl_version_command} 2>/dev/null | head -n 1 \
                                                             | awk -F '[,:]' '{print $7}' \
                                                             | sed -e 's/"//g'`
-    # 找不到kubectlr命令
+    # 存在kubectl命令
     if [[ "${kubectl_version}" != "" ]]
     then
         kubectl_service_status=${STATUS_NORMAL}
@@ -239,55 +241,73 @@ function check_mindxdl_by_name() {
     # 服务名
     service_name=$3
     # 服务状态
-    service_status=${SERVER_NOT_INSTALL}
-    service_status_str=`${GET_ALL_PODS_COMMAND} 2>/dev/null | grep \`hostname\` \
-                                                            | grep -E "${service_name_regexp}" \
-                                                            | head -n 1 \
-                                                            | sed -e 's/[ ]*$//g' \
-                                                            | sed -e 's/^[ ]*//g'`
-    # 节点部署了服务
-    if [[ "${service_status_str}" != "" ]]
-    then
+    service_status=${STATUS_SERVER_NOT_INSTALL}
+    pods_status_str=`${UNSET_PROXY} && ${GET_ALL_PODS_COMMAND} 2>&1`
 
-        # 使用的k8s命名空间
-        pod_namespace=`echo "${service_status_str}" | awk -F ' ' '{print $1}'`
-        # pod名称
-        pod_name=`echo "${service_status_str}" | awk -F ' ' '{print $2}'`
-        # pod状态
-        pod_status=`echo "${service_status_str}" | awk -F ' ' '{print $4}'`
-        # 查询pod详情
-        describe_pod_command="${DESCRIBE_POD_COMMAND} -n ${pod_namespace} ${pod_name}"
-        # pod使用的镜像
-        service_image=`${describe_pod_command} 2>/dev/null | grep "Image:" \
-                                                           | awk -F ' ' '{print $2}' \
-                                                           | sed -e 's/[ ]*$//g' \
-                                                           | sed -e 's/^[ ]*//g'`
-        if [[ ${service_name} == ${VOLCANO_ADMISSION_INIT_SERVICE} ]]
+    # 有权限访问kubernetes服务
+    if [[ ! "${pods_status_str}" =~ (.*was refused.*) ]]
+    then
+        service_status_str=`echo "${pods_status_str}" | grep \`hostname\` \
+                                                      | grep -E "${service_name_regexp}" \
+                                                      | head -n 1 \
+                                                      | sed -e 's/[ ]*$//g' \
+                                                      | sed -e 's/^[ ]*//g'`
+        # 安装了对应的服务
+        if [[ ${service_status_str} != "" ]]
         then
-            if [[ "${pod_status}" != "${POD_STATUS_COMPLETED}" ]]
+            # 使用的k8s命名空间
+            pod_namespace=`echo "${service_status_str}" | awk -F ' ' '{print $1}'`
+            # pod名称
+            pod_name=`echo "${service_status_str}" | awk -F ' ' '{print $2}'`
+            # pod状态
+            pod_status=`echo "${service_status_str}" | awk -F ' ' '{print $4}'`
+            # 查询pod详情
+            describe_pod_command="${DESCRIBE_POD_COMMAND} -n ${pod_namespace} ${pod_name}"
+            # pod使用的镜像
+            service_image=`${UNSET_PROXY} && ${describe_pod_command} 2>/dev/null | grep "Image:" \
+                                                                                 | awk -F ' ' '{print $2}' \
+                                                                                 | sed -e 's/[ ]*$//g' \
+                                                                                 | sed -e 's/^[ ]*//g'`
+            if [[ ${service_name} == ${VOLCANO_ADMISSION_INIT_SERVICE} ]]
             then
-                status=${STATUS_ERROR}
+                if [[ "${pod_status}" != "${STATUS_POD_COMPLETED}" ]]
+                then
+                    status=${STATUS_ERROR}
+                else
+                    status=${STATUS_NORMAL}
+                fi
             else
-                status=${STATUS_NORMAL}
+                if [[ "${pod_status}" != "${POD_STATUS_RUNNING}" ]]
+                then
+                    status=${STATUS_ERROR}
+                else
+                    status=${STATUS_NORMAL}
+                fi
             fi
+            service_status="${status}[$pod_status]"
         else
-            if [[ "${pod_status}" != "${POD_STATUS_RUNNING}" ]]
+            docker_image_str=`${DOCKER_IMAGES} 2>&1`
+            if [[ "${docker_image_str}" =~ (Cannot connect to the Docker daemon.*) ]] \
+                || [[ "${docker_image_str}" =~(.*not install) ]]
             then
-                status=${STATUS_ERROR}
+                # docker没启动
+                service_status=${STATUS_ERROR}
+                service_image=${DOCKER_SERVICE_NOT_RUNNING}
             else
-                status=${STATUS_NORMAL}
+              service_image=`echo "${docker_image_str}" 2>/dev/null | grep -E "${image_name} " \
+                                                                    | awk -F ' ' '{print $1":"$2}' \
+                                                                    | xargs \
+                                                                    | sed -e 's/ /,/g'`
+              if [[ "${service_image}" == "" ]]
+              then
+                  service_image=${NO_IMAGE}
+              fi
             fi
         fi
-        service_status="${status}[$pod_status]"
     else
-        service_image=`${DOCKER_IMAGES} 2>/dev/null | grep -E "${image_name} " \
-                                                    | awk -F ' ' '{print $1":"$2}' \
-                                                    | xargs \
-                                                    | sed -e 's/ /,/g'`
-        if [[ "${service_image}" == "" ]]
-        then
-            service_image=${NO_IMAGE}
-        fi
+        # 没有权限访问k8s
+        service_status=${STATUS_PERMISSION_DENIED}
+        service_image=""
     fi
 
     check_result_str="${service_name}|${service_status}|${service_image}"
@@ -469,31 +489,22 @@ function print_format_to_file() {
 
 #执行检查
 function do_check() {
-    # 表头
-    table_head="hostname|ip|service|status|version"
-    set_max_len ${table_head}
-    # 添加表头
-    SERVICE_CHECK_STR_ARRAY+=(${table_head})
-
     # 检查npu
     check_npu
     # 检查docker
     check_docker
     # 检查k8s
     check_k8s
-
-    docker_info_str=`${DOKCER_INFO}`
-    # docker没启动就不检查MindX DL组件
-    if [[ "${docker_info_str}" =~ (.*Cannot connect to the Docker daemon) ]] \
-        || [[ "${docker_status}" =~(.*not install) ]]
-    then
-        return
-    fi
     # 检查MindX DL组件
     check_mindxdl
 }
 
 function main() {
+    # 表头
+    table_head="hostname|ip|service|status|version"
+    set_max_len ${table_head}
+    # 添加表头
+    SERVICE_CHECK_STR_ARRAY+=(${table_head})
     # 检查
     do_check
     # 格式化打印
@@ -505,5 +516,5 @@ function main() {
 main >>/dev/null 2>&1
 cat ${file_path}
 echo ""
-echo "Notice: Finished! The check report is stored in the ${file_path}"
+echo "Finished! The check report is stored in the ${file_path}"
 echo ""
