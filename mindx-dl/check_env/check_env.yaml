@@ -70,6 +70,15 @@
     tmp_dir: "/tmp"
 
   tasks:
+    - name: Granting Permissions to the Worker Node
+      shell:
+        cmd:
+          mv $HOME/.kube $HOME/.kube.bak || true;
+          mkdir $HOME/.kube;
+          cp /etc/kubernetes/kubelet.conf $HOME/.kube/config;
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
     - name: Copy check_env.sh to workers
       copy:
         src: "{{ playbook_dir }}/check_env.sh"
@@ -83,7 +92,19 @@
         chdir: "{{ tmp_dir }}"
         cmd:
           dos2unix check_env.sh;
+          unset KUBECONFIG;
           bash check_env.sh worker "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Revoking Permissions on a Worker Node
+      shell:
+        cmd:
+          rm -rf $HOME/.kube || true;
+          mv $HOME/.kube.bak $HOME/.kube || true;
+          source /etc/profile
+      args:
+        executable: "/bin/bash"
       when:
         - ansible_default_ipv4['address'] != master_ip
 
