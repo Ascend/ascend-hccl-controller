@@ -1,7 +1,7 @@
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # Generate report with master
-- hosts: localnode, master
+- hosts: master
   remote_user: root
 
   tasks:
@@ -29,10 +29,6 @@
       when:
         - ansible_hostname in groups["workers"]
 
-- hosts: master
-  remote_user: root
-
-  tasks:
     - name: Set reports dir facts
       add_host:
         name: "master_reports"
@@ -54,7 +50,7 @@
         src: "{{ playbook_dir }}/env_check_report.txt"
         dest: "{{ hostvars['master_reports']['report_dir'] }}/env_check_report_master.txt"
         remote_src: True
-        mode: 0444
+        mode: 0440
 
     - name: Remove temporary file on master
       shell:
@@ -113,7 +109,7 @@
         src: "{{ tmp_dir }}/env_check_report.txt"
         dest: "{{ tmp_dir }}/env_check_report_{{ ansible_default_ipv4['address'] }}.txt"
         remote_src: True
-        mode: 0444
+        mode: 0440
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -153,7 +149,7 @@
       file:
         path: "{{ playbook_dir }}/{{ report_file_name }}"
         state: touch
-        mode: 0444
+        mode: 0440
 
     - name: Generate final report
       shell:
