@@ -486,7 +486,7 @@ function print_format_to_file() {
     done
 }
 
-#执行检查
+# 执行检查
 function do_check() {
     # 检查npu
     check_npu
