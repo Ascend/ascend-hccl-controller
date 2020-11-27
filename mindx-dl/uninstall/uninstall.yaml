@@ -274,6 +274,7 @@
       shell:
         cmd:
           systemctl stop nfs-server
+      ignore_errors: True
       when:
         - whether_uninstall_nfs == true
 
