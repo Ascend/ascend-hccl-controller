@@ -72,6 +72,7 @@
           mv $HOME/.kube $HOME/.kube.bak || true;
           mkdir $HOME/.kube;
           cp /etc/kubernetes/kubelet.conf $HOME/.kube/config;
+          chown $(id -u):$(id -g) $HOME/.kube/config
       when:
         - ansible_default_ipv4['address'] != master_ip
 
