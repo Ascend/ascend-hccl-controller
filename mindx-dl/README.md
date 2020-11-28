@@ -25,7 +25,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p178845251052"><a name="zh-cn_topic_0183384832_p178845251052"></a><a name="zh-cn_topic_0183384832_p178845251052"></a>本文档介绍了MindX DL的产品定位、功能介绍、应用场景和系统架构，帮助用户快速了解产品。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p196171515446"><a name="zh-cn_topic_0183384832_p196171515446"></a><a name="zh-cn_topic_0183384832_p196171515446"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p196171515446"><a name="zh-cn_topic_0183384832_p196171515446"></a><a name="zh-cn_topic_0183384832_p196171515446"></a>https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_19_0002.html</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row68842250517"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0183384832_p38841125952"><a name="zh-cn_topic_0183384832_p38841125952"></a><a name="zh-cn_topic_0183384832_p38841125952"></a>安装与调测</p>
@@ -34,7 +34,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p988414258519"><a name="zh-cn_topic_0183384832_p988414258519"></a><a name="zh-cn_topic_0183384832_p988414258519"></a>本文档介绍了MindX DL的安装方式，包括快速安装、在线安装和手动安装三种方式，以及功能测试、卸载操作、安全加固和故障处理方法。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p2061713112443"><a name="zh-cn_topic_0183384832_p2061713112443"></a><a name="zh-cn_topic_0183384832_p2061713112443"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p2061713112443"><a name="zh-cn_topic_0183384832_p2061713112443"></a><a name="zh-cn_topic_0183384832_p2061713112443"></a>https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_03_0001.html</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row168848256514"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0183384832_p168847257517"><a name="zh-cn_topic_0183384832_p168847257517"></a><a name="zh-cn_topic_0183384832_p168847257517"></a>操作类</p>
@@ -43,7 +43,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0183384832_p288422518517"><a name="zh-cn_topic_0183384832_p288422518517"></a><a name="zh-cn_topic_0183384832_p288422518517"></a>本文档介绍了MindX DL支持的API接口以及调用API接口的方法。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p76175124410"><a name="zh-cn_topic_0183384832_p76175124410"></a><a name="zh-cn_topic_0183384832_p76175124410"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p76175124410"><a name="zh-cn_topic_0183384832_p76175124410"></a><a name="zh-cn_topic_0183384832_p76175124410"></a>https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_07_0001.html</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0183384832_row38849251258"><td class="cellrowborder" valign="top" width="12%" headers="mcps1.2.5.1.1 "><p id="p127292039101416"><a name="p127292039101416"></a><a name="p127292039101416"></a>参考</p>
@@ -52,7 +52,7 @@ Atlas深度学习组件（MindX DL）用户指南由产品描述、安装部署�
 </td>
 <td class="cellrowborder" valign="top" width="50.1%" headers="mcps1.2.5.1.3 "><p id="p9869143715147"><a name="p9869143715147"></a><a name="p9869143715147"></a>本文档提供了MindX DL产品通信矩阵的相关解释说明。</p>
 </td>
-<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p1861718134417"><a name="zh-cn_topic_0183384832_p1861718134417"></a><a name="zh-cn_topic_0183384832_p1861718134417"></a>XXX</p>
+<td class="cellrowborder" valign="top" width="22.900000000000002%" headers="mcps1.2.5.1.4 "><p id="zh-cn_topic_0183384832_p1861718134417"><a name="zh-cn_topic_0183384832_p1861718134417"></a><a name="zh-cn_topic_0183384832_p1861718134417"></a>https://support.huaweicloud.com/usermanual-mindxdl/atlasmindx_09_0001.html</p>
 </td>
 </tr>
 </tbody>
