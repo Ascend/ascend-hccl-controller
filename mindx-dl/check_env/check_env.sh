@@ -526,5 +526,5 @@ function main() {
 main >>/dev/null 2>&1
 cat "${file_path}"
 echo ""
-echo "Finished! The check report is stored in the ${file_path}"
+echo "Finished! The check report is stored in ${file_path}"
 echo ""

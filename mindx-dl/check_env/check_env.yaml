@@ -15,7 +15,7 @@
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
-          dos2unix check_env.sh;
+          dos2unix *;
           bash check_env.sh master "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
         - ansible_hostname not in groups["workers"]
@@ -24,7 +24,7 @@
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
-          dos2unix check_env.sh;
+          dos2unix *;
           bash check_env.sh master-worker "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
         - ansible_hostname in groups["workers"]
@@ -88,7 +88,6 @@
       shell:
         chdir: "{{ tmp_dir }}"
         cmd:
-          dos2unix check_env.sh;
           unset KUBECONFIG;
           bash check_env.sh worker "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
@@ -163,4 +162,4 @@
     - name: Print report path
       shell:
         cmd:
-          echo "Finished! The check report is stored in the {{ playbook_dir }}/{{ report_file_name }} on the master node."
+          echo "Finished! The check report is stored in {{ playbook_dir }}/{{ report_file_name }} on the master node."
