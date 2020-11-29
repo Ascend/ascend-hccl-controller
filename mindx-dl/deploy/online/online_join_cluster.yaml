@@ -494,7 +494,7 @@
     - name: Pull mindx images - arm64
       shell:
         cmd:
-          docker pull {{ ascend_hub_prefix }}/{{ item }}
+          docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
         - cadvisor_arm64:{{ cadvisor_version }}
@@ -505,7 +505,7 @@
     - name: Pull mindx images - x86_64
       shell:
         cmd:
-          docker pull {{ ascend_hub_prefix }}/{{ item }}
+          docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
         - cadvisor_amd64:{{ cadvisor_version }}
@@ -516,7 +516,7 @@
     - name: Tag mindx images - arm64
       shell:
         cmd:
-          docker tag {{ ascend_hub_prefix }}/{{ item }}
+          docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
         - cadvisor_arm64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
@@ -527,7 +527,7 @@
     - name: Tag mindx images - x86_64
       shell:
         cmd:
-          docker tag {{ ascend_hub_prefix }}/{{ item }}
+          docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
         - cadvisor_amd64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
@@ -560,7 +560,7 @@
     - name: Workers remove redundant images - arm64
       shell:
         cmd:
-          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+          docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
         - cadvisor_arm64:{{ cadvisor_version }}
@@ -571,7 +571,7 @@
     - name: Workers remove redundant images - x86_64
       shell:
         cmd:
-          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+          docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
         - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
         - cadvisor_amd64:{{ cadvisor_version }}

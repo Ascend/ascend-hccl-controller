@@ -262,7 +262,7 @@
   remote_user: root
 
   tasks:
-    - name: Modify docker runtime
+    - name: Modify docker runtime - master
       shell:
         cmd: |
           cat <<EOF >/etc/docker/daemon.json
@@ -283,7 +283,7 @@
   remote_user: root
 
   tasks:
-    - name: Modify docker runtime
+    - name: Modify docker runtime - workers
       shell:
         cmd: |
           cat <<EOF >/etc/docker/daemon.json
