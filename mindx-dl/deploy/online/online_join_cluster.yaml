@@ -90,7 +90,7 @@
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{ master_ip }}'
+        replace: '\1\2,ansible_default_ipv4.address'
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
@@ -102,7 +102,7 @@
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{ master_ip }}'
+        line: 'export no_proxy={{ ansible_default_ipv4.address }}'
       when: has_no_proxy_var.stdout == ""
       tags:
         - basic_only
@@ -535,30 +535,48 @@
       tags:
         - basic_only
 
-    - name: Workers remove redundant images - arm64
+    - name: Workers remove kubernetes basic  redundant images - arm64
       shell:
         cmd:
           docker rmi {{ item }}
       with_items:
         - cruse/kube-proxy-arm64:v1.17.3-beta.0
         - cruse/pause-arm64:3.1
-        - "{{ ascend_hub_prefix }}/ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}"
-        - "{{ ascend_hub_prefix }}/cadvisor_arm64:{{ cadvisor_version }}"
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Workers remove redundant images - x86_64
+    - name: Workers remove kubernetes basic  redundant images - x86_64
       shell:
         cmd:
           docker rmi {{ item }}
       with_items:
         - kubesphere/kube-proxy:v1.17.3
         - kubesphere/pause:3.1
-        - "{{ ascend_hub_prefix }}/ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}"
-        - "{{ ascend_hub_prefix }}/cadvisor_amd64:{{ cadvisor_version }}"
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags: kubernetes_basic
+      ignore_errors: yes
+
+    - name: Workers remove redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
+        - cadvisor_arm64:{{ cadvisor_version }}
+      when: ansible_architecture == "aarch64"
+      tags: basic_only
+      ignore_errors: yes
+
+    - name: Workers remove redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
+        - cadvisor_amd64:{{ cadvisor_version }}
+      when: ansible_architecture == "x86_64"
+      tags: basic_only
       ignore_errors: yes
     # ========================================================================
 
@@ -604,160 +622,61 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
-    # copy local admin.conf to workers
-    - name: copy local kubelet.conf to workers
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: /etc/kubernetes/
-        force: yes
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+# Labeling Work Nodes
+- hosts: master
+  remote_user: root
 
-    - name: Replace config
-      shell:
-        cmd:
-          mkdir -p ~/.kube;
-          cp -f ~/.kube/config ~/.kube/config_bak || true;
-          cp -f /etc/kubernetes/admin.conf ~/.kube/config
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Delete config
-      lineinfile:
-        path: /etc/profile
-        line: "export KUBECONFIG=/etc/kubernetes/kubelet.conf"
-        state: absent
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Add config
-      lineinfile:
-        path: /etc/profile
-        line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
-        state: present
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Enable /etc/profile
-      shell:
-        cmd:
-          source /etc/profile;
-          systemctl daemon-reload;
-          systemctl restart kubelet
-      args:
-        executable: "/bin/bash"
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Label training nodes - arm64
+  tasks:
+    - name: Label worker nodes
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-arm --overwrite=true
+          kubectl label nodes {{ item }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ item }} workerselector=dls-worker-node --overwrite=true
       tags:
         - init-workers
         - basic_only
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['new_training_node']
+      with_items: "{{ groups['new_node'] }}"
 
-    - name: Label training nodes - x86_64
+    - name: Label training nodes
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-x86 --overwrite=true
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true
       tags:
         - init-workers
         - basic_only
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['new_training_node']
+      with_items: "{{ groups['new_training_node'] }}"
 
-    - name: Label inference nodes - arm64
+    - name: Label inference nodes
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-arm --overwrite=true
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend310 --overwrite=true
       tags:
         - init-workers
         - basic_only
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['new_inference_node']
+      with_items: "{{ groups['new_inference_node'] }}"
 
-    - name: Label inference nodes - x86_64
+    - name: Label arm nodes
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ ansible_hostname }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ ansible_hostname }} host-arch=huawei-x86 --overwrite=true
+          kubectl label nodes {{ item }} host-arch=huawei-arm --overwrite=true
       tags:
         - init-workers
         - basic_only
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['new_inference_node']
+      with_items: "{{ groups['new_arm'] }}"
 
-    - name: Replace config
+    - name: Label x86 nodes
       shell:
         cmd:
-          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config || mv ~/.kube/config_bak ~/.kube/config
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} host-arch=huawei-x86 --overwrite=true
       tags:
         - init-workers
         - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Add worker kubeconfig file
-      lineinfile:
-        path: /etc/profile
-        regexp: 'export KUBECONFIG(.*)=(.*)/etc'
-        line: 'export KUBECONFIG=/etc/kubernetes/kubelet.conf'
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Enable /etc/profile
-      shell:
-        cmd:
-          source /etc/profile;
-          systemctl daemon-reload;
-          systemctl restart kubelet
-      args:
-        executable: "/bin/bash"
-      tags:
-        - init-workers
-        - basic_only
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+      with_items: "{{ groups['new_x86'] }}"
 
 - hosts: new_node
   remote_user: root

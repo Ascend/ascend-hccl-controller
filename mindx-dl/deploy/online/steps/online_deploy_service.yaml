@@ -115,7 +115,7 @@
         cmd: kubectl apply -f volcano-*.yaml
 
 # After the deployment is successful, delete the installation package.
-- hosts: localnode, workers
+- hosts: localnode, cluster
   remote_user: root
 
   tasks:

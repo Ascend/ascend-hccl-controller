@@ -266,7 +266,7 @@
   remote_user: root
 
   tasks:
-    - name: Remove redundant images - arm64
+    - name: Remove kubernetes basic redundant images - arm64
       shell:
         cmd:
           docker rmi {{ item }}
@@ -278,16 +278,11 @@
         - cruse/pause-arm64:3.1
         - cruse/etcd-arm64:3.4.3-0
         - coredns/coredns:1.6.5
-        - "{{ ascend_hub_prefix }}/vc-controller-manager_arm64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-scheduler_arm64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-webhook-manager_arm64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-webhook-manager-base_arm64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/hccl-controller_arm64:{{ hccl_version }}"
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Remove redundant images - x86_64
+    - name: Remove kubernetes basic redundant images - x86_64
       shell:
         cmd:
           docker rmi {{ item }}
@@ -299,42 +294,83 @@
         - kubesphere/pause:3.1
         - cruse/etcd-amd64:3.4.3-0
         - coredns/coredns:1.6.5
-        - "{{ ascend_hub_prefix }}/vc-controller-manager_amd64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-scheduler_amd64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-webhook-manager_amd64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/vc-webhook-manager-base_amd64:{{ volcano_version }}"
-        - "{{ ascend_hub_prefix }}/hccl-controller_amd64:{{ hccl_version }}"
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags: kubernetes_basic
+      ignore_errors: yes
+
+    - name: Remove redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - vc-controller-manager_arm64:{{ volcano_version }}
+        - vc-scheduler_arm64:{{ volcano_version }}
+        - vc-webhook-manager_arm64:{{ volcano_version }}
+        - vc-webhook-manager-base_arm64:{{ volcano_version }}
+        - hccl-controller_arm64:{{ hccl_version }}
+      when: ansible_architecture == "aarch64"
+      tags: basic_only
+      ignore_errors: yes
+
+    - name: Remove redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - vc-controller-manager_amd64:{{ volcano_version }}
+        - vc-scheduler_amd64:{{ volcano_version }}
+        - vc-webhook-manager_amd64:{{ volcano_version }}
+        - vc-webhook-manager-base_amd64:{{ volcano_version }}
+        - hccl-controller_amd64:{{ hccl_version }}
+      when: ansible_architecture == "x86_64"
+      tags: basic_only
       ignore_errors: yes
 
 - hosts: localnode, workers
   remote_user: root
 
   tasks:
-    - name: Workers remove redundant images - arm64
+    - name: Workers remove kubernetes basic  redundant images - arm64
       shell:
         cmd:
           docker rmi {{ item }}
       with_items:
         - cruse/kube-proxy-arm64:v1.17.3-beta.0
         - cruse/pause-arm64:3.1
-        - "{{ ascend_hub_prefix }}/ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}"
-        - "{{ ascend_hub_prefix }}/cadvisor_arm64:{{ cadvisor_version }}"
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Workers remove redundant images - x86_64
+    - name: Workers remove kubernetes basic  redundant images - x86_64
       shell:
         cmd:
           docker rmi {{ item }}
       with_items:
         - kubesphere/kube-proxy:v1.17.3
         - kubesphere/pause:3.1
-        - "{{ ascend_hub_prefix }}/ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}"
-        - "{{ ascend_hub_prefix }}/cadvisor_amd64:{{ cadvisor_version }}"
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags: kubernetes_basic
+      ignore_errors: yes
+
+    - name: Workers remove redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
+        - cadvisor_arm64:{{ cadvisor_version }}
+      when: ansible_architecture == "aarch64"
+      tags: basic_only
+      ignore_errors: yes
+
+    - name: Workers remove redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{ ascend_hub_prefix }}/{{ item }}
+      with_items:
+        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
+        - cadvisor_amd64:{{ cadvisor_version }}
+      when: ansible_architecture == "x86_64"
+      tags: basic_only
       ignore_errors: yes
 

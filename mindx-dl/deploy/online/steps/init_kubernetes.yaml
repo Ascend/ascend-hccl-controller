@@ -82,7 +82,8 @@
     - name: Label master node
       shell:
         cmd:
-          kubectl label nodes {{ ansible_hostname }} masterselector=dls-master-node
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ ansible_hostname }} masterselector=dls-master-node --overwrite=true
       tags:
         - init-master
         - basic_only
