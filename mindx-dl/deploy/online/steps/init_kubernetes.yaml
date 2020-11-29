@@ -19,7 +19,7 @@
 - hosts: localnode, master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{ dls_root_dir }}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
     - name: reset k8s
@@ -32,6 +32,7 @@
     - name: Init cluster
       shell:
         cmd:
+          unset http_proxy https_proxy;
           kubeadm init --kubernetes-version=v1.17.3
             --node-name={{ ansible_hostname }}
             --pod-network-cidr=192.168.0.0/16
@@ -46,7 +47,7 @@
           chown $(id -u):$(id -g) $HOME/.kube/config
       tags: init-master
 
-    # apply deploy/yaml/calico.yaml
+    # apply deploy/yamls/calico.yaml
     - name: Apply calico yaml file
       shell:
         chdir: "{{ deploy_yaml_dir }}"

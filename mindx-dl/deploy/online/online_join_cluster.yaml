@@ -805,7 +805,7 @@
 - hosts: master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{ dls_root_dir }}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
     - name: Deploy device plugin
