@@ -1,5 +1,5 @@
 #!/bin/bash
-# Entry script for offline cluster deployment.
+# Entry script for offline deployment.
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 set -e
 

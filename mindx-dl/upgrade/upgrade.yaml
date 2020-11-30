@@ -1,0 +1,221 @@
+---
+# This playbook is used to upgrade MindX DL components.
+# Before running the script, ensure that the dependent files are stored in the 'dls_root_dir/upgrade_dependencies' directory defined in /etc/ansible/hosts
+
+# This play is used to upgrade 1).Services 2).Images in cluster.
+- hosts: workers
+  remote_user: root
+
+  tasks:
+    # copy images and yaml files from upgrade_dir
+    # distinguish arm/x86 only when load images.
+    - name: scp images and yaml files from master to workers
+      copy:
+        src: "{{ dls_root_dir }}/upgrade_dependencies"
+        dest: "{{ dls_root_dir }}/"
+      when: ansible_default_ipv4['address'] != master_ip
+      tags: upgrade
+
+
+# This play is used to load images to worker nodes.
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
+    # load cadvisor & device-plugin images on nodes
+    - name: load cadvisor & device-plugin images on nodes - arm64
+      shell:
+        chdir: "{{ dls_root_dir }}/upgrade_dependencies/images"
+        cmd:
+          docker load -i Ascend-K8sDevicePlugin*arm64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+      tags: upgrade
+
+    - name: load cadvisor & device-plugin images on nodes - x86_64
+      shell:
+        chdir: "{{ dls_root_dir }}/upgrade_dependencies/images"
+        cmd:
+          docker load -i Ascend-K8sDevicePlugin*amd64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+      tags: upgrade
+
+
+# This play is used to load images to master node.
+- hosts: localnode, master
+  remote_user: root
+
+  tasks:
+    # load volcano & hccl-controller images on nodes
+    - name: load volcano & hccl-controller images on nodes - arm64
+      shell:
+        chdir: "{{ dls_root_dir }}/upgrade_dependencies/images"
+        cmd:
+          docker load -i vc-webhook-manager-base*arm64.tar.gz;
+          docker load -i vc-controller-manager*arm64.tar.gz;
+          docker load -i vc-scheduler*arm64.tar.gz;
+          docker load -i vc-webhook-manager-v*arm64.tar.gz;
+          docker load -i hccl-controller*arm64.tar.gz;
+      when: ansible_architecture == "aarch64"
+      tags: upgrade
+
+    - name: load volcano & hccl-controller images on nodes - x86_64
+      shell:
+        chdir: "{{ dls_root_dir }}/upgrade_dependencies/images"
+        cmd:
+          docker load -i vc-webhook-manager-base*amd64.tar.gz;
+          docker load -i vc-controller-manager*amd64.tar.gz;
+          docker load -i vc-scheduler*amd64.tar.gz;
+          docker load -i vc-webhook-manager-v*amd64.tar.gz;
+          docker load -i hccl-controller*amd64.tar.gz;
+      when: ansible_architecture == "x86_64"
+      tags: upgrade
+
+    # Handle version differences of components.
+    - name: Handling cadvisor version differences
+      shell:
+        chdir: "{{ playbook_dir }}/Previous_version_info"
+        cmd:
+          kubectl delete -f cadvisor-export.yaml;
+      tags: upgrade    
+
+    - name: Handling volcano version differences
+      shell:
+        chdir: "{{ playbook_dir }}/Previous_version_info"
+        cmd:
+          kubectl delete secret volcano-admission-secret -n volcano-system;
+          kubectl delete -f volcano-admission-export.yaml;
+          kubectl delete -f volcano-admission-init-export.yaml
+      tags: upgrade
+      ignore_errors: True
+
+    # Upgrade components by use kubectl apply command to change the image currently in use.
+    - name: Upgrade services
+      shell:
+        chdir: "{{ dls_root_dir }}/upgrade_dependencies/yamls"
+        cmd:
+          kubectl apply -f hccl-controller*.yaml;
+          kubectl apply -f volcano-*.yaml;
+          kubectl apply -f cadvisor-*.yaml;
+          kubectl apply -f ascendplugin-volcano*.yaml;
+          kubectl apply -f ascendplugin-310*.yaml;
+      tags: upgrade
+
+# This play is used to check service status after upgrade.
+- hosts: localnode, master
+  remote_user: root
+
+  tasks:
+    # Check status of components.
+    - name: Check hccl-controller status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces -o wide | grep hccl-controller |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == '1'"
+      retries: 4
+      delay: 10
+      tags: check
+
+    - name: Check volcano status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces | grep volcano |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == '3'"
+      retries: 4
+      delay: 10
+      tags: check
+
+- hosts: localnode
+  remote_user: root
+
+  tasks:
+    # Check status of components.
+    - name: Check cadvisor status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces -o wide | grep cadvisor |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == '1'"
+      retries: 4
+      delay: 10
+      tags: check
+
+    - name: Check device plugin status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces | grep ascend-device-plugin |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == '1'"
+      retries: 4
+      delay: 10
+      tags: check
+
+- hosts: master
+  remote_user: root
+  vars:
+    HOST_COUNT: "{{ groups['workers'] | length }}"
+
+  tasks:
+    # Check status of components.
+    - name: Check cadvisor status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces -o wide | grep cadvisor |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == HOST_COUNT"
+      retries: 4
+      delay: 10
+      tags: check
+
+    - name: Check device plugin status
+      shell:
+        cmd:
+          kubectl get pods --all-namespaces | grep ascend-device-plugin |grep Running | wc -l
+      register: return_value
+      until: "return_value.stdout == HOST_COUNT"
+      retries: 4
+      delay: 10
+      tags: check
+
+# The folloing plays are used to remove previous version images after upgrade.
+- hosts: localnode, master
+  remote_user: root
+
+  tasks:
+    - name: Remove volcano images
+      shell:
+        cmd:
+          docker rmi {{ vA }}
+          docker rmi {{ vC }}
+          docker rmi {{ vS }}
+      ignore_errors: True
+      tags: remove-images
+
+    - name: Remove hccl-controller image
+      shell:
+        cmd:
+          docker rmi {{ hc }}
+      ignore_errors: True
+      tags: remove-images
+
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
+    - name: Remove cadvisor image
+      shell:
+        cmd:
+          docker rmi {{ ca }}
+      ignore_errors: True
+      tags: remove-images
+
+    - name: Remove device-plugin image
+      shell:
+        cmd:
+          docker rmi {{ dp }}
+      ignore_errors: True
+      tags: remove-images
+ 
