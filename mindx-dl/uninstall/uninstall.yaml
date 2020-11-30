@@ -1,3 +1,4 @@
+# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
 ---
 # This playbook is used to uninstall MindX DL platform.
 # Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts
@@ -20,8 +21,7 @@
       default: "no"
 
   vars:
-    deploy_dir: "{{dls_root_dir}}"
-    deploy_yaml_dir: "{{dls_root_dir}}/yamls"
+     deploy_yaml_dir : "{{ dls_root_dir }}/yamls"
 
   tasks:
     # check interactive input
@@ -42,30 +42,30 @@
 
     - name: Remove volcano service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl delete -f volcano-*.yaml
       ignore_errors: True
 
     - name: Remove hccl-controller service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir  }}"
         cmd:
-          kubectl delete -f hccl-controller.yaml
+          kubectl delete -f hccl-controller*.yaml
       ignore_errors: True
 
     - name: Remove device-plugin service
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
-          kubectl delete -f ascendplugin-volcano.yaml;
-          kubectl delete -f ascendplugin-310.yaml
+          kubectl delete -f ascendplugin-volcano*.yaml;
+          kubectl delete -f ascendplugin-310*.yaml
       ignore_errors: True
 
     - name: Remove cadvisor service
       shell:
-        chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
-        cmd: kubectl delete -k huawei
+        chdir: "{{ deploy_yaml_dir }}"
+        cmd: kubectl delete -f cadvisor-*.yaml
       ignore_errors: True
 
     - name: Check whether all service component services are terminated
@@ -88,7 +88,6 @@
 
     - name: Remove hccl-controller image
       shell:
-        chdir: "{{deploy_yaml_dir}}"
         cmd:
           docker rmi -f $(docker images | grep hccl-controller | awk '{print $3}')
       ignore_errors: True
@@ -174,6 +173,7 @@
       ignore_errors: True
 
 
+
 # This play is used to remove k8s & docker and restore system environment on all nodes(master & cluster).
 - hosts: localnode, cluster
   remote_user: root
@@ -185,25 +185,27 @@
       shell:
         cmd:
           kubeadm reset -f;
-          apt-mark unhold kubelet kubeadm kubectl
       when: whether_uninstall_k8s_and_docker == true
       ignore_errors: True
 
-    - name: Uninstall kubernetes on every node
-      apt:
-        pkg:
-          - kubeadm
-          - kubectl
-          - kubelet
-          - kubernetes-cni
-          - kube*
-        state: absent
-        purge: yes
-        autoremove: yes
+    - name: Uninstall kubernetes on every node - Ubuntu
+      shell:
+        apt-mark unhold kubelet kubeadm kubectl;
+        apt-get --purge remove -y kubeadm kubectl kubelet kubernetes-cni kube*;
+        apt-get autoremove -y
+      ignore_errors: True
       when:
         - whether_uninstall_k8s_and_docker == true
         - ansible_distribution == 'Ubuntu'
+
+    - name: Uninstall kubernetes on every node - CentOS
+      shell:
+        yum remove -y kubeadm kubectl kubelet kubernetes-cni;
+        yum autoremove -y
       ignore_errors: True
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'CentOS'
 
     - name: Remove residule files
       file:
@@ -221,21 +223,25 @@
         - /var/etcd
       when: whether_uninstall_k8s_and_docker == true
 
-    - name: Uninstall docker on every node
-      apt:
-        pkg:
-          - docker
-          - docker-ce
-          - docker-engine
-          - docker.io
-          - containerd
-          - runc
-        state: absent
-        purge: yes
-        autoremove: yes
+    - name: Uninstall docker on every node - Ubuntu
+      shell:
+        cmd:
+          apt-get --purge remove -y docker docker-ce docker-engine docker.io containerd runc;
+          apt-get autoremove -y
+      ignore_errors: True
       when:
         - whether_uninstall_k8s_and_docker == true
         - ansible_distribution == 'Ubuntu'
+
+    - name: Uninstall docker on every node - CentOS
+      shell:
+        cmd:
+          yum remove -y docker-ce;
+          yum autoremove -y
+      ignore_errors: True
+      when:
+        - whether_uninstall_k8s_and_docker == true
+        - ansible_distribution == 'CentOS'
 
     - name: Restore system configs
       shell:
@@ -245,7 +251,6 @@
           sed -ri 's/net.ipv4.ip_forward(.*)=(.*)1/net.ipv4.ip_forward = 0/' /etc/sysctl.conf
       when:
         - whether_uninstall_k8s_and_docker == true
-        - ansible_distribution == 'Ubuntu'
 
     - name: Restore system configs
       file:
@@ -256,8 +261,6 @@
         - /etc/rc.local
       when:
         - whether_uninstall_k8s_and_docker == true
-        - ansible_distribution == 'Ubuntu'
-
 
 
 # This play is used to uninstall nfs.
@@ -271,6 +274,7 @@
       shell:
         cmd:
           systemctl stop nfs-server
+      ignore_errors: True
       when:
         - whether_uninstall_nfs == true
 
@@ -282,18 +286,25 @@
       when:
         - whether_uninstall_nfs == true
 
-    - name: Uninstall nfs-server
-      apt:
-        pkg:
-          - nfs-kernel-server
-          - nfs-common
-          - rpcbind
-        state: absent
-        purge: yes
-        autoremove: yes
+    - name: Uninstall nfs-server - Ubuntu
+      shell:
+        cmd:
+          apt-get --purge remove -y nfs-kernel-server nfs-common rpcbind;
+          apt-get autoremove -y
+      ignore_errors: True
       when:
         - whether_uninstall_nfs == true
         - ansible_distribution == 'Ubuntu'
+
+    - name: Uninstall nfs-server - CentOS
+      shell:
+        cmd:
+          yum remove -y nfs-utils rpcbind;
+          yum autoremove -y
+      ignore_errors: True
+      when:
+        - whether_uninstall_nfs == true
+        - ansible_distribution == 'CentOS'
 
 # This play is used to uninstall nfs.
 - hosts: cluster
@@ -302,13 +313,24 @@
     - config.yaml
 
   tasks:
-    - name: Uninstall nfs-common
-      apt:
-        pkg:
-          - nfs-common
-        state: absent
-        purge: yes
-        autoremove: yes
+    - name: Uninstall nfs-common - Ubuntu
+      shell:
+        cmd:
+          apt-get --purge remove -y nfs-common;
+          apt-get autoremove -y
+      ignore_errors: True
       when:
         - whether_uninstall_nfs == true
         - ansible_distribution == 'Ubuntu'
+        - ansible_default_ipv4['address'] != nfs_service_ip
+
+    - name: Uninstall nfs-common - CentOS
+      shell:
+        cmd:
+          yum remove -y nfs-utils rpcbind;
+          yum autoremove -y
+      ignore_errors: True
+      when:
+        - whether_uninstall_nfs == true
+        - ansible_distribution == 'CentOS'
+        - ansible_default_ipv4['address'] != nfs_service_ip
