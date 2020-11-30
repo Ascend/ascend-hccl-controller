@@ -5,7 +5,7 @@ set -e
 
 scope="basic"
 
-if [ $scope == "basic" ]
+if [ "$scope" == "basic" ]
 then
   ansible-playbook -vv set_global_env.yaml --tags=basic_only
   ansible-playbook -vv online_install_packages.yaml --tags=basic_only
@@ -13,7 +13,7 @@ then
   ansible-playbook -vv init_kubernetes.yaml --tags=basic_only
   ansible-playbook -vv clean_services.yaml
   ansible-playbook -vv online_deploy_service.yaml
-elif [ $scope == "full" ]
+elif [ "$scope" == "full" ]
 then
   ansible-playbook -vv set_global_env.yaml
   ansible-playbook -vv online_install_packages.yaml
