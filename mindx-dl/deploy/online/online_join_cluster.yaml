@@ -1,23 +1,4 @@
-# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
-# Please Read the following instructions first.
-#
-# use command to run this yaml:
-#   ansible-playbook --skip-tags="" online_join_cluster.yaml
-#
-#   params:
-#     skip-tags
-#     The "skip-tags" parameter consists of the following two parts:
-#     1. (Optional)don't install software list.
-#        Four options:
-#          kubernetes/go/nfs/docker
-#        For example:
-#         --skip-tags="kubernetes,docker" will install nfs,go but dont' install kubernetes，docker
-#         --skip-tags="" will install kubernetes/go/nfs/docker
-#     2. (required)choose one method to get mindx-dl images.
-#         Tow options:
-#           no_ansible-hub/ansible-hub.
-#        If skip-tags contains "no_ascend-hub",playbook will use "no_ascend-hub" to get images, otherwise, use "ascend-hub".
-
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 - hosts: new_node
   remote_user: root
@@ -30,13 +11,14 @@
       when:
         - ansible_distribution == 'Ubuntu'
 
-    - name: Install libselinux-python3 - CentOS
+    - name: Install selinux - CentOS
       shell:
         cmd:
-          yum install -y libselinux-python3
+          yum install -y libselinux-python3 libselinux-python;
+          pip3.7 install selinux
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
 
@@ -45,6 +27,7 @@
         cmd:
           systemctl stop firewalld.service;
           systemctl disable firewalld.service
+      ignore_errors: True
       when:
         - ansible_distribution == 'CentOS'
 
@@ -98,24 +81,32 @@
       shell: grep "export no_proxy" /etc/profile
       ignore_errors: True
       register: has_no_proxy_var
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # add when no_proxy exists
     - name: Set no proxy ip
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{ master_ip }}'
-      when: has_no_proxy_var.stdout != ""
-      tags: init-master
+        replace: '\1\2,ansible_default_ipv4.address'
+      when:
+        - has_no_proxy_var.stdout != ""
+        - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
+      tags:
+        - basic_only
+        - init-master
 
     # create no_proxy when no_proxy exists
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{ master_ip }}'
+        line: 'export no_proxy={{ ansible_default_ipv4.address }}'
       when: has_no_proxy_var.stdout == ""
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Enable /etc/profile
       shell:
@@ -123,23 +114,34 @@
           source /etc/profile
       args:
         executable: "/bin/bash"
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Add User
       shell:
         cmd:
           useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
           usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
 
 # Install packages
 - hosts: new_node
   remote_user: root
+  vars:
+    apt_package_list: []
+    yum_package_list: []
 
   tasks:
-    - name: Install prerequisite software - Ubuntu
-      shell:
-        cmd:
-          apt install -y {{item}}
+    - name: Register package_list - Ubuntu
+      set_fact:
+        apt_package_list: "{{  apt_package_list.append(item)  }}{{ apt_package_list }}"
+      tags:
+        - docker
+        - nfs
+        - kubernetes
+      when:
+        - ansible_distribution == 'Ubuntu'
       with_items:
         - curl
         - apt-transport-https
@@ -148,106 +150,53 @@
         - software-properties-common
         - libltdl7
         - nfs-common
+
+    - name: Register package_list - CentOS
+      set_fact:
+        yum_package_list: "{{  yum_package_list.append(item)  }}{{ yum_package_list }}"
+      tags:
+        - docker
+        - nfs
+        - kubernetes
+      when:
+        - ansible_distribution == 'CentOS'
+      with_items:
+        - nfs-utils
+        - yum-plugin-versionlock
+
+    - name: Install prerequisite software - Ubuntu
+      shell:
+        cmd:
+          apt install -y {{ " ".join(apt_package_list) }}
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'Ubuntu'
       tags:
-        - go
-        - kubernetes
-        - nfs
         - docker
+        - nfs
+        - kubernetes
 
     - name: Install prerequisite software - CentOS
       shell:
         cmd:
-          yum install -y {{item}}
-      with_items:
-        - nfs-utils
-        - yum-plugin-versionlock
+          yum install -y {{ " ".join(yum_package_list) }}
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
       tags:
-        - go
-        - kubernetes
-        - nfs
         - docker
-
-    ############################## Install Go #########################################
-    - name: Go tar file status
-      stat:
-        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-      register: go_file_status
-      tags: go
-
-    - name: Download go tar file - arm64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Download go tar file - x86_64
-      get_url:
-        dest: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        url: https://dl.google.com/go/go1.14.3.linux-amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - go_file_status.stat.exists == False
-      tags: go
-      environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
-
-    - name: Unzip go tar file
-      unarchive:
-        src: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        dest: /usr/local
-        remote_src: yes
-      tags: go
-
-    # configure the Go environment
-    - name: Add Go ENV
-      blockinfile:
-        path: /etc/profile
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Add Go ENV for non-login shell
-      blockinfile:
-        path: ~/.bashrc
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=/home/gopath
-          export PATH=$PATH:/usr/local/go/bin
-      tags: go
-
-    - name: Enable config
-      shell:
-        cmd:
-          source /etc/profile;
-      args:
-        executable: "/bin/bash"
-      tags: go
-    ###################################################################################
+        - nfs
+        - kubernetes
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
     - name: Docker install package file status - Ubuntu
       stat:
-        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        path: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
       register: docker_file_status
       tags: docker
       when:
@@ -256,7 +205,7 @@
     - name: Download docker - Ubuntu/arm64
       get_url:
         url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/arm64/docker-ce_18.06.3~ce~3-0~ubuntu_arm64.deb
-        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
         validate_certs: no
       when:
         - ansible_architecture == "aarch64"
@@ -264,13 +213,13 @@
         - docker_file_status.stat.exists == False
       tags: docker
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Download docker - Ubuntu/x86_64
       get_url:
         url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~ubuntu_amd64.deb
-        dest: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
+        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
         validate_certs: no
       when:
         - ansible_architecture == "x86_64"
@@ -278,12 +227,12 @@
         - docker_file_status.stat.exists == False
       tags: docker
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Install docker - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}"
+        chdir: "{{ dls_root_dir }}"
         cmd:
           dpkg -i docker-ce_18.06.3_ce_3-0.deb
       when:
@@ -300,8 +249,8 @@
       when:
         - ansible_distribution == 'CentOS'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: docker
 
     - name: Install docker - CentOS
@@ -309,48 +258,12 @@
         cmd:
           yum install -y docker-ce-18.06.3.ce
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
       tags: docker
     # =================================================================================
-
-    - name: Docker daemon.json file
-      file:
-        path: /etc/docker
-        state: directory
-      tags: docker
-
-    - name: Modify docker runtime
-      shell:
-        cmd: |
-          cat <<EOF >/etc/docker/daemon.json
-          {
-            "registry-mirrors": ["https://dockerhub.azk8s.cn",
-                                 "https://docker.mirrors.ustc.edu.cn",
-                                 "http://hub-mirror.c.163.com"],
-            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
-            "exec-opts": ["native.cgroupdriver=systemd"],
-            "runtimes":
-            {
-              "ascend":
-              {
-                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
-                "runtimeArgs": []
-              }
-                  },
-                  "default-runtime": "ascend"
-                }
-                EOF
-      tags: always
-
-    - name: Effect modification for docker
-      shell:
-        cmd:
-          systemctl daemon-reload && systemctl restart docker;
-          systemctl enable docker
-      tags: always
     ###################################################################################
 
     ############################## Install Kubernetes #################################
@@ -366,18 +279,18 @@
 
     - name: Add kubernetes source gpg key
       get_url:
-        dest: "{{dls_root_dir}}/apt-key.gpg"
+        dest: "{{ dls_root_dir }}/apt-key.gpg"
         url: https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg
       tags: kubernetes
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
 
     - name: Add kubernetes source gpg key
       shell:
-        chdir: "{{dls_root_dir}}"
+        chdir: "{{ dls_root_dir }}"
         cmd: apt-key add apt-key.gpg
       tags: kubernetes
       when:
@@ -391,8 +304,8 @@
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: kubernetes
 
     - name: Hold version
@@ -445,8 +358,8 @@
       when:
         - ansible_distribution == 'CentOS'
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       tags: kubernetes
 
     - name: Hold version
@@ -464,122 +377,12 @@
       tags: kubernetes
     ###################################################################################
 
-# Load docker images on worker
-- hosts: new_node
-  remote_user: root
-  vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
-
-  tasks:
-    - name: Workers pull kubernetes basic images - arm64
-      shell:
-        cmd:
-          docker pull {{item}}
-      with_items:
-        - cruse/kube-proxy-arm64:v1.17.3-beta.0
-        - cruse/pause-arm64:3.1
-        - calico/node:v3.11.3
-        - calico/pod2daemon-flexvol:v3.11.3
-        - calico/cni:v3.11.3
-        - calico/kube-controllers:v3.11.3
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_default_ipv4['address'] != master_ip
+    - name: Docker daemon.json file
+      file:
+        path: /etc/docker
+        state: directory
       tags: always
 
-    - name: Workers pull kubernetes basic images - x86_64
-      shell:
-        cmd:
-          docker pull {{item}}
-      with_items:
-        - kubesphere/kube-proxy:v1.17.3
-        - kubesphere/pause:3.1
-        - calico/node:v3.11.3
-        - calico/pod2daemon-flexvol:v3.11.3
-        - calico/cni:v3.11.3
-        - calico/kube-controllers:v3.11.3
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags: always
-
-    - name: Workers tag images - arm64
-      shell:
-        cmd:
-          docker tag {{item}}
-      with_items:
-        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
-        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags: always
-
-    - name: Workers tag images - x86_64
-      shell:
-        cmd:
-          docker tag {{item}}
-      with_items:
-        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
-        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags: always
-
-    # ======================= Don't use ascend-hub ===========================
-    - name: scp docker images from master to workers - arm64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-{{cadvisor_version}}-arm64.tar.gz
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: scp docker images from master to workers - x86_64
-      copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-{{cadvisor_version}}-amd64.tar.gz
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_default_ipv4['address'] != master_ip
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - arm64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
-        - huawei-cadvisor-{{cadvisor_version}}-arm64.tar.gz
-      when: ansible_architecture == "aarch64"
-      tags:
-        - no_ascend-hub
-
-    - name: Load images - x86_64
-      shell:
-        chdir: "{{docker_images_dir}}"
-        cmd:
-          docker load < {{item}}
-      with_items:
-        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
-        - huawei-cadvisor-{{cadvisor_version}}-amd64.tar.gz
-      when: ansible_architecture == "x86_64"
-      tags:
-        - no_ascend-hub
-    # ========================================================================
-
-    # =========================== Use ascend-hub =============================
     - name: Modify docker runtime
       shell:
         cmd: |
@@ -602,101 +405,182 @@
             "default-runtime": "ascend"
           }
           EOF
-      when:
-        - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - docker
+        - basic_only
 
-    - name: Restart docker service
+    - name: Effect modification for docker
       shell:
         cmd:
-          systemctl daemon-reload && systemctl restart docker
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags:
+        - docker
+        - basic_only
+
+# Load docker images on worker
+- hosts: new_node
+  remote_user: root
+
+  tasks:
+    - name: Workers pull kubernetes basic images - arm64
+      shell:
+        cmd:
+          docker pull {{ item }}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
       when:
+        - ansible_architecture == "aarch64"
         - ansible_default_ipv4['address'] != master_ip
       tags:
-        - ascend-hub
+        - kubernetes_basic
 
+    - name: Workers pull kubernetes basic images - x86_64
+      shell:
+        cmd:
+          docker pull {{ item }}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+        - calico/node:v3.11.3
+        - calico/pod2daemon-flexvol:v3.11.3
+        - calico/cni:v3.11.3
+        - calico/kube-controllers:v3.11.3
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - kubernetes_basic
+
+    - name: Workers tag images - arm64
+      shell:
+        cmd:
+          docker tag {{ item }}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - kubernetes_basic
+
+    - name: Workers tag images - x86_64
+      shell:
+        cmd:
+          docker tag {{ item }}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+      tags:
+        - kubernetes_basic
+
+    # =========================== Use ascend-hub =============================
     - name: Ascend-hub docker login
       shell:
         cmd:
-          "{{ascendhub_login_command}}"
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+          "{{ ascendhub_login_command }}"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - arm64
       shell:
         cmd:
-          docker pull {{item}}
+          docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
+        - cadvisor_arm64:{{ cadvisor_version }}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Pull mindx images - x86_64
       shell:
         cmd:
-          docker pull {{item}}
+          docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
+        - cadvisor_amd64:{{ cadvisor_version }}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - arm64
       shell:
         cmd:
-          docker tag {{item}}
+          docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - "ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_arm64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
+        - cadvisor_arm64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
       when: ansible_architecture == "aarch64"
       tags:
-        - ascend-hub
+        - basic_only
 
     - name: Tag mindx images - x86_64
       shell:
         cmd:
-          docker tag {{item}}
+          docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - "ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}} ascend-k8sdeviceplugin:{{deviceplugin_version}}"
-        - "huawei-cadvisor-beta_amd64:{{cadvisor_version}} google/cadvisor:{{cadvisor_version}}"
+        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
+        - cadvisor_amd64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
       when: ansible_architecture == "x86_64"
       tags:
-        - ascend-hub
+        - basic_only
+
+    - name: Workers remove kubernetes basic  redundant images - arm64
+      shell:
+        cmd:
+          docker rmi {{ item }}
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0
+        - cruse/pause-arm64:3.1
+      when: ansible_architecture == "aarch64"
+      tags: kubernetes_basic
+      ignore_errors: yes
+
+    - name: Workers remove kubernetes basic  redundant images - x86_64
+      shell:
+        cmd:
+          docker rmi {{ item }}
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1
+      when: ansible_architecture == "x86_64"
+      tags: kubernetes_basic
+      ignore_errors: yes
 
     - name: Workers remove redundant images - arm64
       shell:
         cmd:
-          docker rmi {{item}}
+          docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - cruse/kube-proxy-arm64:v1.17.3-beta.0
-        - cruse/pause-arm64:3.1
-        - ascend-k8sdeviceplugin_arm64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_arm64:{{cadvisor_version}}
+        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
+        - cadvisor_arm64:{{ cadvisor_version }}
       when: ansible_architecture == "aarch64"
-      tags: always
+      tags: basic_only
       ignore_errors: yes
 
     - name: Workers remove redundant images - x86_64
       shell:
         cmd:
-          docker rmi {{item}}
+          docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - kubesphere/kube-proxy:v1.17.3
-        - kubesphere/pause:3.1
-        - ascend-k8sdeviceplugin_amd64:{{deviceplugin_version}}
-        - huawei-cadvisor-beta_amd64:{{cadvisor_version}}
+        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
+        - cadvisor_amd64:{{ cadvisor_version }}
       when: ansible_architecture == "x86_64"
-      tags: always
+      tags: basic_only
       ignore_errors: yes
     # ========================================================================
 
-# print join cluster command
+# Register join cluster command
 - hosts: master
   remote_user: root
 
@@ -708,27 +592,18 @@
       register: join_command
       tags: init-workers
 
-    - name: Print join cluster command
-      debug: var=join_command.stdout
+    - name: Set join facts
+      add_host:
+        name: "KUBERNETES_JOIN_COMMAND"
+        join_command: "{{ join_command.stdout }}"
       tags: init-workers
 
 
 # init workers
 - hosts: new_node
   remote_user: root
-  vars_prompt:
-    - name: "join_cluster_command"
-      prompt: "Input the command shown above for adding to the cluster"
-      default: ""
-      private: no
 
   tasks:
-    - name: Check join cluster command
-      fail:
-        msg: "The command you entered for adding to the cluster is incorrect. Please enter the command shown above for adding to the cluster."
-      when:
-        - not join_cluster_command.startswith('kubeadm join')
-
     - name: reset k8s
       shell:
         cmd:
@@ -741,138 +616,79 @@
 
     - name: Join into cluster
       shell:
-        cmd: "{{join_cluster_command}}"
+        cmd:
+          unset http_proxy https_proxy && {{ hostvars["KUBERNETES_JOIN_COMMAND"]["join_command"] }}
       tags: init-workers
       when:
         - ansible_default_ipv4['address'] != master_ip
 
-    # copy local admin.conf to workers
-    - name: copy local kubelet.conf to workers
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: /etc/kubernetes/
-        force: yes
-      tags: init-workers
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+# Labeling Work Nodes
+- hosts: master
+  remote_user: root
 
-    - name: Replace config
+  tasks:
+    - name: Label worker nodes
       shell:
         cmd:
-          mkdir -p ~/.kube;
-          cp -f /etc/kubernetes/admin.conf ~/.kube/config
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} node-role.kubernetes.io/worker=worker --overwrite=true;
+          kubectl label nodes {{ item }} workerselector=dls-worker-node --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['new_node'] }}"
 
-    - name: Delete config
-      lineinfile:
-        path: /etc/profile
-        line: "export KUBECONFIG=/etc/kubernetes/kubelet.conf"
-        state: absent
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Add config
-      lineinfile:
-        path: /etc/profile
-        line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
-        state: present
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Enable /etc/profile
+    - name: Label training nodes
       shell:
         cmd:
-          source /etc/profile;
-          systemctl daemon-reload;
-          systemctl restart kubelet
-      args:
-        executable: "/bin/bash"
-      tags: init-workers
-      when:
-        - ansible_default_ipv4['address'] != master_ip
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['new_training_node'] }}"
 
-    - name: Label training nodes - arm64
+    - name: Label inference nodes
       shell:
         cmd:
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['new_training_node']
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend310 --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['new_inference_node'] }}"
 
-    - name: Label training nodes - x86_64
+    - name: Label arm nodes
       shell:
         cmd:
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['new_training_node']
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} host-arch=huawei-arm --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['new_arm'] }}"
 
-    - name: Label inference nodes - arm64
+    - name: Label x86 nodes
       shell:
         cmd:
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-arm --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "aarch64"
-        - ansible_hostname in groups['new_inference_node']
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} host-arch=huawei-x86 --overwrite=true
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['new_x86'] }}"
 
-    - name: Label inference nodes - x86_64
-      shell:
-        cmd:
-          kubectl label nodes {{ansible_hostname}} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} workerselector=dls-worker-node --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} accelerator=huawei-Ascend310 --overwrite=true;
-          kubectl label nodes {{ansible_hostname}} host-arch=huawei-x86 --overwrite=true
-      tags: init-workers
-      when:
-        - ansible_architecture == "x86_64"
-        - ansible_hostname in groups['new_inference_node']
+- hosts: new_node
+  remote_user: root
 
-    - name: Replace config
-      shell:
-        cmd:
-          cp -f /etc/kubernetes/kubelet.conf ~/.kube/config
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Add worker kubeconfig file
-      lineinfile:
-        path: /etc/profile
-        regexp: 'export KUBECONFIG(.*)=(.*)/etc'
-        line: 'export KUBECONFIG=/etc/kubernetes/kubelet.conf'
-      tags: init-workers
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
-    - name: Enable /etc/profile
-      shell:
-        cmd:
-          source /etc/profile;
-          systemctl daemon-reload;
-          systemctl restart kubelet
-      args:
-        executable: "/bin/bash"
-      tags: init-workers
-      when:
-        - ansible_default_ipv4['address'] != master_ip
-
+  tasks:
     - name: Create log directory for cadvisor and device-plugin
       file:
         path: /var/log/{{ item }}
         state: directory
         mode: "0750"
+      tags:
+        - basic_only
       with_items:
         - devicePlugin
         - cadvisor
@@ -902,16 +718,20 @@
           }
         state: present
         create: yes
+      tags:
+        - basic_only
 
 - hosts: master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
     - name: Deploy device plugin
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl apply -f ascendplugin-volcano*.yaml;
           kubectl apply -f ascendplugin-310*.yaml
+      tags:
+        - basic_only

@@ -1,16 +1,16 @@
-# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # This playbook is used to cleaning up services.
 
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yaml"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
   - name: remove volcano
     shell:
-      chdir: "{{deploy_yaml_dir}}"
+      chdir: "{{ deploy_yaml_dir }}"
       cmd:
         kubectl delete -f volcano-*.yaml
     tags: volcano
@@ -18,15 +18,15 @@
 
   - name: remove cadvisor
     shell:
-      chdir: "{{deploy_yaml_dir}}/kubernetes/overlays"
+      chdir: "{{ deploy_yaml_dir }}"
       cmd:
-        kubectl delete -k huawei
+        kubectl delete -f cadvisor-*.yaml
     tags: cadvisor
     ignore_errors: yes
 
   - name: remove hccl-controller
     shell:
-      chdir: "{{deploy_yaml_dir}}"
+      chdir: "{{ deploy_yaml_dir }}"
       cmd:
         kubectl delete -f hccl-controller*.yaml
     tags: hccl-controller
@@ -34,7 +34,7 @@
 
   - name: remove device-plugin
     shell:
-      chdir: "{{deploy_yaml_dir}}"
+      chdir: "{{ deploy_yaml_dir }}"
       cmd:
         kubectl delete -f ascendplugin-310*.yaml;
         kubectl delete -f ascendplugin-volcano*.yaml
@@ -52,27 +52,3 @@
     retries: 6
     delay: 5
     ignore_errors: yes
-
-  - name: remove go tar file
-    file:
-      path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-      state: absent
-    ignore_errors: yes
-
-- hosts: workers
-  remote_user: root
-
-  tasks:
-    - name: remove go tar file
-      file:
-        path: "{{dls_root_dir}}/go1.14.3.linux.tar.gz"
-        state: absent
-      ignore_errors: yes
-
-    - name: remove docker deb file
-      file:
-        path: "{{dls_root_dir}}/docker-ce_18.06.3_ce_3-0.deb"
-        state: absent
-      when: ansible_distribution == 'Ubuntu'
-      ignore_errors: yes
-
