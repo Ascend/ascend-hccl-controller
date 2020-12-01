@@ -520,7 +520,7 @@ function main() {
     # 格式化打印
     print_format_to_file
 
-    chmod 540 "${file_path}"
+    chmod 440 "${file_path}"
 }
 
 main >>/dev/null 2>&1
