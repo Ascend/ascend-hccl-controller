@@ -1,5 +1,5 @@
 #!/bin/bash
-# Entry script for online cluster deployment.
+# Entry script for online deployment.
 # Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 set -e
 
