@@ -19,7 +19,7 @@ function exportYaml(){
 }
 
 function printVersion(){
-    echo -e "$(kubectl describe pod -n "${1}" "$(kubectl get pods -A | grep "${2}" | awk '{print $2}' | head -n 1)" | grep Image: | awk '{print "$2"}')"
+    echo -e "$(kubectl describe pod -n "${1}" "$(kubectl get pods -A | grep "${2}" | awk '{print $2}' | head -n 1)" | grep Image: | awk '{print $2}')"
 }
 
 
@@ -76,7 +76,7 @@ function upgrade(){
 
     # Post-upgrade processing
     if [ "$(grep -c "failed=1" ./check_log.txt)" -eq "1" ];then
-        echo -e "\nUpgrade failed, rolling back to previous version...\n"
+        echo -e "\nUpgrade failed.\n"
 
         local rollback
         read -r -p "Do you want to roll back to previous version?(yes/no)" rollback
