@@ -1,0 +1,105 @@
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
+---
+# Generate report with master
+
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Set reports dir facts
+      add_host:
+        name: "master_reports"
+        report_dir: "/tmp/MindXReport"
+
+    - name: Create result dir
+      file:
+        path: "{{ hostvars['master_reports']['report_dir'] }}"
+        state: directory
+        mode: 0750
+
+    - name: Change file mode
+      file:
+        path: "{{ playbook_dir }}/collectLog.py"
+        mode: 0540
+      ignore_errors: True
+
+    - name: collect log - master nodes
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          dos2unix collectLog.py;
+          python collectLog.py >> /dev/null 2>&1
+      when:
+        - ansible_hostname in groups["master"]
+
+
+# Generate report with worker
+- hosts: workers
+  remote_user: root
+  vars:
+    tmp_dir: "/tmp"
+
+  tasks:
+    - name: Remove old file on workers
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "{{ tmp_dir }}/collectLog.py"
+        - "{{ tmp_dir }}/MindXReport/"
+      ignore_errors: True
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: Copy collectLog.py to workers
+      copy:
+        src: "{{ playbook_dir }}/collectLog.py"
+        dest: "{{ tmp_dir }}/collectLog.py"
+        mode: 0540
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: collect log  - worker nodes
+      shell:
+        chdir: "{{ tmp_dir }}"
+        cmd:
+          unset http_proxy;
+          unset https_proxy;
+          python collectLog.py master >> /dev/null 2>&1
+      when:
+        - ansible_hostname not in groups["master"]
+
+    # copy from worker node
+    - name: find report file from workers
+      find:
+        paths: "{{ tmp_dir }}/MindXReport/"
+        patterns: "MindX-DL_Report*.zip"
+        recurse: True
+      register: file_name
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: Get report from workers
+      fetch:
+        src: "{{ item.path }}"
+        dest: "{{ hostvars['master_reports']['report_dir'] }}/"
+        flat: True
+      with_items: " {{ file_name.files }} "
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: Remove temporary file on workers
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "{{ tmp_dir }}/collectLog.py"
+        - "{{ tmp_dir }}/MindXReport/"
+      ignore_errors: True
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: Print report path
+      shell:
+        cmd:
+          echo "Finished! The check report is stored in /tmp/MindXReport/ on the master node."
