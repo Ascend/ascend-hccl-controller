@@ -22,7 +22,6 @@ import tarfile
 import time
 import shutil
 
-from sys import stdout
 from pwd import getpwnam
 
 
@@ -73,8 +72,12 @@ def compress_os_files(base, tmp_path, done):
     else:
         os_log_path = ""
 
-    filepath = os.popen("ls " + os_log_path)
-    log_path = filepath.read()
+    try:
+        filepath = os.listdir(os_log_path)
+        log_path = filepath.read()
+    except Exception as ex:
+        log(ex)
+
     log_path = log_path.strip('\n').replace("\n", " ").split(" ")
     for dst_path, file_list in [(base + "/OS_log", log_path)]:
         os.mkdir(dst_path)
@@ -114,7 +117,7 @@ def get_mindx_dl_compress_files(base, tmp_path, dst_src_file_list, done):
 def set_log_report_file_path():
     time_base = get_create_time()
     hostName = socket.gethostname()
-    tmp_path = "/tmp/MindXReport/" + time_base
+    tmp_path = os.path.join("/tmp/MindXReport/", time_base)
     base = os.path.join(tmp_path, "LogCollect")
     tarFilePath = tmp_path + "-" + hostName + "-LogCollect.zip"
 
@@ -149,17 +152,16 @@ def get_log_path_src_and_dst(base):
 def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
     log("create a tar file:" + tar_file_path + ", and archive all compressed files into it")
-    tar = tarfile.open(tar_file_path, 'w')
-    old_path = os.getcwd()
-    os.chdir(tmp_path)
-    for filename in done:
-        try:
-            tar.add(filename)
-            log("Adding to tar: %s\n" % filename)
-        except OSError as reason:
-            log("error: %s, skipping: %s\n" % (filename, reason))
-    tar.close()
-    os.chdir(old_path)
+    try:
+        with tarfile.open(tar_file_path, 'w') as file:
+            old_path = os.getcwd()
+            os.chdir(tmp_path)
+            for filename in done:
+                file.add(filename)
+                log("Adding to tar: %s\n" % filename)
+            os.chdir(old_path)
+    except tarfile.TarError as err:
+        log("error: %s, skipping: %s\n" % (filename, err))
 
 
 def set_file_right(tarFilePath):
