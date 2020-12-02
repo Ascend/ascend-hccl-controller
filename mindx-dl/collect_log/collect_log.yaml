@@ -80,7 +80,7 @@
     - name: find report file from workers
       find:
         paths: "{{ tmp_dir }}/MindXReport/"
-        patterns: "MindX-DL_Report*.zip"
+        patterns: "MindX_Report*.gz"
         recurse: True
       register: file_name
       when:
