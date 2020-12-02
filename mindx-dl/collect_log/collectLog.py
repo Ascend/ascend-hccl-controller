@@ -1,4 +1,4 @@
-# coding: UTF-8
+# coding: utf-8
 
 #  Copyright (C)  2020. Huawei Technologies Co., Ltd. All rights reserved.
 #
@@ -72,10 +72,11 @@ def compress_os_files(base, tmp_path, done):
     else:
         os_log_path = ""
 
+    log_path = ""
     try:
         filepath = os.listdir(os_log_path)
         log_path = filepath.read()
-    except Exception as ex:
+    except OSError as ex:
         log(ex)
 
     log_path = log_path.strip('\n').replace("\n", " ").split(" ")

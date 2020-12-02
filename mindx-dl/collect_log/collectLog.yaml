@@ -9,7 +9,7 @@
     - name: Set reports dir facts
       add_host:
         name: "master_reports"
-        report_dir: "/tmp/MindXReport"
+        report_dir: "{{ playbook_dir }}/MindXReport"
 
     - name: Create result dir
       file:
@@ -102,4 +102,4 @@
     - name: Print report path
       shell:
         cmd:
-          echo "Finished! The check report is stored in /tmp/MindXReport/ on the master node."
+          echo "Finished! The check report is stored in {{ playbook_dir }}/MindXReport/ on the master node."
