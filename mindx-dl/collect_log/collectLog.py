@@ -30,7 +30,7 @@ def log(content):
 
 
 def get_create_time():
-    return "MindX-DL_Report_%04d_%02d_%02d_%02d_%02d_%02d" % time.localtime()[:6]
+    return "MindX_Report_%04d_%02d_%02d_%02d_%02d_%02d" % time.localtime()[:6]
 
 
 def compress(src, dst):
@@ -119,23 +119,27 @@ def set_log_report_file_path():
     host_name = socket.gethostname()
     tmp_path = os.path.join(os.getcwd(), time_base)
     base = os.path.join(tmp_path, "LogCollect")
-    tar_File_ath = tmp_path + "-" + host_name + "-LogCollect.gz"
+    tar_file_ath = tmp_path + "-" + host_name + "-LogCollect.gz"
 
     # create folders
     log("Creating dst folder:" + base)
     os.makedirs(tmp_path)
     os.makedirs(base)
 
-    return base, tmp_path, tar_File_ath
+    return base, tmp_path, tar_file_ath
 
 
 def get_log_path_src_and_dst(base):
     # compress all files from source folders into destination folders
     dst_src_paths = \
-        [(base + "/volcano-scheduler", "/var/log/atlas_dls/volcano-scheduler"),
-         (base + "/volcano-admission", "/var/log/atlas_dls/volcano-admission"),
-         (base + "/volcano-controller", "/var/log/atlas_dls/volcano-controller"),
-         (base + "/hccl-controller", "/var/log/atlas_dls/hccl-controller"),
+        [(base + "/volcano-scheduler",
+          "/var/log/atlas_dls/volcano-scheduler"),
+         (base + "/volcano-admission",
+          "/var/log/atlas_dls/volcano-admission"),
+         (base + "/volcano-controller",
+          "/var/log/atlas_dls/volcano-controller"),
+         (base + "/hccl-controller",
+          "/var/log/atlas_dls/hccl-controller"),
          (base + "/devicePlugin", "/var/log/devicePlugin"),
          (base + "/cadvisor", "/var/log/cadvisor"),
          (base + "/npuSlog", "/var/log/npu/slog/host-0/"),
@@ -152,7 +156,7 @@ def get_log_path_src_and_dst(base):
 
 def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
-    log("create a tar file:" + tar_file_path + ", and archive all compressed files")
+    log("create tar file:" + tar_file_path + ", from all compressed files")
     try:
         with tarfile.open(tar_file_path, 'w:gz') as file:
             old_path = os.getcwd()
