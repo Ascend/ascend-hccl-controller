@@ -37,15 +37,15 @@ def compress(src, dst):
     """compress if the src file is uncompressed"""
     log("compress files:" + src)
     if src[-3:].lower() == ".gz":
-        f = open
+        f_open = open
     else:
-        f = gzip.open
+        f_open = gzip.open
         dst = dst + ".gz"
-    fOpenDst = f(dst, 'wb', 9)
-    fOpenSrc = open(src, 'rb')
-    fOpenDst.writelines(fOpenSrc)
-    fOpenDst.close()
-    fOpenSrc.close()
+    f_open_dst = f_open(dst, 'wb', 9)
+    f_open_src = open(src, 'rb')
+    f_open_dst.writelines(f_open_src)
+    f_open_dst.close()
+    f_open_src.close()
     return dst
 
 
@@ -63,11 +63,11 @@ def get_compress_file_paths(tmp_path, dst_src_paths, done):
 
 
 def compress_os_files(base, tmp_path, done):
-    sysStr = platform.platform().lower()
+    sys_str = platform.platform().lower()
 
-    if "ubuntu" in sysStr:
+    if "ubuntu" in sys_str:
         os_log_path = "/var/log/syslog*"
-    elif "centos" in sysStr:
+    elif "centos" in sys_str:
         os_log_path = "/var/log/message*"
     else:
         os_log_path = ""
@@ -115,45 +115,44 @@ def get_mindx_dl_compress_files(base, tmp_path, dst_src_file_list, done):
 
 
 def set_log_report_file_path():
-    report_log_path = "/tmp/MindXReport/"
-
     time_base = get_create_time()
-    hostName = socket.gethostname()
-    tmp_path = os.path.join(report_log_path, time_base)
+    host_name = socket.gethostname()
+    tmp_path = os.path.join(os.getcwd(), time_base)
     base = os.path.join(tmp_path, "LogCollect")
-    tarFilePath = tmp_path + "-" + hostName + "-LogCollect.gz"
+    tar_File_ath = tmp_path + "-" + host_name + "-LogCollect.gz"
 
     # create folders
     log("Creating dst folder:" + base)
     os.makedirs(tmp_path)
     os.makedirs(base)
 
-    return base, tmp_path, tarFilePath
+    return base, tmp_path, tar_File_ath
 
 
 def get_log_path_src_and_dst(base):
     # compress all files from source folders into destination folders
-    dst_src_paths = [(base + "/volcano-scheduler", "/var/log/atlas_dls/volcano-scheduler"),
-                     (base + "/volcano-admission", "/var/log/atlas_dls/volcano-admission"),
-                     (base + "/volcano-controller", "/var/log/atlas_dls/volcano-controller"),
-                     (base + "/hccl-controller", "/var/log/atlas_dls/hccl-controller"),
-                     (base + "/devicePlugin", "/var/log/devicePlugin"),
-                     (base + "/cadvisor", "/var/log/cadvisor"),
-                     (base + "/npuSlog", "/var/log/npu/slog/host-0/"),
-                     (base + "/apigw", "/var/log/atlas_dls/apigw"),
-                     (base + "/cec", "/var/log/atlas_dls/cec"),
-                     (base + "/dms", "/var/log/atlas_dls/dms"),
-                     (base + "/mms", "/var/log/atlas_dls/mms"),
-                     (base + "/mysql", "/var/log/atlas_dls/mysql"),
-                     (base + "/nginx", "/var/log/atlas_dls/nginx"),
-                     (base + "/tjm", "/var/log/atlas_dls/tjm")]
+    dst_src_paths = \
+        [(base + "/volcano-scheduler", "/var/log/atlas_dls/volcano-scheduler"),
+         (base + "/volcano-admission", "/var/log/atlas_dls/volcano-admission"),
+         (base + "/volcano-controller", "/var/log/atlas_dls/volcano-controller"),
+         (base + "/hccl-controller", "/var/log/atlas_dls/hccl-controller"),
+         (base + "/devicePlugin", "/var/log/devicePlugin"),
+         (base + "/cadvisor", "/var/log/cadvisor"),
+         (base + "/npuSlog", "/var/log/npu/slog/host-0/"),
+         (base + "/apigw", "/var/log/atlas_dls/apigw"),
+         (base + "/cec", "/var/log/atlas_dls/cec"),
+         (base + "/dms", "/var/log/atlas_dls/dms"),
+         (base + "/mms", "/var/log/atlas_dls/mms"),
+         (base + "/mysql", "/var/log/atlas_dls/mysql"),
+         (base + "/nginx", "/var/log/atlas_dls/nginx"),
+         (base + "/tjm", "/var/log/atlas_dls/tjm")]
 
     return dst_src_paths
 
 
 def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
-    log("create a tar file:" + tar_file_path + ", and archive all compressed files into it")
+    log("create a tar file:" + tar_file_path + ", and archive all compressed files")
     try:
         with tarfile.open(tar_file_path, 'w:gz') as file:
             old_path = os.getcwd()
@@ -166,9 +165,9 @@ def create_compress_file(done, tmp_path, tar_file_path):
         log("error: %s, skipping: %s\n" % (filename, err))
 
 
-def set_file_right(tarFilePath):
+def set_file_right(tar_file_path):
     uid = getpwnam("hwMindX").pw_uid
-    os.lchown(tarFilePath, uid, uid)
+    os.lchown(tar_file_path, uid, uid)
 
 
 def delete_tmp_file(tmp_path):
@@ -179,16 +178,16 @@ def delete_tmp_file(tmp_path):
 def main():
     log("begin to collect log files")
 
-    base, tmp_path, tarFilePath = set_log_report_file_path()
+    base, tmp_path, tar_file_path = set_log_report_file_path()
 
     dst_src_paths = get_log_path_src_and_dst(base)
 
     done = []
     done = get_mindx_dl_compress_files(base, tmp_path, dst_src_paths, done)
 
-    create_compress_file(done, tmp_path, tarFilePath)
+    create_compress_file(done, tmp_path, tar_file_path)
 
-    set_file_right(tarFilePath)
+    set_file_right(tar_file_path)
 
     delete_tmp_file(tmp_path)
 
