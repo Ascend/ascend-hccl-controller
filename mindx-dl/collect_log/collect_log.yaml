@@ -32,6 +32,13 @@
       when:
         - ansible_hostname in groups["master"]
 
+    - name: mv report on master
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          mv MindX_Report*.gz { hostvars['master_reports']['report_dir'] }}
+      when:
+        - ansible_hostname in groups["master"]
 
 # Generate report with worker
 - hosts: workers
