@@ -18,13 +18,11 @@ import gzip
 import os
 import platform
 import socket
-import subprocess
 import tarfile
 import time
 import shutil
 
 from pwd import getpwnam
-from glob import glob
 
 
 def log(content):
@@ -91,9 +89,9 @@ def compress_os_files(base, tmp_path, done):
             log_file_path = os_log_path + file
             log_path.append(log_file_path)
 
-    for dst_path, fileList in [(base + "/OS_log", log_path)]:
+    for dst_path, file_list in [(base + "/OS_log", log_path)]:
         os.mkdir(dst_path)
-        for file in fileList:
+        for file in file_list:
             if os.path.isfile(file):
                 dst = os.path.join(dst_path, os.path.split(file)[1])
                 dst = compress(file, dst)
