@@ -44,7 +44,7 @@
 - hosts: workers
   remote_user: root
   vars:
-    tmp_dir: "/tmp"
+    tmp_dir: "/tmp/MindXReport/"
 
   tasks:
     - name: Remove old file on workers
@@ -53,8 +53,15 @@
         state: absent
       with_items:
         - "{{ tmp_dir }}/collect_log.py"
-        - "{{ tmp_dir }}/MindXReport/"
+        - "{{ tmp_dir }}"
       ignore_errors: True
+      when:
+        - ansible_hostname not in groups["master"]
+
+    - name: create remote dir  - worker nodes
+      shell:
+        cmd:
+          mkdir -p {{ tmp_dir }}
       when:
         - ansible_hostname not in groups["master"]
 
@@ -70,8 +77,6 @@
       shell:
         chdir: "{{ tmp_dir }}"
         cmd:
-          unset http_proxy;
-          unset https_proxy;
           python collect_log.py master >> /dev/null 2>&1
       when:
         - ansible_hostname not in groups["master"]
@@ -79,7 +84,7 @@
     # copy from worker node
     - name: find report file from workers
       find:
-        paths: "{{ tmp_dir }}/MindXReport/"
+        paths: "{{ tmp_dir }}"
         patterns: "MindX_Report*.gz"
         recurse: True
       register: file_name
@@ -101,7 +106,7 @@
         state: absent
       with_items:
         - "{{ tmp_dir }}/collect_log.py"
-        - "{{ tmp_dir }}/MindXReport/"
+        - "{{ tmp_dir }}"
       ignore_errors: True
       when:
         - ansible_hostname not in groups["master"]
