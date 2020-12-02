@@ -1,22 +1,28 @@
-#!/usr/bin/python
+# coding: UTF-8
 
-# ------------------------------------------------------------------------------
-#   Copyright (C), 2020, Huawei Tech. Co., Ltd.
-# ------------------------------------------------------------------------------
-# Filename: collectLog.py
-# Requires: python 3.7 (or newer version)
-# Desc:     Gather and compress Mindx-DL logs into a single tar files.
+#  Copyright (C)  2020. Huawei Technologies Co., Ltd. All rights reserved.
 #
-# ------------------------------------------------------------------------------
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
 import gzip
 import os
 import platform
 import socket
-import sys
 import tarfile
 import time
 import shutil
+
+from sys import stdout
 from pwd import getpwnam
 
 
@@ -82,7 +88,7 @@ def compress_os_files(base, tmp_path, done):
         for file in fileList:
             if os.path.isfile(file):
                 dst = os.path.join(dst_path, os.path.split(file)[1])
-                sys.stdout.write("Compressing: %s\n" % dst)
+                stdout.write("Compressing: %s\n" % dst)
                 dst = compress(file, dst)
                 done.append(dst[len(tmp_path) + 1:])
     return done
@@ -92,10 +98,10 @@ def compress_file_list(base, tmp_path, dst_src_file_list, done):
     for dst_path, file_list in dst_src_file_list:
         for file in file_list:
             if os.path.isfile(file):
-                dst = os.path.join(dst_path, os.path.split(file)[1])
-                log("Compressing: %s\n" % dst)
-                dst = compress(file, dst)
-                done.append(dst[len(tmp_path) + 1:])
+                dst_file = os.path.join(dst_path, os.path.split(file)[1])
+                log("Compressing: %s\n" % dst_file)
+                dst_file = compress(file, dst_file)
+                done.append(dst_file[len(tmp_path) + 1:])
 
     done = compress_os_files(base, tmp_path, done)
     return done
@@ -131,21 +137,21 @@ def get_log_path_src_and_dst(base):
                      (base + "/devicePlugin", "/var/log/devicePlugin"),
                      (base + "/cadvisor", "/var/log/cadvisor"),
                      (base + "/npuSlog", "/var/log/npu/slog/host-0/"),
-                     (base + "/apigw", "/var/log/npu/slog/host-0/"),
-                     (base + "/cec", "/var/log/npu/slog/host-0/"),
-                     (base + "/dms", "/var/log/npu/slog/host-0/"),
-                     (base + "/mms", "/var/log/npu/slog/host-0/"),
-                     (base + "/mysql", "/var/log/npu/slog/host-0/"),
-                     (base + "/nginx", "/var/log/npu/slog/host-0/"),
-                     (base + "/tjm", "/var/log/npu/slog/host-0/")]
+                     (base + "/apigw", "/var/log/atlas_dls/apigw"),
+                     (base + "/cec", "/var/log/atlas_dls/cec"),
+                     (base + "/dms", "/var/log/atlas_dls/dms"),
+                     (base + "/mms", "/var/log/atlas_dls/mms"),
+                     (base + "/mysql", "/var/log/atlas_dls/mysql"),
+                     (base + "/nginx", "/var/log/atlas_dls/nginx"),
+                     (base + "/tjm", "/var/log/atlas_dls/tjm")]
 
     return dst_src_paths
 
 
-def create_compress_file(done, tmp_path, tarFilePath):
+def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
-    log("create a tar file:" + tarFilePath + ", and archive all compressed files into it")
-    tar = tarfile.open(tarFilePath, 'w')
+    log("create a tar file:" + tar_file_path + ", and archive all compressed files into it")
+    tar = tarfile.open(tar_file_path, 'w')
     old_path = os.getcwd()
     os.chdir(tmp_path)
     for filename in done:

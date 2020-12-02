@@ -20,7 +20,7 @@
     - name: Change file mode
       file:
         path: "{{ playbook_dir }}/collectLog.py"
-        mode: 0540
+        mode: 0500
       ignore_errors: True
 
     - name: collect log - master nodes
@@ -55,7 +55,7 @@
       copy:
         src: "{{ playbook_dir }}/collectLog.py"
         dest: "{{ tmp_dir }}/collectLog.py"
-        mode: 0540
+        mode: 0500
       when:
         - ansible_hostname not in groups["master"]
 
