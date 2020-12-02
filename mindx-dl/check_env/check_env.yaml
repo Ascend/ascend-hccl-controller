@@ -8,7 +8,7 @@
     - name: Change file mode
       file:
         path: "{{ playbook_dir }}/check_env.sh"
-        mode: 0540
+        mode: 0500
       ignore_errors: True
 
     - name: Check MindX-DL env - master nodes
@@ -43,14 +43,14 @@
       file:
         path: "{{ hostvars['master_reports']['report_dir'] }}"
         state: directory
-        mode: 0750
+        mode: 0700
 
     - name: Create master report txt
       copy:
         src: "{{ playbook_dir }}/env_check_report.txt"
         dest: "{{ hostvars['master_reports']['report_dir'] }}/env_check_report_master.txt"
         remote_src: True
-        mode: 0440
+        mode: 0400
 
     - name: Remove temporary file on master
       shell:
@@ -80,7 +80,7 @@
       copy:
         src: "{{ playbook_dir }}/check_env.sh"
         dest: "{{ tmp_dir }}/check_env.sh"
-        mode: 0540
+        mode: 0500
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -109,7 +109,7 @@
         src: "{{ tmp_dir }}/env_check_report.txt"
         dest: "{{ tmp_dir }}/env_check_report_{{ ansible_default_ipv4['address'] }}.txt"
         remote_src: True
-        mode: 0440
+        mode: 0400
       when:
         - ansible_default_ipv4['address'] != master_ip
 
@@ -149,7 +149,7 @@
       file:
         path: "{{ playbook_dir }}/{{ report_file_name }}"
         state: touch
-        mode: 0440
+        mode: 0400
 
     - name: Generate final report
       shell:
@@ -158,6 +158,11 @@
           echo "" >> {{ playbook_dir }}/{{ report_file_name }}
       with_fileglob: "{{ hostvars['master_reports']['report_dir'] }}/*"
       register: all_reports
+
+    - name: Change report permission
+      shell:
+        cmd:
+          chmod -R 400 {{ hostvars['master_reports']['report_dir'] }}/*
 
     - name: Print report path
       shell:
