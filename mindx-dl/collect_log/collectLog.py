@@ -55,18 +55,11 @@ def get_compress_file_paths(tmp_path, dst_src_paths, done):
         if not os.path.exists(dst_path):
             os.makedirs(dst_path)
     for dst_path, src_path in dst_src_paths:
-        filenames = []
-        for _, _, filenames in os.walk(src_path):
+        file_names = []
+        for _, _, file_names in os.walk(src_path):
             break
-        for file in filenames:
-            src = os.path.join(src_path, file)
-            dst = os.path.join(dst_path, file)
-            log("Compressing: %s\n" % dst)
-            try:
-                dst = compress(src, dst)
-                done.append(dst[len(tmp_path) + 1:])
-            except OSError as reason:
-                log("error:%s, skipping: %s\n" % (src, reason))
+        done = compress_files(done, dst_path, file_names, tmp_path)
+
     return done
 
 
@@ -83,27 +76,32 @@ def compress_os_files(base, tmp_path, done):
     filepath = os.popen("ls " + os_log_path)
     log_path = filepath.read()
     log_path = log_path.strip('\n').replace("\n", " ").split(" ")
-    for dst_path, fileList in [(base + "/OS_log", log_path)]:
+    for dst_path, file_list in [(base + "/OS_log", log_path)]:
         os.mkdir(dst_path)
-        for file in fileList:
-            if os.path.isfile(file):
-                dst = os.path.join(dst_path, os.path.split(file)[1])
-                stdout.write("Compressing: %s\n" % dst)
-                dst = compress(file, dst)
-                done.append(dst[len(tmp_path) + 1:])
+        done = compress_files(done, dst_path, file_list, tmp_path)
+
     return done
 
 
 def compress_file_list(base, tmp_path, dst_src_file_list, done):
     for dst_path, file_list in dst_src_file_list:
-        for file in file_list:
-            if os.path.isfile(file):
-                dst_file = os.path.join(dst_path, os.path.split(file)[1])
-                log("Compressing: %s\n" % dst_file)
-                dst_file = compress(file, dst_file)
-                done.append(dst_file[len(tmp_path) + 1:])
+        done = compress_files(done, dst_path, file_list, tmp_path)
 
     done = compress_os_files(base, tmp_path, done)
+    return done
+
+
+def compress_files(done, dst_path, file_list, tmp_path):
+    for file in file_list:
+        if os.path.isfile(file):
+            dst_file = os.path.join(dst_path, os.path.split(file)[1])
+            log("Compressing: %s\n" % dst_file)
+            try:
+                dst_file = compress(file, dst_file)
+                done.append(dst_file[len(tmp_path) + 1:])
+            except OSError as reason:
+                log("error:%s, skipping: %s\n" % (file, reason))
+
     return done
 
 
