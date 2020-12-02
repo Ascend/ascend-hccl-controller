@@ -115,11 +115,13 @@ def get_mindx_dl_compress_files(base, tmp_path, dst_src_file_list, done):
 
 
 def set_log_report_file_path():
+    report_log_path = "/tmp/MindXReport/"
+
     time_base = get_create_time()
     hostName = socket.gethostname()
-    tmp_path = os.path.join("/tmp/MindXReport/", time_base)
+    tmp_path = os.path.join(report_log_path, time_base)
     base = os.path.join(tmp_path, "LogCollect")
-    tarFilePath = tmp_path + "-" + hostName + "-LogCollect.zip"
+    tarFilePath = tmp_path + "-" + hostName + "-LogCollect.gz"
 
     # create folders
     log("Creating dst folder:" + base)
@@ -153,7 +155,7 @@ def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
     log("create a tar file:" + tar_file_path + ", and archive all compressed files into it")
     try:
-        with tarfile.open(tar_file_path, 'w') as file:
+        with tarfile.open(tar_file_path, 'w:gz') as file:
             old_path = os.getcwd()
             os.chdir(tmp_path)
             for filename in done:
