@@ -19,7 +19,7 @@
 
     - name: Change file mode
       file:
-        path: "{{ playbook_dir }}/collectLog.py"
+        path: "{{ playbook_dir }}/collect_log.py"
         mode: 0500
       ignore_errors: True
 
@@ -27,8 +27,8 @@
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
-          dos2unix collectLog.py;
-          python collectLog.py >> /dev/null 2>&1
+          dos2unix collect_log.py;
+          python collect_log.py >> /dev/null 2>&1
       when:
         - ansible_hostname in groups["master"]
 
@@ -45,16 +45,16 @@
         path: "{{ item }}"
         state: absent
       with_items:
-        - "{{ tmp_dir }}/collectLog.py"
+        - "{{ tmp_dir }}/collect_log.py"
         - "{{ tmp_dir }}/MindXReport/"
       ignore_errors: True
       when:
         - ansible_hostname not in groups["master"]
 
-    - name: Copy collectLog.py to workers
+    - name: Copy collect_log.py to workers
       copy:
-        src: "{{ playbook_dir }}/collectLog.py"
-        dest: "{{ tmp_dir }}/collectLog.py"
+        src: "{{ playbook_dir }}/collect_log.py"
+        dest: "{{ tmp_dir }}/collect_log.py"
         mode: 0500
       when:
         - ansible_hostname not in groups["master"]
@@ -65,7 +65,7 @@
         cmd:
           unset http_proxy;
           unset https_proxy;
-          python collectLog.py master >> /dev/null 2>&1
+          python collect_log.py master >> /dev/null 2>&1
       when:
         - ansible_hostname not in groups["master"]
 
@@ -93,7 +93,7 @@
         path: "{{ item }}"
         state: absent
       with_items:
-        - "{{ tmp_dir }}/collectLog.py"
+        - "{{ tmp_dir }}/collect_log.py"
         - "{{ tmp_dir }}/MindXReport/"
       ignore_errors: True
       when:
