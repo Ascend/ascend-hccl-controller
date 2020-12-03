@@ -60,9 +60,10 @@
         - ansible_hostname not in groups["master"]
 
     - name: create remote dir  - worker nodes
-      shell:
-        cmd:
-          mkdir -p {{ tmp_dir }}
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: 0700
       when:
         - ansible_hostname not in groups["master"]
 
@@ -101,17 +102,6 @@
       when:
         - ansible_hostname not in groups["master"]
 
-    - name: mv and Change file right
-      shell:
-        chdir: "{{ playbook_dir }}"
-        cmd:
-          mv MindX_Report*.gz "{{ hostvars['master_reports']['report_dir'] }}/";
-          chmod -R 400 "{{ hostvars['master_reports']['report_dir'] }}/MindX_Report*.gz";
-          chown -R root:root "{{ hostvars['master_reports']['report_dir'] }}"
-      ignore_errors: True
-      when:
-        - ansible_hostname in groups["master"]
-
     - name: Remove temporary file on workers
       file:
         path: "{{ item }}"
@@ -122,6 +112,23 @@
       ignore_errors: True
       when:
         - ansible_hostname not in groups["master"]
+
+
+# deal collect log in master
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: mv and Change file right
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          mv MindX_Report*.gz "{{ hostvars['master_reports']['report_dir'] }}/";
+          chmod -R 400 "{{ hostvars['master_reports']['report_dir'] }}/MindX_Report*.gz";
+          chown -R root:root "{{ hostvars['master_reports']['report_dir'] }}"
+      ignore_errors: True
+      when:
+        - ansible_hostname in groups["master"]
 
     - name: Print report path
       shell:

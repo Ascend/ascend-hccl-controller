@@ -15,14 +15,13 @@
 #  limitations under the License.
 
 import gzip
-import os, stat
+import os
 import platform
+import stat
 import socket
+import shutil
 import tarfile
 import time
-import shutil
-
-from pwd import getpwnam
 
 
 def log(content):
