@@ -22,11 +22,6 @@ import socket
 import shutil
 import tarfile
 import time
-import logging
-
-
-def init_sys_log():
-    logging.basicConfig(level=logging.INFO)
 
 
 def get_create_time():
@@ -35,7 +30,7 @@ def get_create_time():
 
 def compress(src, dst):
     """compress if the src file is uncompressed"""
-    logging.info("compress files:" + src)
+    print("compress files:" + src)
     if src.lower().endswith(".gz"):
         f_open = open
     else:
@@ -53,7 +48,7 @@ def get_compress_file_paths(tmp_path, dst_src_paths, done):
             os.makedirs(dst_path)
     for dst_path, src_path in dst_src_paths:
         if not os.path.exists(src_path):
-            logging.warning("%s not exists" % src_path)
+            print("warning: %s not exists" % src_path)
             continue
 
         file_names = []
@@ -62,12 +57,12 @@ def get_compress_file_paths(tmp_path, dst_src_paths, done):
         for tmp_file in file_names:
             src = os.path.join(src_path, tmp_file)
             dst = os.path.join(dst_path, tmp_file)
-            logging.info("Compressing: %s\n" % dst)
+            print("Compressing: %s\n" % dst)
             try:
                 dst = compress(src, dst)
                 done.append(dst[len(tmp_path) + 1:])
             except OSError as reason:
-                logging.error("error:%s, skipping: %s\n" % (src, reason))
+                print("error: %s, skipping: %s\n" % (src, reason))
     return done
 
 
@@ -81,7 +76,7 @@ def compress_os_files(base, tmp_path, done):
     elif "debian" in sys_str:
         os_log_file = "syslog"
     else:
-        logging.error("not support os inf %s\n" % sys_str)
+        print("not support os inf %s\n" % sys_str)
         return done
 
     log_path = []
@@ -108,7 +103,7 @@ def compress_file_list(base, tmp_path, dst_src_file_list, done):
         for tmp_file in file_list:
             if os.path.isfile(tmp_file):
                 dst = os.path.join(dst_path, os.path.split(tmp_file)[1])
-                logging.info("Compressing: %s\n" % dst)
+                print("Compressing: %s\n" % dst)
                 dst = compress(tmp_file, dst)
                 done.append(dst[len(tmp_path) + 1:])
 
@@ -130,7 +125,7 @@ def set_log_report_file_path():
     tar_file_path = tmp_path + "-" + host_name + "-LogCollect.gz"
 
     # create folders
-    logging.info("Creating dst folder:" + base)
+    print("Creating dst folder:" + base)
     os.makedirs(tmp_path)
     os.makedirs(base)
 
@@ -164,17 +159,17 @@ def get_log_path_src_and_dst(base):
 
 def create_compress_file(done, tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
-    logging.info("create tar file:" + tar_file_path + ", from all compressed files")
+    print("create tar file:" + tar_file_path + ", from all compressed files")
     try:
         with tarfile.open(tar_file_path, 'w:gz') as tmp_file:
             old_path = os.getcwd()
             os.chdir(tmp_path)
             for filename in done:
                 tmp_file.add(filename)
-                logging.info("Adding to tar: %s\n" % filename)
+                print("Adding to tar: %s\n" % filename)
             os.chdir(old_path)
     except tarfile.TarError as err:
-        logging.error("error: %s, skipping: %s\n" % (filename, err))
+        print("error: %s, skipping: %s\n" % (filename, err))
 
 
 def set_file_right(tar_file_path):
@@ -182,14 +177,12 @@ def set_file_right(tar_file_path):
 
 
 def delete_tmp_file(tmp_path):
-    logging.info("Delete temp folder" + tmp_path)
+    print("Delete temp folder" + tmp_path)
     shutil.rmtree(tmp_path)
 
 
 def main():
-    init_sys_log()
-
-    logging.info("begin to collect log files")
+    print("begin to collect log files")
 
     base, tmp_path, tar_file_path = set_log_report_file_path()
 
@@ -204,7 +197,7 @@ def main():
 
     delete_tmp_file(tmp_path)
 
-    logging.info("collect log files finish")
+    print("collect log files finish")
 
 
 if __name__ == '__main__':
