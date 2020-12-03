@@ -85,7 +85,7 @@ def compress_os_files(base, tmp_path, done):
     files = os.listdir(os_log_path)
     for tmp_file in files:
         if os_log_file in tmp_file:
-            log_file_path = os_log_path + tmp_file
+            log_file_path = os.path.join(os_log_path, tmp_file)
             log_path.append(log_file_path)
 
     dst_path = base + "/OS_log"
@@ -127,7 +127,6 @@ def set_log_report_file_path():
 
     # create folders
     print("Creating dst folder:" + base)
-    os.makedirs(tmp_path)
     os.makedirs(base)
 
     return base, tmp_path, tar_file_path
