@@ -15,7 +15,7 @@
       file:
         path: "{{ hostvars['master_reports']['report_dir'] }}"
         state: directory
-        mode: 0750
+        mode: 0700
 
     - name: Change file mode
       file:
@@ -39,6 +39,7 @@
           mv MindX_Report*.gz "{{ hostvars['master_reports']['report_dir'] }}/"
       when:
         - ansible_hostname in groups["master"]
+
 
 # Generate report with worker
 - hosts: workers
@@ -99,6 +100,17 @@
       with_items: " {{ file_name.files }} "
       when:
         - ansible_hostname not in groups["master"]
+
+    - name: mv and Change file right
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          mv MindX_Report*.gz "{{ hostvars['master_reports']['report_dir'] }}/";
+          chmod -R 400 "{{ hostvars['master_reports']['report_dir'] }}/MindX_Report*.gz";
+          chown -R root:root "{{ hostvars['master_reports']['report_dir'] }}"
+      ignore_errors: True
+      when:
+        - ansible_hostname in groups["master"]
 
     - name: Remove temporary file on workers
       file:
