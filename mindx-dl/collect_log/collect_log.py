@@ -36,7 +36,8 @@ def compress(src, dst):
     else:
         f_open = gzip.open
         dst = dst + ".gz"
-    with f_open(dst, 'wb', 9) as f_open_dst, open(src, 'rb') as f_open_src:
+    with f_open(dst, 'wb', 9) as f_open_dst, \
+            open(src, 'rb') as f_open_src:
         f_open_dst.writelines(f_open_src)
 
     return dst
@@ -76,7 +77,7 @@ def compress_os_files(base, tmp_path, done):
     elif "debian" in sys_str:
         os_log_file = "syslog"
     else:
-        print("not support os inf %s\n" % sys_str)
+        print("not support os information: %s\n" % sys_str)
         return done
 
     log_path = []
