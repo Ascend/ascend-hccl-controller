@@ -14,7 +14,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import gzip
 import os
 import platform
 import stat
@@ -22,29 +21,30 @@ import socket
 import shutil
 import tarfile
 import time
+import gzip
 
 
 def get_create_time():
-    return "MindX_Report_%04d_%02d_%02d_%02d_%02d_%02d" % time.localtime()[:6]
+    return "%04d_%02d_%02d_%02d_%02d_%02d" % time.localtime()[:6]
 
 
-def compress(src, dst):
-    """compress if the src file is uncompressed"""
+def compress_and_copy_files(src, dst):
+    """compress if the src file is uncompressed else copied"""
     print("compress files:" + src)
     if src.lower().endswith(".gz"):
-        f_open = open
+        try:
+            shutil.copy(src, dst)
+        except OSError as e:
+            print("unable to copy file. %s" % e)
     else:
-        f_open = gzip.open
         dst = dst + ".gz"
-    with f_open(dst, 'wb', 9) as f_open_dst, \
-            open(src, 'rb') as f_open_src:
-        f_open_dst.writelines(f_open_src)
-
-    return dst
+        with gzip.open(dst, 'wb') as f_open_compress, \
+                open(src, 'rb') as f_open_src:
+            f_open_compress.writelines(f_open_src)
 
 
-def get_compress_file_paths(tmp_path, dst_src_paths, done):
-    for dst_path, src_path in dst_src_paths:
+def get_compress_file_paths(dst_src_paths):
+    for dst_path, _ in dst_src_paths:
         if not os.path.exists(dst_path):
             os.makedirs(dst_path)
     for dst_path, src_path in dst_src_paths:
@@ -52,22 +52,19 @@ def get_compress_file_paths(tmp_path, dst_src_paths, done):
             print("warning: %s not exists" % src_path)
             continue
 
-        file_names = []
-        for _, _, file_names in os.walk(src_path):
-            break
+        file_names = os.listdir(src_path)
         for tmp_file in file_names:
             src = os.path.join(src_path, tmp_file)
-            dst = os.path.join(dst_path, tmp_file)
-            print("Compressing: %s\n" % dst)
-            try:
-                dst = compress(src, dst)
-                done.append(dst[len(tmp_path) + 1:])
-            except OSError as reason:
-                print("error: %s, skipping: %s\n" % (src, reason))
-    return done
+            if os.path.isfile(src):
+                dst = os.path.join(dst_path, tmp_file)
+                print("compressing: %s\n" % dst)
+                try:
+                    compress_and_copy_files(src, dst)
+                except OSError as reason:
+                    print("error: %s, skipping: %s\n" % (src, reason))
 
 
-def compress_os_files(base, tmp_path, done):
+def compress_os_files(base):
     sys_str = platform.platform().lower()
 
     if "ubuntu" in sys_str:
@@ -78,7 +75,7 @@ def compress_os_files(base, tmp_path, done):
         os_log_file = "syslog"
     else:
         print("not support os information: %s\n" % sys_str)
-        return done
+        return
 
     log_path = []
     os_log_path = "/var/log/"
@@ -88,45 +85,28 @@ def compress_os_files(base, tmp_path, done):
             log_file_path = os.path.join(os_log_path, tmp_file)
             log_path.append(log_file_path)
 
-    dst_path = base + "/OS_log"
+    dst_path = os.path.join(base, "os_log")
     os.mkdir(dst_path)
     for tmp_file in log_path:
         if os.path.isfile(tmp_file):
             dst = os.path.join(dst_path, os.path.split(tmp_file)[1])
-            dst = compress(tmp_file, dst)
-            relative_path = dst[len(tmp_path) + 1:]
-            done.append(relative_path)
-    return done
+            compress_and_copy_files(tmp_file, dst)
 
 
-def compress_file_list(base, tmp_path, dst_src_file_list, done):
-    for dst_path, file_list in dst_src_file_list:
-        for tmp_file in file_list:
-            if os.path.isfile(tmp_file):
-                dst = os.path.join(dst_path, os.path.split(tmp_file)[1])
-                print("Compressing: %s\n" % dst)
-                dst = compress(tmp_file, dst)
-                done.append(dst[len(tmp_path) + 1:])
-
-    done = compress_os_files(base, tmp_path, done)
-    return done
-
-
-def get_mindx_dl_compress_files(base, tmp_path, dst_src_file_list, done):
-    done = get_compress_file_paths(tmp_path, dst_src_file_list, done)
-    done = compress_file_list(base, tmp_path, dst_src_file_list, done)
-    return done
+def get_mindx_dl_compress_files(base, dst_src_file_list):
+    get_compress_file_paths(dst_src_file_list)
+    compress_os_files(base)
 
 
 def set_log_report_file_path():
     time_base = get_create_time()
     host_name = socket.gethostname()
-    tmp_path = os.path.join(os.getcwd(), time_base)
+    tmp_path = "MindX_Report_" + time_base
     base = os.path.join(tmp_path, "LogCollect")
-    tar_file_path = tmp_path + "-" + host_name + "-LogCollect.gz"
+    tar_file_path = "-".join([tmp_path, host_name, "LogCollect.tar.gz"])
 
     # create folders
-    print("Creating dst folder:" + base)
+    print("creating dst folder:" + base)
     os.makedirs(base)
 
     return base, tmp_path, tar_file_path
@@ -135,41 +115,38 @@ def set_log_report_file_path():
 def get_log_path_src_and_dst(base):
     # compress all files from source folders into destination folders
     dst_src_paths = \
-        [(base + "/volcano-scheduler",
+        [(os.path.join(base, "volcano-scheduler"),
           "/var/log/atlas_dls/volcano-scheduler"),
-         (base + "/volcano-admission",
+         (os.path.join(base, "volcano-admission"),
           "/var/log/atlas_dls/volcano-admission"),
-         (base + "/volcano-controller",
+         (os.path.join(base, "volcano-controller"),
           "/var/log/atlas_dls/volcano-controller"),
-         (base + "/hccl-controller",
+         (os.path.join(base, "hccl-controller"),
           "/var/log/atlas_dls/hccl-controller"),
-         (base + "/devicePlugin", "/var/log/devicePlugin"),
-         (base + "/cadvisor", "/var/log/cadvisor"),
-         (base + "/npuSlog", "/var/log/npu/slog/host-0/"),
-         (base + "/apigw", "/var/log/atlas_dls/apigw"),
-         (base + "/cec", "/var/log/atlas_dls/cec"),
-         (base + "/dms", "/var/log/atlas_dls/dms"),
-         (base + "/mms", "/var/log/atlas_dls/mms"),
-         (base + "/mysql", "/var/log/atlas_dls/mysql"),
-         (base + "/nginx", "/var/log/atlas_dls/nginx"),
-         (base + "/tjm", "/var/log/atlas_dls/tjm")]
+         (os.path.join(base, "devicePlugin"), "/var/log/devicePlugin"),
+         (os.path.join(base, "cadvisor"), "/var/log/cadvisor"),
+         (os.path.join(base, "npuSlog"), "/var/log/npu/slog/host-0/"),
+         (os.path.join(base, "apigw"), "/var/log/atlas_dls/apigw"),
+         (os.path.join(base, "cec"), "/var/log/atlas_dls/cec"),
+         (os.path.join(base, "dms"), "/var/log/atlas_dls/dms"),
+         (os.path.join(base, "mms"), "/var/log/atlas_dls/mms"),
+         (os.path.join(base, "mysql"), "/var/log/atlas_dls/mysql"),
+         (os.path.join(base, "nginx"), "/var/log/atlas_dls/nginx"),
+         (os.path.join(base, "tjm"), "/var/log/atlas_dls/tjm")]
 
     return dst_src_paths
 
 
-def create_compress_file(done, tmp_path, tar_file_path):
+def create_compress_file(tmp_path, tar_file_path):
     # create a tar file, and archive all compressed files into ita
     print("create tar file:" + tar_file_path + ", from all compressed files")
     try:
+        os.path.abspath(tar_file_path)
         with tarfile.open(tar_file_path, 'w:gz') as tmp_file:
-            old_path = os.getcwd()
-            os.chdir(tmp_path)
-            for filename in done:
-                tmp_file.add(filename)
-                print("Adding to tar: %s\n" % filename)
-            os.chdir(old_path)
+            tmp_file.add(tmp_path)
+            print("adding to tar: %s\n" % tmp_path)
     except tarfile.TarError as err:
-        print("error: %s, skipping: %s\n" % (filename, err))
+        print("error: %s, skipping: %s\n" % (tmp_path, err))
 
 
 def set_file_right(tar_file_path):
@@ -177,7 +154,7 @@ def set_file_right(tar_file_path):
 
 
 def delete_tmp_file(tmp_path):
-    print("Delete temp folder" + tmp_path)
+    print("delete temp folder" + tmp_path)
     shutil.rmtree(tmp_path)
 
 
@@ -188,10 +165,9 @@ def main():
 
     dst_src_paths = get_log_path_src_and_dst(base)
 
-    done = []
-    done = get_mindx_dl_compress_files(base, tmp_path, dst_src_paths, done)
+    get_mindx_dl_compress_files(base, dst_src_paths)
 
-    create_compress_file(done, tmp_path, tar_file_path)
+    create_compress_file(base, tar_file_path)
 
     set_file_right(tar_file_path)
 
