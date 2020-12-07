@@ -123,8 +123,7 @@
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
-          mv MindX_Report*.gz "{{ hostvars['master_reports']['report_dir'] }}/";
-          chmod -R 400 "{{ hostvars['master_reports']['report_dir'] }}/MindX_Report*.gz";
+          chmod -R 400 "{{ hostvars['master_reports']['report_dir'] }}";
           chown -R root:root "{{ hostvars['master_reports']['report_dir'] }}"
       ignore_errors: True
       when:
