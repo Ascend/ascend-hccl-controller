@@ -34,8 +34,8 @@ def compress_and_copy_files(src, dst):
     if src.lower().endswith(".gz"):
         try:
             shutil.copy(src, dst)
-        except OSError as e:
-            print("unable to copy file. %s" % e)
+        except OSError as reason:
+            print("unable to copy file. %s" % reason)
     else:
         dst = dst + ".gz"
         with gzip.open(dst, 'wb') as f_open_compress, \
@@ -43,7 +43,7 @@ def compress_and_copy_files(src, dst):
             f_open_compress.writelines(f_open_src)
 
 
-def get_compress_file_paths(dst_src_paths):
+def compress_mindx_files(dst_src_paths):
     for dst_path, _ in dst_src_paths:
         if not os.path.exists(dst_path):
             os.makedirs(dst_path)
@@ -52,16 +52,19 @@ def get_compress_file_paths(dst_src_paths):
             print("warning: %s not exists" % src_path)
             continue
 
-        file_names = os.listdir(src_path)
-        for tmp_file in file_names:
-            src = os.path.join(src_path, tmp_file)
-            if os.path.isfile(src):
-                dst = os.path.join(dst_path, tmp_file)
-                print("compressing: %s\n" % dst)
-                try:
-                    compress_and_copy_files(src, dst)
-                except OSError as reason:
-                    print("error: %s, skipping: %s\n" % (src, reason))
+        get_compress_file_by_path(dst_path, src_path)
+
+
+def get_compress_file_by_path(dst_path, src_path):
+    file_names = os.listdir(src_path)
+    for tmp_file in file_names:
+        src = os.path.join(src_path, tmp_file)
+        if os.path.isfile(src):
+            dst = os.path.join(dst_path, tmp_file)
+            try:
+                compress_and_copy_files(src, dst)
+            except OSError as reason:
+                print("error: %s, skipping: %s\n" % (src, reason))
 
 
 def compress_os_files(base):
@@ -94,7 +97,7 @@ def compress_os_files(base):
 
 
 def get_mindx_dl_compress_files(base, dst_src_file_list):
-    get_compress_file_paths(dst_src_file_list)
+    compress_mindx_files(dst_src_file_list)
     compress_os_files(base)
 
 
