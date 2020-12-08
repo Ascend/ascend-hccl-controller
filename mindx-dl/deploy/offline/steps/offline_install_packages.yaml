@@ -11,7 +11,7 @@
     ############################# Install NFS Server ##################################
     - name: Install nfs-server
       shell:
-        chdir: "{{dls_root_dir}}/base_software/nfs"
+        chdir: "{{dls_root_dir}}/base_software/"
         cmd:
           dpkg -i libtirpc* libtirpc-dev*;
           dpkg -i rpcbind*;

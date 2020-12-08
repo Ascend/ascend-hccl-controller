@@ -150,7 +150,8 @@
       shell:
         cmd:
           unset http_proxy https_proxy;
-          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ item }} accelerator-type-
       tags:
         - init-workers
         - basic_only
@@ -165,6 +166,17 @@
         - init-workers
         - basic_only
       with_items: "{{ groups['inference_node'] }}"
+
+    - name: Label A300T nodes
+      shell:
+        cmd:
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true;
+          kubectl label nodes {{ item }} accelerator-type=card
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['A300T_node'] }}"
 
     - name: Label arm nodes
       shell:
