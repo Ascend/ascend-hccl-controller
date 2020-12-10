@@ -23,7 +23,7 @@
         path: "{{ dls_root_dir }}/base_software"
         state: directory
 
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   tasks:
     - name: Check if offline package for arm arch exists
@@ -52,9 +52,9 @@
       file:
         path: "{{ dls_root_dir }}/base_software_amd64"
         state: directory
-      when: arm_file_status.stat.exists == True
+      when: amd_file_status.stat.exists == True
 
-    - name: unarchive offline package - x86_64
+    - name: unarchive offline package - amd64
       unarchive:
         src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
         dest: "{{dls_root_dir}}/base_software_amd64/"
@@ -79,7 +79,7 @@
         - ansible_architecture == "x86_64"
 
 # unzip offline package
-- hosts: localnode, master
+- hosts: master
   remote_user: root
   tasks:
     - name: unarchive offline package - arm64
