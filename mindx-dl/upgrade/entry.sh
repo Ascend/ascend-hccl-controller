@@ -102,7 +102,7 @@ function upgrade(){
             kubectl apply -f hccl-controller-export.yaml
             cd ../volcano-difference
             tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh
-            bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret
+            bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret || true
             kubectl apply -f volcano-v*.yaml
             cd ..
             # Wait a short period of time til resources rolled back.
