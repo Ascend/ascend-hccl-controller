@@ -143,7 +143,7 @@
 
 
 
-# For who chose to remove k8s & docker, this play is used to remove all nodes in cluster. 
+# For who choose to remove k8s & docker, this play is used to remove all nodes in cluster.
 - hosts: master
   remote_user: root
   vars_files:
