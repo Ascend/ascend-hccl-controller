@@ -178,7 +178,7 @@
       delay: 10
       tags: check
 
-# The folloing plays are used to remove previous version images after upgrade.
+# The following plays are used to remove previous version images after upgrade.
 - hosts: localnode, master
   remote_user: root
 
