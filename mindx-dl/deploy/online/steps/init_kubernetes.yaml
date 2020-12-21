@@ -43,11 +43,11 @@
       shell:
         cmd:
           mkdir -p $HOME/.kube;
-          cp -i /etc/kubernetes/admin.conf $HOME/.kube/config;
-          chown $(id -u):$(id -g) $HOME/.kube/config;
+          cp -f /etc/kubernetes/admin.conf $HOME/.kube/config;
+          chown $(id -u):$(id -g) $HOME/.kube/config
       tags: init-master
 
-    # apply deploy/yaml/calico.yaml
+    # apply deploy/yamls/calico.yaml
     - name: Apply calico yaml file
       shell:
         chdir: "{{ deploy_yaml_dir }}"
@@ -93,7 +93,7 @@
   remote_user: root
 
   tasks:
-    - name: Register join command
+    - name: Register join commamd
       shell:
         cmd:
           kubeadm token create --print-join-command
@@ -105,7 +105,6 @@
         name: "KUBERNETES_JOIN_COMMAND"
         join_command: "{{ join_command.stdout }}"
       tags: init-workers
-
 
 # Add the worker node to the cluster and grant the Kubernetes administrator permission to the worker node.
 - hosts: workers
@@ -130,6 +129,7 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
+
 # Labeling Work Nodes
 - hosts: localnode, master
   remote_user: root
@@ -140,7 +140,7 @@
         cmd:
           unset http_proxy https_proxy;
           kubectl label nodes {{ item }} node-role.kubernetes.io/worker=worker --overwrite=true;
-          kubectl label nodes {{ item }} workerselector=dls-worker-node --overwrite=true;
+          kubectl label nodes {{ item }} workerselector=dls-worker-node --overwrite=true
       tags:
         - init-workers
         - basic_only

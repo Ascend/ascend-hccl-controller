@@ -393,13 +393,13 @@ function check_volcano_controllers_service() {
 
 # 检查volcano-scheduler状态，版本
 function check_volcano_scheduler_service() {
-    # volcano-controllers
+    # volcano-scheduler
     service_name=${VOLCANO_SCHEDULER_SERVICE}
 
     # pod名称通配符
     service_name_regexp="volcano-scheduler-(.*)"
 
-    # volcano_admission服务使用镜像的名称
+    # volcano_scheduler服务使用镜像的名称
     image_name="volcanosh/vc-scheduler"
 
     # 检查
@@ -447,7 +447,7 @@ function print_format_to_file() {
     # 检查结果数组长度
     arr_length=${#SERVICE_CHECK_STR_ARRAY[@]}
     # 打印时设置的其他符号长度
-    other_symbel_length=16
+    other_symble_length=16
 
     hostname=$(hostname)
     # hostname长度
@@ -471,7 +471,7 @@ function print_format_to_file() {
 
     row_max_length=$((service_col_length + ip_col_length + \
                         status_col_length + version_col_length + \
-                        hostname_col_length + other_symbel_length))
+                        hostname_col_length + other_symble_length))
 
     printf "%-${row_max_length}s\n" "-" | sed -e 's/ /-/g' >> "${file_path}"
     for((i=0; i<arr_length; i++));
@@ -520,7 +520,7 @@ function main() {
     # 格式化打印
     print_format_to_file
 
-    chmod 540 "${file_path}"
+    chmod 400 "${file_path}"
 }
 
 main >>/dev/null 2>&1

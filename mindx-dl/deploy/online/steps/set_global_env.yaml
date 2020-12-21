@@ -1,21 +1,21 @@
-# Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
 ---
 # This playbook is used to modify system configurations on the master and worker nodes before all deployment.
 # Make sure that this script is executed first.
-- hosts: master
+- hosts: localnode, master
   remote_user: root
 
   tasks:
     - name: Check master IP
       fail:
         msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
-               Step 1, edit {{playbook_dir}}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
-               Step 2, edit {{dls_root_dir}}/yaml/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+               Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
+               Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
                At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
 
-- hosts: cluster
+- hosts: localnode, cluster
   remote_user: root
 
   tasks:
@@ -32,16 +32,17 @@
           yum install -y libselinux-python3 libselinux-python;
           pip3.7 install selinux
       environment:
-        http_proxy: "{{proxy}}"
-        https_proxy: "{{proxy}}"
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
       when:
         - ansible_distribution == 'CentOS'
 
-    - name: Close firwall - CentOS
+    - name: Close firewall - CentOS
       shell:
         cmd:
           systemctl stop firewalld.service;
           systemctl disable firewalld.service
+      ignore_errors: True
       when:
         - ansible_distribution == 'CentOS'
 
@@ -95,26 +96,32 @@
       shell: grep "export no_proxy" /etc/profile
       ignore_errors: True
       register: has_no_proxy_var
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     # add when no_proxy exists
     - name: Set no proxy ip
       replace:
         path: /etc/profile
         regexp: '(export no_proxy)(.*)'
-        replace: '\1\2,{{ master_ip }}'
+        replace: '\1\2,ansible_default_ipv4.address'
       when:
         - has_no_proxy_var.stdout != ""
         - ansible_default_ipv4['address'] not in has_no_proxy_var.stdout
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
-    # create no_proxy when no_proxy exists
+    # create no_proxy when no_proxy not exists
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
-        line: 'export no_proxy={{ master_ip }}'
+        line: 'export no_proxy={{ ansible_default_ipv4.address }}'
       when: has_no_proxy_var.stdout == ""
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Enable /etc/profile
       shell:
@@ -122,21 +129,26 @@
           source /etc/profile
       args:
         executable: "/bin/bash"
-      tags: init-master
+      tags:
+        - basic_only
+        - init-master
 
     - name: Add User
       shell:
         cmd:
           useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
           usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
 
 - hosts: nfs_server
   remote_user: root
 
   tasks:
-  - name: Add User
-    shell:
-      cmd:
-        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
-        useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
-        usermod -a -G HwHiAiUser hwMindX
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
+          usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only

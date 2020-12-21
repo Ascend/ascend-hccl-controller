@@ -44,7 +44,7 @@
 - hosts: localnode, master
   remote_user: root
   vars:
-    deploy_yaml_dir: "{{dls_root_dir}}/yamls"
+    deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
     - name: Remove /var/log/atlas_dls
@@ -94,30 +94,30 @@
 
     - name: Deploy hccl-controller
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f hccl-controller*.yaml
 
     - name: Deploy device plugin
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl apply -f ascendplugin-volcano*.yaml;
           kubectl apply -f ascendplugin-310*.yaml
 
     - name: Deploy cadvisor
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f cadvisor-*.yaml
 
     - name: Deploy volcano
       shell:
-        chdir: "{{deploy_yaml_dir}}"
+        chdir: "{{ deploy_yaml_dir }}"
         cmd: kubectl apply -f volcano-*.yaml
 
     # Deleting Software Packages
     - name: Deleting software packages - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}/base_software/"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           rm libtirpc* rpcbind* libnfsidmap2* keyutils* nfs-common* nfs-kernel-server*;
           rm libltdl7* docker-ce_18.06.3* cri-tools* conntrack* socat*;
@@ -129,7 +129,7 @@
 
     - name: Deleting software packages - CentOS
       shell:
-        chdir: "{{dls_root_dir}}/base_software/"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           rm -rf docker kubernetes libselinux lvm2 nfs selinux versionlock yum-utils;
       tags: clean_pkg

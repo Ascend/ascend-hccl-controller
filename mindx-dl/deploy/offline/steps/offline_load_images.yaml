@@ -7,12 +7,12 @@
 - hosts: localnode, master
   remote_user: root
   vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
 
   tasks:
     - name: Load kubernetes basic images - arm64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i kube-apiserver_arm64.tar.gz;
           docker load -i kube-controller-manager_arm64.tar.gz;
@@ -29,7 +29,7 @@
 
     - name: Load kubernetes basic images - x86_64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i kube-apiserver_amd64.tar.gz;
           docker load -i kube-controller-manager_amd64.tar.gz;
@@ -74,7 +74,7 @@
 
     - name: Load mindxdl images - arm64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i vc-webhook-manager-base*arm64.tar.gz;
           docker load -i vc-controller-manager*arm64.tar.gz;
@@ -86,7 +86,7 @@
 
     - name: Load mindxdl images - x86_64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i vc-webhook-manager-base*amd64.tar.gz;
           docker load -i vc-controller-manager*amd64.tar.gz;
@@ -100,13 +100,13 @@
 - hosts: workers
   remote_user: root
   vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
 
   tasks:
     - name: scp basic images from master to workers - arm64
       copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
         - huawei-cadvisor-{{cadvisor_version}}-arm64.tar.gz
@@ -117,8 +117,8 @@
 
     - name: scp basic images from master to workers - x86_64
       copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
       with_items:
         - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
         - huawei-cadvisor-{{cadvisor_version}}-amd64.tar.gz
@@ -132,12 +132,12 @@
 - hosts: localnode, workers
   remote_user: root
   vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
 
   tasks:
     - name: Load mindxdl images - arm64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i Ascend-K8sDevicePlugin*arm64-Docker.tar.gz;
           docker load -i huawei-cadvisor*arm64.tar.gz;
@@ -146,7 +146,7 @@
 
     - name: Load mindxdl images - x86_64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i Ascend-K8sDevicePlugin*amd64-Docker.tar.gz;
           docker load -i huawei-cadvisor*amd64.tar.gz;
@@ -157,13 +157,13 @@
 - hosts: workers
   remote_user: root
   vars:
-    docker_images_dir: "{{dls_root_dir}}/docker_images"
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
 
   tasks:
     - name: scp additional images from master to workers - arm64
       copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
       with_items:
         - kube-proxy_arm64.tar.gz
         - pause_arm64.tar.gz
@@ -177,8 +177,8 @@
 
     - name: scp additional images from master to workers - x86_64
       copy:
-        src: "{{docker_images_dir}}/{{item}}"
-        dest: "{{docker_images_dir}}/"
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
       with_items:
         - kube-proxy_amd64.tar.gz
         - pause_amd64.tar.gz
@@ -192,7 +192,7 @@
 
     - name: Load additional images - arm64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i kube-proxy_arm64.tar.gz;
           docker load -i pause_arm64.tar.gz;
@@ -206,7 +206,7 @@
 
     - name: Load additional images - x86_64
       shell:
-        chdir: "{{docker_images_dir}}"
+        chdir: "{{ docker_images_dir }}"
         cmd:
           docker load -i kube-proxy_amd64.tar.gz;
           docker load -i pause_amd64.tar.gz;

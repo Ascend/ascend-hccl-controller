@@ -11,7 +11,7 @@
     ############################# Install NFS Server ##################################
     - name: Install nfs-server
       shell:
-        chdir: "{{dls_root_dir}}/base_software/nfs"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           dpkg -i libtirpc* libtirpc-dev*;
           dpkg -i rpcbind*;
@@ -25,7 +25,7 @@
 
     - name: Install Linux NFS - CentOS
       shell:
-        chdir: "{{dls_root_dir}}/base_software/"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           yum install ./nfs/*.rpm -y
       ignore_errors: True
@@ -48,13 +48,13 @@
 
     - name: Check NFS mount directory
       stat:
-        path: "{{nfs_shared_dir}}"
+        path: "{{ nfs_shared_dir }}"
       register: nfs_mount_folder
       tags: nfs
 
     - name: Create nfs mount directory
       file:
-        path: "{{nfs_shared_dir}}"
+        path: "{{ nfs_shared_dir }}"
         state: directory
       when: nfs_mount_folder.stat.exists == false
       tags: nfs
@@ -69,7 +69,7 @@
     - name: Add NFS config info
       lineinfile:
         path: /etc/exports
-        line: "{{nfs_shared_dir}} *(rw,sync,no_root_squash)"
+        line: "{{ nfs_shared_dir }} *(rw,sync,no_root_squash)"
         state: present
       tags: nfs
 
@@ -101,6 +101,35 @@
       tags: nfs
     ###################################################################################
 
+# install nfs client on workers
+- hosts: workers
+  remote_user: root
+
+  tasks:
+    ############################# Install NFS Client ##################################
+    - name: Install nfs client
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i libtirpc* libtirpc-dev*;
+          dpkg -i rpcbind*;
+          dpkg -i libnfsidmap2*;
+          dpkg -i keyutils*;
+          dpkg -i nfs-common*;
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: nfs
+
+    - name: Install Linux NFS - CentOS
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          yum install ./nfs/*.rpm -y
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: nfs
+
 # install docker in cluster
 - hosts: localnode, cluster
   remote_user: root
@@ -109,7 +138,7 @@
     ############################# Install Docker ######################################
     - name: Install prerequisite software - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}/base_software/docker"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           dpkg -i libltdl7*
       when:
@@ -118,7 +147,7 @@
 
     - name: Install docker engine - Ubuntu
       shell:
-        chdir: "{{dls_root_dir}}/base_software/docker"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           dpkg -i docker-ce_18.06.3*
       when:
@@ -127,7 +156,7 @@
 
     - name: Install docker engine - CentOS
       shell:
-        chdir: "{{dls_root_dir}}/base_software/"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           yum install ./yum-utils/*.rpm -y;
           yum install ./lvm2/*.rpm -y;
@@ -221,7 +250,7 @@
     ############################## Install Kubernetes #################################
     - name: Install k8s server
       shell:
-        chdir: "{{dls_root_dir}}/base_software/kubernetes"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           dpkg -i cri-tools* conntrack* socat*;
           dpkg -i kubernetes-cni*;
@@ -241,7 +270,7 @@
 
     - name: Install kubelet kubeadm kubectl
       shell:
-        chdir: "{{dls_root_dir}}/base_software/"
+        chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
           yum install ./kubernetes/*.rpm -y;
           yum install ./versionlock/*.rpm -y
