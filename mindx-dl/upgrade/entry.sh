@@ -83,12 +83,12 @@ function upgrade(){
         if [ "$rollback" == 'yes' ];then
             echo -e "\nRolling back to previous version...\n"
             # Delete resource definition of current version
-            kubectl delete daemonset ascend-device-plugin-daemonset -n kube-system
-            kubectl delete daemonset ascend-device-plugin2-daemonset -n kube-system
-            kubectl delete daemonset cadvisor -n cadvisor
-            kubectl delete deployment hccl-controller
-            kubectl delete deployment volcano-admission -n volcano-system
-            kubectl delete job volcano-admission-init -n volcano-system
+            kubectl delete daemonset ascend-device-plugin-daemonset -n kube-system || true
+            kubectl delete daemonset ascend-device-plugin2-daemonset -n kube-system || true
+            kubectl delete daemonset cadvisor -n cadvisor || true
+            kubectl delete deployment hccl-controller || true
+            kubectl delete deployment volcano-admission -n volcano-system || true
+            kubectl delete job volcano-admission-init -n volcano-system || true
             # Wait a short period of time til resources deleted.
             while [ "$(kubectl get pods -A | grep -c Terminating)" -gt 0 ];do
                 echo -e "\nWaiting for the pods to terminate, please do not interrupt.\n"
