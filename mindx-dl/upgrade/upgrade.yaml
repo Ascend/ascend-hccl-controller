@@ -99,6 +99,7 @@
           kubectl apply -f ascendplugin-volcano*.yaml;
           kubectl apply -f ascendplugin-310*.yaml;
       tags: upgrade
+      ignore_errors: True
 
 # This play is used to check service status after upgrade.
 - hosts: localnode, master
