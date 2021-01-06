@@ -100,64 +100,53 @@ hccl-controller                                    #深度学习组件hccl-contr
 │   └── verify-codegen.sh
 ├── main.go                                               #程序入口
 ├── mindx-dl                                              #mindx dl组件文档及安装脚本
+│   ├── check_env                                         #环境检查脚本
+│   │   ├── check_env.sh
+│   │   └── check_env.yaml
+│   ├── collect_log                                       #日志收集脚本
+│   │   ├── collect_log.py
+│   │   └── collect_log.yaml
 │   ├── deploy                                            #mindx dl安装脚本
 │   │   ├── offline                                       #离线安装脚本
-│   │   │   ├── cluster                                   #集群部署
-│   │   │   │   ├── clean_services.yaml
-│   │   │   │   ├── entry.sh
-│   │   │   │   ├── init_kubernetes.yaml
-│   │   │   │   ├── offline_deploy_service.yaml
-│   │   │   │   ├── offline_install_package.yaml
-│   │   │   │   ├── offline_load_images.yaml
-│   │   │   │   └── set_global_env.yaml
-│   │   │   ├── join_cluster.yaml
-│   │   │   └── single                                    #单机部署
+│   │   │   ├── offline_join_cluster.yaml
+│   │   │   └── steps
 │   │   │       ├── clean_services.yaml
 │   │   │       ├── entry.sh
 │   │   │       ├── init_kubernetes.yaml
 │   │   │       ├── offline_deploy_service.yaml
-│   │   │       ├── offline_install_package.yaml
+│   │   │       ├── offline_install_packages.yaml
 │   │   │       ├── offline_load_images.yaml
 │   │   │       └── set_global_env.yaml
-│   │   ├── online                                        #在线安装脚本
-│   │   │   ├── deploy.yaml
-│   │   │   ├── docker_install.yaml
-│   │   │   ├── entry.sh
-│   │   │   └── install.yaml
-│   │   ├── playbooks                                     #更新脚本
-│   │   │   └── update.yaml
-│   │   └── yamls                                         #各组件部署文件
-│   │       ├── ascendplugin-310.yaml
-│   │       ├── ascendplugin-volcano.yaml
-│   │       ├── calico.yaml
-│   │       ├── gen-admission-secret.sh
-│   │       ├── hccl-controller.yaml
-│   │       ├── kubernetes
-│   │       │   ├── base
-│   │       │   │   ├── cluserrolebinding.yaml
-│   │       │   │   ├── cluserrole.yaml
-│   │       │   │   ├── daemonset.yaml
-│   │       │   │   ├── kustomization.yaml
-│   │       │   │   ├── namespace.yaml
-│   │       │   │   ├── podsecuritypolicy.yaml
-│   │       │   │   └── serviceaccount.yaml
-│   │       │   ├── overlays
-│   │       │   │   ├── examples
-│   │       │   │   │   ├── cadvisor-args.yaml
-│   │       │   │   │   ├── critical-priority.yaml
-│   │       │   │   │   ├── gpu-privilages.yaml
-│   │       │   │   │   ├── kustomization.yaml
-│   │       │   │   │   └── stackdriver-sidecar.yaml
-│   │       │   │   └── huawei
-│   │       │   │       ├── cadvisor-args.yaml
-│   │       │   │       ├── gpu-privilages.yaml
-│   │       │   │       └── kustomization.yaml
-│   │       │   └── README.md
-│   │       ├── rbac.yaml
-│   │       └── volcano-v0.4.0-r03.yaml
+│   │   └── online                                        #在线安装脚本
+│   │       ├── online_join_cluster.yaml
+│   │       └── steps
+│   │           ├── clean_services.yaml
+│   │           ├── entry.sh
+│   │           ├── init_kubernetes.yaml
+│   │           ├── online_deploy_service.yaml
+│   │           ├── online_install_packages.yaml
+│   │           ├── online_load_images.yaml
+│   │           └── set_global_env.yaml
 │   ├── LICENSE
+│   ├── README_EN.md
 │   ├── README.md
-│   └── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── uninstall                                       #卸载脚本
+│   │   ├── entry.sh
+│   │   └── uninstall.yaml
+│   ├── upgrade                                         #升级脚本
+│   │   ├── entry.sh
+│   │   ├── upgrade.yaml
+│   │   └── volcano-difference
+│   │       ├── gen-admission-secret.sh
+│   │       └── volcano-v0.4.0-r03.yaml
+│   └── yamls                                           #各组件部署文件
+│       ├── ascendplugin-310-v20.2.0.yaml
+│       ├── ascendplugin-volcano-v20.2.0.yaml
+│       ├── cadvisor-v0.34.0-r40.yaml
+│       ├── calico.yaml
+│       ├── hccl-controller-v20.2.0.yaml
+│       └── volcano-v1.0.1-r40.yaml
 ├── output                                                     #编译结果输出路径
 │   └── README.md
 ├── pkg                                                         #程序文件包
@@ -193,4 +182,6 @@ hccl-controller                                    #深度学习组件hccl-contr
 
 | 版本   | 发布日期   | 修改说明  |
 | ---- | ---- | ---- |
+| v20.2.0| 2020-12-30    | 更新目录结构    |
 | v20.1.0| 2020-09-30    | 第一次正式发布    |
+
