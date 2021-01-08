@@ -75,18 +75,16 @@
     # Handle version differences of components.
     - name: Handling cadvisor version differences
       shell:
-        chdir: "{{ playbook_dir }}/Previous_version_info"
         cmd:
-          kubectl delete -f cadvisor-export.yaml;
-      tags: upgrade    
+          kubectl delete daemonset cadvisor -n cadvisor;
+      tags: upgrade
 
     - name: Handling volcano version differences
       shell:
-        chdir: "{{ playbook_dir }}/Previous_version_info"
         cmd:
           kubectl delete secret volcano-admission-secret -n volcano-system;
-          kubectl delete -f volcano-admission-export.yaml;
-          kubectl delete -f volcano-admission-init-export.yaml
+          kubectl delete deployment volcano-admission -n volcano-system;
+          kubectl delete job volcano-admission-init -n volcano-system
       tags: upgrade
       ignore_errors: True
 
@@ -101,6 +99,7 @@
           kubectl apply -f ascendplugin-volcano*.yaml;
           kubectl apply -f ascendplugin-310*.yaml;
       tags: upgrade
+      ignore_errors: True
 
 # This play is used to check service status after upgrade.
 - hosts: localnode, master
@@ -114,7 +113,7 @@
           kubectl get pods --all-namespaces -o wide | grep hccl-controller |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == '1'"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
@@ -124,7 +123,7 @@
           kubectl get pods --all-namespaces | grep volcano |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == '3'"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
@@ -139,7 +138,7 @@
           kubectl get pods --all-namespaces -o wide | grep cadvisor |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == '1'"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
@@ -149,7 +148,7 @@
           kubectl get pods --all-namespaces | grep ascend-device-plugin |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == '1'"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
@@ -166,7 +165,7 @@
           kubectl get pods --all-namespaces -o wide | grep cadvisor |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == HOST_COUNT"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
@@ -176,11 +175,11 @@
           kubectl get pods --all-namespaces | grep ascend-device-plugin |grep Running | wc -l
       register: return_value
       until: "return_value.stdout == HOST_COUNT"
-      retries: 4
+      retries: 6
       delay: 10
       tags: check
 
-# The folloing plays are used to remove previous version images after upgrade.
+# The following plays are used to remove previous version images after upgrade.
 - hosts: localnode, master
   remote_user: root
 
@@ -218,4 +217,3 @@
           docker rmi {{ dp }}
       ignore_errors: True
       tags: remove-images
- 

@@ -3,17 +3,12 @@
 function exportYaml(){
     mkdir -p "${1}"
     cd "${1}"
-    # Collect previous version resource defination of volcano.
-    kubectl get deployment -n volcano-system volcano-scheduler -o yaml > volcano-scheduler-export.yaml
-    kubectl get deployment -n volcano-system volcano-controllers -o yaml > volcano-controller-export.yaml
-    kubectl get deployment -n volcano-system volcano-admission -o yaml > volcano-admission-export.yaml
-    kubectl get job -n volcano-system volcano-admission-init -o yaml > volcano-admission-init-export.yaml || true
-    # Collect previous version resource defination of device-plugin.
+    # Collect previous version resource definition of device-plugin.
     kubectl get daemonset -n kube-system ascend-device-plugin-daemonset -o yaml > 910-ascend-device-plugin-export.yaml
     kubectl get daemonset -n kube-system ascend-device-plugin2-daemonset -o yaml > 310-ascend-device-plugin-export.yaml
-    # Collect previous version resource defination of hccl-controller
+    # Collect previous version resource definition of hccl-controller.
     kubectl get deployment hccl-controller -o yaml > hccl-controller-export.yaml
-    # Collect previous version resource defination of cadvisor
+    # Collect previous version resource definition of cadvisor.
     kubectl get daemonset -n cadvisor cadvisor -o yaml > cadvisor-export.yaml
     cd ..
 }
@@ -87,33 +82,35 @@ function upgrade(){
 
         if [ "$rollback" == 'yes' ];then
             echo -e "\nRolling back to previous version...\n"
-            exportYaml "./Current_version_info"
-            # Delete resource defination of current version
-            cd ./Current_version_info
-            kubectl delete -f 310-ascend-device-plugin-export.yaml
-            kubectl delete -f 910-ascend-device-plugin-export.yaml
-            kubectl delete -f cadvisor-export.yaml
-            kubectl delete -f hccl-controller-export.yaml
-            kubectl delete -f volcano-admission-export.yaml
-            kubectl delete -f volcano-admission-init-export.yaml
-            kubectl delete -f volcano-controller-export.yaml
-            kubectl delete -f volcano-scheduler-export.yaml
-            cd ..
+            # Delete resource definition of current version
+            kubectl delete daemonset ascend-device-plugin-daemonset -n kube-system || true
+            kubectl delete daemonset ascend-device-plugin2-daemonset -n kube-system || true
+            kubectl delete daemonset cadvisor -n cadvisor || true
+            kubectl delete deployment hccl-controller || true
+            kubectl delete deployment volcano-admission -n volcano-system || true
+            kubectl delete job volcano-admission-init -n volcano-system || true
             # Wait a short period of time til resources deleted.
-            sleep 15s
+            while [ "$(kubectl get pods -A | grep -c Terminating)" -gt 0 ];do
+                echo -e "\nWaiting for the pods to terminate, please do not interrupt.\n"
+                sleep 10
+            done
             # Apply resource definition of previous version
             cd ./Previous_version_info
             kubectl apply -f 310-ascend-device-plugin-export.yaml
             kubectl apply -f 910-ascend-device-plugin-export.yaml
             kubectl apply -f cadvisor-export.yaml
             kubectl apply -f hccl-controller-export.yaml
-            kubectl apply -f volcano-admission-export.yaml
-            kubectl apply -f volcano-controller-export.yaml
-            kubectl apply -f volcano-scheduler-export.yaml
+            cd ../volcano-difference
+            tr -d '\r' < gen-admission-secret.sh > gen-admission-secret-exec.sh
+            bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret || true
+            kubectl apply -f volcano-v*.yaml
             cd ..
-            rm -rf ./Current_version_info
-            # Print image versions
-            sleep 20s
+            # Wait a short period of time til resources rolled back.
+            sleep 30s
+            while [ "$(kubectl get pods -A | grep -c Terminating)" -gt 0 ];do
+                echo -e "\nWaiting for the pods to terminate, please do not interrupt.\n"
+                sleep 10
+            done
             saveImageVersion
             echo -e "\nAfter Roll back:" | tee ./post_check.txt
             versionPrint | tee ./post_check.txt

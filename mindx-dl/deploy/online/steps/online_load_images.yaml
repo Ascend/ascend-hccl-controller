@@ -330,7 +330,7 @@
   remote_user: root
 
   tasks:
-    - name: Workers remove kubernetes basic  redundant images - arm64
+    - name: Workers remove kubernetes basic redundant images - arm64
       shell:
         cmd:
           docker rmi {{ item }}
@@ -341,7 +341,7 @@
       tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Workers remove kubernetes basic  redundant images - x86_64
+    - name: Workers remove kubernetes basic redundant images - x86_64
       shell:
         cmd:
           docker rmi {{ item }}

@@ -1,4 +1,4 @@
-# HCCL-Controller
+# HCCL-Controller.en
 -   [Description](#description.md)
 -   [HCCL-Controller](#hccl-controller.md)
 -   [Environment Dependencies](#environment-dependencies.md)
@@ -72,15 +72,14 @@ HCCL-Controller is a component used to generate the  **hccl.json**  file of all 
 
 <h2 id="environment-dependencies.md">Environment Dependencies</h2>
 
-Kubernetes 1.16 or later
-
-Go 1.13 or later
+-   Kubernetes 1.16 or later
+-   Go 1.13 or later
 
 <h2 id="directory-structure.md">Directory Structure</h2>
 
 ```
-hccl-controller                                        # HCCL-CONTROLLER module of the deep learning component
-├── build                                                 # Compilation and test directory
+hccl-controller                                               # HCCL-CONTROLLER module of the deep learning component
+├── build                                                  # Compilation and test directory
 │   ├── build.sh
 │   ├── Dockerfile
 │   ├── hccl-controller.yaml
@@ -88,83 +87,72 @@ hccl-controller                                        # HCCL-CONTROLLER module 
 │   ├── test.bat
 │   └── test.sh
 ├── doc
-│   └── images                                            # Document materials
-│   │   ├── Controller-interaction-process.png
-│   │   ├── HCCL-Controller-process.png
-│   │   ├── icon-caution.gif
-│   │   ├── icon-danger.gif
-│   │   ├── icon-note.gif
-│   │   ├── icon-notice.gif
-│   │   ├── icon-tip.gif
-│   │   └── icon-warning.gif
+│   └── images                                             # Document materials
+│       ├── Controller-interaction-process.png
+│       ├── HCCL-Controller-process.png
+│       ├── icon-caution.gif
+│       ├── icon-danger.gif
+│       ├── icon-note.gif
+│       ├── icon-notice.gif
+│       ├── icon-tip.gif
+│       └── icon-warning.gif
 ├── go.mod
 ├── go.sum
 ├── hack
 │   ├── update-codegen.sh
 │   └── verify-codegen.sh
-├── main.go                                               # Program entry
-├── mindx-dl                                              # MindX DL component documents and installation scripts
-│   ├── deploy                                            # MindX DL installation scripts
-│   │   ├── offline                                       # Offline installation scripts
-│   │   │   ├── cluster                                   # cluster deployment
-│   │   │   │   ├── clean_services.yaml
-│   │   │   │   ├── entry.sh
-│   │   │   │   ├── init_kubernetes.yaml
-│   │   │   │   ├── offline_deploy_service.yaml
-│   │   │   │   ├── offline_install_package.yaml
-│   │   │   │   ├── offline_load_images.yaml
-│   │   │   │   └── set_global_env.yaml
-│   │   │   ├── join_cluster.yaml
-│   │   │   └── single                                    # Single-node deployment
+├── main.go                                                  # Program entry
+├── mindx-dl                                                 # MindX DL component documents and installation scripts
+│   ├── check_env                                           # Environment check script
+│   │   ├── check_env.sh
+│   │   └── check_env.yaml
+│   ├── collect_log                                         # Log collection script
+│   │   ├── collect_log.py
+│   │   └── collect_log.yaml
+│   ├── deploy                                              # MindX DL installation scripts
+│   │   ├── offline                                        # Offline installation script
+│   │   │   ├── offline_join_cluster.yaml
+│   │   │   └── steps
 │   │   │       ├── clean_services.yaml
 │   │   │       ├── entry.sh
 │   │   │       ├── init_kubernetes.yaml
 │   │   │       ├── offline_deploy_service.yaml
-│   │   │       ├── offline_install_package.yaml
+│   │   │       ├── offline_install_packages.yaml
 │   │   │       ├── offline_load_images.yaml
 │   │   │       └── set_global_env.yaml
-│   │   ├── online                                        # Online installation scripts
-│   │   │   ├── deploy.yaml
-│   │   │   ├── docker_install.yaml
-│   │   │   ├── entry.sh
-│   │   │   └── install.yaml
-│   │   ├── playbooks                                     # Update scripts
-│   │   │   └── update.yaml
- │   │   └── yamls                                         # Component deployment files
-│   │       ├── ascendplugin-310.yaml
-│   │       ├── ascendplugin-volcano.yaml
-│   │       ├── calico.yaml
-│   │       ├── gen-admission-secret.sh
-│   │       ├── hccl-controller.yaml
-│   │       ├── kubernetes
-│   │       │   ├── base
-│   │       │   │   ├── cluserrolebinding.yaml
-│   │       │   │   ├── cluserrole.yaml
-│   │       │   │   ├── daemonset.yaml
-│   │       │   │   ├── kustomization.yaml
-│   │       │   │   ├── namespace.yaml
-│   │       │   │   ├── podsecuritypolicy.yaml
-│   │       │   │   └── serviceaccount.yaml
-│   │       │   ├── overlays
-│   │       │   │   ├── examples
-│   │       │   │   │   ├── cadvisor-args.yaml
-│   │       │   │   │   ├── critical-priority.yaml
-│   │       │   │   │   ├── gpu-privilages.yaml
-│   │       │   │   │   ├── kustomization.yaml
-│   │       │   │   │   └── stackdriver-sidecar.yaml
-│   │       │   │   └── huawei
-│   │       │   │       ├── cadvisor-args.yaml
-│   │       │   │       ├── gpu-privilages.yaml
-│   │       │   │       └── kustomization.yaml
-│   │       │   └── README.md
-│   │       ├── rbac.yaml
-│   │       └── volcano-v0.4.0-r03.yaml
+│   │   ├── online                                         # Online installation script
+│   │       ├── online_join_cluster.yaml
+│   │       └── steps
+│   │           ├── clean_services.yaml
+│   │           ├── entry.sh
+│   │           ├── init_kubernetes.yaml
+│   │           ├── online_deploy_service.yaml
+│   │           ├── online_install_packages.yaml
+│   │           ├── online_load_images.yaml
+│   │           └── set_global_env.yaml
 │   ├── LICENSE
+│   ├── README_EN.md
 │   ├── README.md
-│   └── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── uninstall                                            # Uninstallation script
+│   │   ├── entry.sh
+│   │   └── uninstall.yaml
+│   ├── upgrade                                              # Upgrade scripts
+│   │   ├── entry.sh
+│   │   ├── upgrade.yaml
+│   │   └── volcano-difference
+│   │       ├── gen-admission-secret.sh
+│   │       └── volcano-v0.4.0-r03.yaml
+│   └── yamls                                                # Component deployment files
+│       ├── ascendplugin-310-v20.2.0.yaml
+│       ├── ascendplugin-volcano-v20.2.0.yaml
+│       ├── cadvisor-v0.34.0-r40.yaml
+│       ├── calico.yaml
+│       ├── hccl-controller-v20.2.0.yaml
+│       └── volcano-v1.0.1-r40.yaml
 ├── output                                                   # Compilation result output path
 │   └── README.md
- ├──pkg                                                      # Program file package
+ ├──pkg                                                       # Program file package
 │   ├── apis
 │   │   └── resourcecontroller
 │   │       ├── register.go
@@ -188,14 +176,15 @@ hccl-controller                                        # HCCL-CONTROLLER module 
 │           ├── controller.go
 │           ├── controller_test.go
 │           └── type.go
-├── README_EN.md                                        # HCCL-Controller README file (English)
-└── README.md                                           # HCCL-Controller README file (Chinese)
+├── README_EN.md                                           # HCCL-Controller README file (English)
+└── README.md                                              # HCCL-Controller README file (Chinese)
 ```
 
 <h2 id="version-updates.md">Version Updates</h2>
 
 | Version   | Date   | Description  |
 | ---- | ---- | ---- |
+| V20.2.0| 2020-12-30    | Updated the Directory Structure section.   |
 | V20.1.0| 2020-09-30    | This issue is the first official release.   |
 
 

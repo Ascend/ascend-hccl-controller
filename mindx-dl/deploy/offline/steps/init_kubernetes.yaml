@@ -93,7 +93,7 @@
   remote_user: root
 
   tasks:
-    - name: Register join commomd
+    - name: Register join command
       shell:
         cmd:
           kubeadm token create --print-join-command

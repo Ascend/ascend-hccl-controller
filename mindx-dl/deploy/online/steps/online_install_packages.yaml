@@ -10,7 +10,7 @@
   tasks:
     - name: Register package_list - Ubuntu
       set_fact:
-        apt_package_list: "{{  apt_package_list.append(item)  }}{{ apt_package_list }}"
+        apt_package_list: "{{ apt_package_list.append(item) }}{{ apt_package_list }}"
       tags:
         - docker
         - nfs
@@ -28,7 +28,7 @@
 
     - name: Register package_list - CentOS
       set_fact:
-        yum_package_list: "{{  yum_package_list.append(item)  }}{{ yum_package_list }}"
+        yum_package_list: "{{ yum_package_list.append(item) }}{{ yum_package_list }}"
       tags:
         - docker
         - nfs
@@ -245,7 +245,7 @@
       tags: kubernetes
     # =================================================================================
 
-    - name: Start kubernets service
+    - name: Start kubernetes service
       shell:
         cmd:
           systemctl enable kubelet && systemctl start kubelet

@@ -10,7 +10,7 @@
       fail:
         msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
                Step 1, edit {{playbook_dir}}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
-               Step 2, edit {{dls_root_dir}}/yaml/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+               Step 2, edit {{dls_root_dir}}/yaml/calico.yaml, find the line value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
                At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
@@ -44,8 +44,8 @@
 
     - name: unarchive offline package - arm64
       unarchive:
-        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
-        dest: "{{dls_root_dir}}/base_software_arm64/"
+        src: "{{ dls_root_dir }}/offline-pkg-arm64.zip"
+        dest: "{{ dls_root_dir }}/base_software_arm64/"
       when: arm_file_status.stat.exists == True
 
     - name: create offline package directory - amd64
@@ -56,8 +56,8 @@
 
     - name: unarchive offline package - amd64
       unarchive:
-        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
-        dest: "{{dls_root_dir}}/base_software_amd64/"
+        src: "{{ dls_root_dir }}/offline-pkg-amd64.zip"
+        dest: "{{ dls_root_dir }}/base_software_amd64/"
       when: amd_file_status.stat.exists == True
 
 # scp install package to workers
@@ -73,8 +73,8 @@
 
     - name: scp install package from master to workers - x86_64
       copy:
-        src: "{{dls_root_dir}}/base_software_amd64/"
-        dest: "{{dls_root_dir}}/base_software/"
+        src: "{{ dls_root_dir }}/base_software_amd64/"
+        dest: "{{ dls_root_dir }}/base_software/"
       when:
         - ansible_architecture == "x86_64"
 
@@ -84,14 +84,14 @@
   tasks:
     - name: unarchive offline package - arm64
       unarchive:
-        src: "{{dls_root_dir}}/offline-pkg-arm64.zip"
-        dest: "{{dls_root_dir}}/base_software/"
+        src: "{{ dls_root_dir }}/offline-pkg-arm64.zip"
+        dest: "{{ dls_root_dir }}/base_software/"
       when: ansible_architecture == "aarch64"
 
     - name: unarchive offline package - x86_64
       unarchive:
-        src: "{{dls_root_dir}}/offline-pkg-amd64.zip"
-        dest: "{{dls_root_dir}}/base_software/"
+        src: "{{ dls_root_dir }}/offline-pkg-amd64.zip"
+        dest: "{{ dls_root_dir }}/base_software/"
       when: ansible_architecture == "x86_64"
 
 # Change settings.
@@ -108,13 +108,13 @@
 
     - name: Install selinux with pip - CentOS
       shell:
-        chdir: "{{dls_root_dir}}/base_software/selinux"
+        chdir: "{{ dls_root_dir }}/base_software/selinux"
         cmd:
           pip3.7 install distro-1.5.0* selinux-0.2.1*
       when:
         - ansible_distribution == 'CentOS'
 
-    - name: Close firwall - CentOS
+    - name: Close firewall - CentOS
       shell:
         cmd:
           systemctl stop firewalld.service;
@@ -191,7 +191,7 @@
         - basic_only
         - init-master
 
-    # create no_proxy when no_proxy exists
+    # create no_proxy when no_proxy not exists
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
@@ -224,10 +224,10 @@
   remote_user: root
 
   tasks:
-  - name: Add User
-    shell:
-      cmd:
-        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
-        useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
-        usermod -a -G HwHiAiUser hwMindX
-    tags: basic_only
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
+          usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only

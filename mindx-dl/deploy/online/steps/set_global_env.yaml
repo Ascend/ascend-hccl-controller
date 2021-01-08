@@ -10,7 +10,7 @@
       fail:
         msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
                Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
-               Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line 'value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+               Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
                At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
       when:
         - ansible_default_ipv4['address'].startswith("192.168")
@@ -37,7 +37,7 @@
       when:
         - ansible_distribution == 'CentOS'
 
-    - name: Close firwall - CentOS
+    - name: Close firewall - CentOS
       shell:
         cmd:
           systemctl stop firewalld.service;
@@ -113,7 +113,7 @@
         - basic_only
         - init-master
 
-    # create no_proxy when no_proxy exists
+    # create no_proxy when no_proxy not exists
     - name: Add no proxy ip
       lineinfile:
         path: /etc/profile
@@ -145,10 +145,10 @@
   remote_user: root
 
   tasks:
-  - name: Add User
-    shell:
-      cmd:
-        useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
-        useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
-        usermod -a -G HwHiAiUser hwMindX
-    tags: basic_only
+    - name: Add User
+      shell:
+        cmd:
+          useradd -d /home/hwMindX -u 9000 -m -s /bin/bash hwMindX || true;
+          useradd -d /home/HwHiAiUser -u 1000 -m -s /bin/bash HwHiAiUser || true;
+          usermod -a -G HwHiAiUser hwMindX
+      tags: basic_only
