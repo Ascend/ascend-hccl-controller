@@ -93,7 +93,7 @@
   remote_user: root
 
   tasks:
-    - name: Register join commamd
+    - name: Register join command
       shell:
         cmd:
           kubeadm token create --print-join-command
@@ -151,7 +151,7 @@
         cmd:
           unset http_proxy https_proxy;
           kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ item }} accelerator-type-
+          kubectl label nodes {{ item }} accelerator-type- --overwrite=true
       tags:
         - init-workers
         - basic_only
@@ -172,7 +172,7 @@
         cmd:
           unset http_proxy https_proxy;
           kubectl label nodes {{ item }} accelerator=huawei-Ascend910 --overwrite=true;
-          kubectl label nodes {{ item }} accelerator-type=card
+          kubectl label nodes {{ item }} accelerator-type=card --overwrite=true
       tags:
         - init-workers
         - basic_only
