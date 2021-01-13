@@ -1,4 +1,4 @@
-# hccl-controller.zh
+﻿# hccl-controller.zh
 -   [Controller介绍](#Controller介绍.md)
 -   [HCCL-Controller](#HCCL-Controller.md)
 -   [环境依赖](#环境依赖.md)
@@ -75,46 +75,106 @@ Go 1.13及以上
 <h2 id="目录结构.md">目录结构</h2>
 
 ```
-hccl-controller                             #深度学习组件hccl-controller模块
-├─ build                                  #编译和测试目录
-│   ├─ build.sh
-│   ├─ deploy.sh
-│   ├─ Dockerfile
-│   ├─ test.bat
-│   └─ test.sh
-├─ cmd/ring-controller
-│   └─ main.go                          #程序入口
-├─ doc/images                            #文档素材
-├─ hack
-│   ├─ update-codegen.sh
-│   └─ verify-codegen.sh
-├─ pkg                                  #程序文件包
-│   ├─ apis/resourcecontroller
-│   │   ├─ v1alpha1
-│   │   │   ├─ doc.go
-│   │   │   ├─ register.go
-│   │   │   ├─ types.go
-│   │   │   └─ zz_generated.deepcopy.go
-│   │   └─ register.go
-│   ├─ resource-controller/signals
-│   │   ├─ signal.go
-│   │   ├─ signal_posix.go
-│   │   └─ signal_windows.go
-│   ├─ ring-controller/controller
-│   │   ├─ agent_interface.go
-│   │   ├─ businessagent.go
-│   │   ├─ businessagent_test.go
-│   │   ├─ businessworker.go
-│   │   ├─ businessworker_test.go
-│   │   ├─ controller.go
-│   │   ├─ controller_test.go
-│   │   └─ type.go
-│   └─ util/waitcycle
-│   │   └─ waitcycle.go
-├─ docker_run.sh
-├─ go.mod
-├─ go.sum
-└─ README.zh.md                       #README文件
+hccl-controller                                               #深度学习组件hccl-controller模块                       
+├── build                                                  #编译和测试目录 
+│   ├── build.sh
+│   ├── Dockerfile
+│   ├── hccl-controller.yaml
+│   ├── rbac.yaml
+│   ├── test.bat
+│   └── test.sh
+├── doc
+│   └── images                                             #文档素材
+│       ├── Controller-interaction-process.png
+│       ├── HCCL-Controller-process.png
+│       ├── icon-caution.gif
+│       ├── icon-danger.gif
+│       ├── icon-note.gif
+│       ├── icon-notice.gif
+│       ├── icon-tip.gif
+│       └── icon-warning.gif
+├── go.mod
+├── go.sum
+├── hack
+│   ├── update-codegen.sh
+│   └── verify-codegen.sh
+├── main.go                                                  #程序入口
+├── mindx-dl                                                 #mindx dl组件文档及安装脚本
+│   ├── check_env                                           #环境检查脚本
+│   │   ├── check_env.sh
+│   │   └── check_env.yaml
+│   ├── collect_log                                         #日志收集脚本
+│   │   ├── collect_log.py
+│   │   └── collect_log.yaml
+│   ├── deploy                                              #mindx dl安装脚本
+│   │   ├── offline                                        #离线安装脚本
+│   │   │   ├── offline_join_cluster.yaml
+│   │   │   └── steps
+│   │   │       ├── clean_services.yaml
+│   │   │       ├── entry.sh
+│   │   │       ├── init_kubernetes.yaml
+│   │   │       ├── offline_deploy_service.yaml
+│   │   │       ├── offline_install_packages.yaml
+│   │   │       ├── offline_load_images.yaml
+│   │   │       └── set_global_env.yaml
+│   │   └── online                                         #在线安装脚本
+│   │       ├── online_join_cluster.yaml
+│   │       └── steps
+│   │           ├── clean_services.yaml
+│   │           ├── entry.sh
+│   │           ├── init_kubernetes.yaml
+│   │           ├── online_deploy_service.yaml
+│   │           ├── online_install_packages.yaml
+│   │           ├── online_load_images.yaml
+│   │           └── set_global_env.yaml
+│   ├── LICENSE
+│   ├── README_EN.md
+│   ├── README.md
+│   ├── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── uninstall                                            #卸载脚本
+│   │   ├── entry.sh
+│   │   └── uninstall.yaml
+│   ├── upgrade                                              #升级脚本
+│   │   ├── entry.sh
+│   │   ├── upgrade.yaml
+│   │   └── volcano-difference
+│   │       ├── gen-admission-secret.sh
+│   │       └── volcano-v0.4.0-r03.yaml
+│   └── yamls                                                #各组件部署文件
+│       ├── ascendplugin-310-v20.2.0.yaml
+│       ├── ascendplugin-volcano-v20.2.0.yaml
+│       ├── cadvisor-v0.34.0-r40.yaml
+│       ├── calico.yaml
+│       ├── hccl-controller-v20.2.0.yaml
+│       └── volcano-v1.0.1-r40.yaml
+├── output                                                    #编译结果输出路径
+│   └── README.md
+├── pkg                                                       #程序文件包
+│   ├── apis
+│   │   └── resourcecontroller
+│   │       ├── register.go
+│   │       └── v1alpha1
+│   │           ├── doc.go
+│   │           ├── register.go
+│   │           ├── types.go
+│   │           └── zz_generated.deepcopy.go
+│   ├── resource-controller
+│   │   └── signals
+│   │       ├── signal.go
+│   │       ├── signal_posix.go
+│   │       └── signal_windows.go
+│   └── ring-controller
+│       └── controller
+│           ├── agent_interface.go
+│           ├── businessagent.go
+│           ├── businessagent_test.go
+│           ├── businessworker.go
+│           ├── businessworker_test.go
+│           ├── controller.go
+│           ├── controller_test.go
+│           └── type.go
+├── README_EN.md                                           #HCCL-Controller README文件英文版
+└── README.md                                              #HCCL-Controller README文件中文版
 ```
 
 <h2 id="版本更新信息.md">版本更新信息</h2>
@@ -122,4 +182,6 @@ hccl-controller                             #深度学习组件hccl-controller�
 
 | 版本   | 发布日期   | 修改说明  |
 | ---- | ---- | ---- |
+| v20.2.0| 2020-12-30    | 更新目录结构章节    |
 | v20.1.0| 2020-09-30    | 第一次正式发布    |
+

@@ -1,5 +1,8 @@
-:: Just for developer to generate mock directory and files
-:: Need to install mockgen firstly go get github.com/golang/mock/mockgen
+rem Copyright @ Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
+rem Just for developer to generate mock directory and files
+rem Need to install mockgen firstly go get github.com/golang/mock/mockgen
+
+@echo off
 cd /d %~dp0
 mkdir %~dp0..\pkg\ring-controller\controller\mock_cache
 mkdir %~dp0..\pkg\ring-controller\controller\mock_controller
@@ -31,3 +34,4 @@ rmdir /S/Q %~dp0..\pkg\ring-controller\controller\mock_controller
 rmdir /S/Q %~dp0..\pkg\ring-controller\controller\mock_kubernetes
 rmdir /S/Q %~dp0..\pkg\ring-controller\controller\mock_v1
 rmdir /S/Q %~dp0..\pkg\ring-controller\controller\mock_v1alpha1
+@echo on

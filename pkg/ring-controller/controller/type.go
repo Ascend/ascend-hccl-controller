@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ const (
 	// PodJobVersion to get job version
 	PodJobVersion = "volcano.sh/job-version"
 	// PodDeviceKey Pod annoation Key
-	PodDeviceKey = "atlas.kubectl.kubernetes.io/ascend-910-configuration"
+	PodDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
 	// PodGroupKey to get Group key
 	PodGroupKey = "volcano.sh/task-spec"
 	// JobRestartPhase restart flage
