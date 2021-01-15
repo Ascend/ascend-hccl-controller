@@ -1,0 +1,156 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cadvisor
+rules:
+  - apiGroups: ['policy']
+    resources: ['podsecuritypolicies']
+    verbs:     ['use']
+    resourceNames:
+      - cadvisor
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cadvisor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cadvisor
+subjects:
+  - kind: ServiceAccount
+    name: cadvisor
+    namespace: cadvisor
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cadvisor
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: cadvisor
+spec:
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+    - '*'
+  allowedHostPaths:
+    - pathPrefix: "/"
+    - pathPrefix: "/var/run"
+    - pathPrefix: "/sys"
+    - pathPrefix: "/var/lib/docker"
+    - pathPrefix: "/dev/disk"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cadvisor
+  namespace: cadvisor
+---
+apiVersion: apps/v1   # for Kubernetes versions before 1.9.0 use apps/v1beta2
+kind: DaemonSet
+metadata:
+  name: cadvisor
+  namespace: cadvisor
+  annotations:
+    seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+spec:
+  selector:
+    matchLabels:
+      name: cadvisor
+  template:
+    metadata:
+      labels:
+        name: cadvisor
+    spec:
+      nodeSelector:
+        workerselector: dls-worker-node
+      serviceAccountName: cadvisor
+      containers:
+        - name: cadvisor
+          args:
+            - --housekeeping_interval=10s                    # kubernetes default args
+            - --max_housekeeping_interval=15s
+            - --event_storage_event_limit=default=0
+            - --event_storage_age_limit=default=0
+            - --disable_metrics=percpu,process,sched,tcp,udp # enable only diskIO, cpu, memory, network, disk
+            - --docker_only                                  # only show stats for docker containers
+            - --update_machine_info_interval=10s
+            - --port=8081                                    # choose an available port
+            - --logtostderr=false
+            - --log_dir=/var/log/cadvisor
+            - --log_file=/var/log/cadvisor/cadvisor.log
+            - --v=3
+          image: google/cadvisor:v0.34.0-r40
+          resources:
+            requests:
+              memory: 300Mi
+              cpu: 500m
+            limits:
+              memory: 2000Mi
+              cpu: 1000m
+          volumeMounts:
+            - name: rootfs
+              mountPath: /rootfs
+              readOnly: true
+            - name: var-run
+              mountPath: /var/run
+              readOnly: true
+            - name: sys
+              mountPath: /sys
+              readOnly: true
+            - name: docker
+              mountPath: /var/lib/docker
+              readOnly: true
+            - name: disk
+              mountPath: /dev/disk
+              readOnly: true
+            - name: localtime
+              mountPath: /etc/localtime
+            - name: ascend-dirver
+              mountPath: /usr/local/Ascend/driver
+              readOnly: true
+            - name: log
+              mountPath: /var/log/cadvisor
+          securityContext:
+              privileged: true
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: rootfs
+          hostPath:
+            path: /
+        - name: var-run
+          hostPath:
+            path: /var/run
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: docker
+          hostPath:
+            path: /var/lib/docker
+        - name: disk
+          hostPath:
+            path: /dev/disk
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: ascend-dirver
+          hostPath:
+            path: /usr/local/Ascend/driver
+        - name: log
+          hostPath:
+            path: /var/log/cadvisor
+

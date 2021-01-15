@@ -1,0 +1,237 @@
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
+---
+# This playbook is used to load the Docker image offline.
+# Before running the script, ensure that the required image list has been uploaded to the 'dls_root_dir' directory defined in /etc/ansible/hosts.
+
+# Load docker images on master
+- hosts: localnode, master
+  remote_user: root
+  vars:
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
+
+  tasks:
+    - name: Load kubernetes basic images - arm64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i kube-apiserver_arm64.tar.gz;
+          docker load -i kube-controller-manager_arm64.tar.gz;
+          docker load -i kube-scheduler_arm64.tar.gz;
+          docker load -i kube-proxy_arm64.tar.gz;
+          docker load -i etcd_arm64.tar.gz;
+          docker load -i pause_arm64.tar.gz;
+          docker load -i coredns_arm64.tar.gz;
+          docker load -i calico-node_arm64.tar.gz;
+          docker load -i calico-pod2daemon-flexvol_arm64.tar.gz;
+          docker load -i calico-cni_arm64.tar.gz;
+          docker load -i calico-kube-controllers_arm64.tar.gz
+      when: ansible_architecture == "aarch64"
+
+    - name: Load kubernetes basic images - x86_64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i kube-apiserver_amd64.tar.gz;
+          docker load -i kube-controller-manager_amd64.tar.gz;
+          docker load -i kube-scheduler_amd64.tar.gz;
+          docker load -i kube-proxy_amd64.tar.gz;
+          docker load -i etcd_amd64.tar.gz;
+          docker load -i pause_amd64.tar.gz;
+          docker load -i coredns_amd64.tar.gz;
+          docker load -i calico-node_amd64.tar.gz;
+          docker load -i calico-pod2daemon-flexvol_amd64.tar.gz;
+          docker load -i calico-cni_amd64.tar.gz;
+          docker load -i calico-kube-controllers_amd64.tar.gz
+      when: ansible_architecture == "x86_64"
+
+    - name: Tag images - arm64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - cruse/kube-apiserver-arm64:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - cruse/kube-controller-manager-arm64:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - cruse/kube-scheduler-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-scheduler:v1.17.3
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-arm64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+      when: ansible_architecture == "aarch64"
+
+    - name: Tag images - x86_64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - kubesphere/kube-apiserver:v1.17.3 k8s.gcr.io/kube-apiserver:v1.17.3
+        - kubesphere/kube-controller-manager:v1.17.3 k8s.gcr.io/kube-controller-manager:v1.17.3
+        - kubesphere/kube-scheduler:v1.17.3 k8s.gcr.io/kube-scheduler:v1.17.3
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+        - cruse/etcd-amd64:3.4.3-0 k8s.gcr.io/etcd:3.4.3-0
+        - coredns/coredns:1.6.5 k8s.gcr.io/coredns:1.6.5
+      when: ansible_architecture == "x86_64"
+
+    - name: Load mindxdl images - arm64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i vc-webhook-manager-base*arm64.tar.gz;
+          docker load -i vc-controller-manager*arm64.tar.gz;
+          docker load -i vc-scheduler*arm64.tar.gz;
+          docker load -i vc-webhook-manager-v*arm64.tar.gz;
+          docker load -i hccl-controller*arm64.tar.gz;
+      tags: basic_only
+      when: ansible_architecture == "aarch64"
+
+    - name: Load mindxdl images - x86_64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i vc-webhook-manager-base*amd64.tar.gz;
+          docker load -i vc-controller-manager*amd64.tar.gz;
+          docker load -i vc-scheduler*amd64.tar.gz;
+          docker load -i vc-webhook-manager-v*amd64.tar.gz;
+          docker load -i hccl-controller*amd64.tar.gz;
+      tags: basic_only
+      when: ansible_architecture == "x86_64"
+
+# Copy docker images to workers
+- hosts: workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
+
+  tasks:
+    - name: scp basic images from master to workers - arm64
+      copy:
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-arm64-Docker.tar.gz
+        - huawei-cadvisor-{{cadvisor_version}}-arm64.tar.gz
+      tags: basic_only
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: scp basic images from master to workers - x86_64
+      copy:
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
+      with_items:
+        - Ascend-K8sDevicePlugin-{{deviceplugin_version}}-amd64-Docker.tar.gz
+        - huawei-cadvisor-{{cadvisor_version}}-amd64.tar.gz
+      tags: basic_only
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+
+
+# Copy docker images to workers
+- hosts: localnode, workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
+
+  tasks:
+    - name: Load mindxdl images - arm64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i Ascend-K8sDevicePlugin*arm64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*arm64.tar.gz;
+      tags: basic_only
+      when: ansible_architecture == "aarch64"
+
+    - name: Load mindxdl images - x86_64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i Ascend-K8sDevicePlugin*amd64-Docker.tar.gz;
+          docker load -i huawei-cadvisor*amd64.tar.gz;
+      tags: basic_only
+      when: ansible_architecture == "x86_64"
+
+# Copy docker images to workers
+- hosts: workers
+  remote_user: root
+  vars:
+    docker_images_dir: "{{ dls_root_dir }}/docker_images"
+
+  tasks:
+    - name: scp additional images from master to workers - arm64
+      copy:
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
+      with_items:
+        - kube-proxy_arm64.tar.gz
+        - pause_arm64.tar.gz
+        - calico-node_arm64.tar.gz
+        - calico-pod2daemon-flexvol_arm64.tar.gz
+        - calico-cni_arm64.tar.gz
+        - calico-kube-controllers_arm64.tar.gz
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: scp additional images from master to workers - x86_64
+      copy:
+        src: "{{ docker_images_dir }}/{{ item }}"
+        dest: "{{ docker_images_dir }}/"
+      with_items:
+        - kube-proxy_amd64.tar.gz
+        - pause_amd64.tar.gz
+        - calico-node_amd64.tar.gz
+        - calico-pod2daemon-flexvol_amd64.tar.gz
+        - calico-cni_amd64.tar.gz
+        - calico-kube-controllers_amd64.tar.gz
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Load additional images - arm64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i kube-proxy_arm64.tar.gz;
+          docker load -i pause_arm64.tar.gz;
+          docker load -i calico-node_arm64.tar.gz;
+          docker load -i calico-pod2daemon-flexvol_arm64.tar.gz;
+          docker load -i calico-cni_arm64.tar.gz;
+          docker load -i calico-kube-controllers_arm64.tar.gz;
+      when:
+        - ansible_architecture == "aarch64"
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Load additional images - x86_64
+      shell:
+        chdir: "{{ docker_images_dir }}"
+        cmd:
+          docker load -i kube-proxy_amd64.tar.gz;
+          docker load -i pause_amd64.tar.gz;
+          docker load -i calico-node_amd64.tar.gz;
+          docker load -i calico-pod2daemon-flexvol_amd64.tar.gz;
+          docker load -i calico-cni_amd64.tar.gz;
+          docker load -i calico-kube-controllers_amd64.tar.gz;
+      when:
+        - ansible_architecture == "x86_64"
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Tag additional images on workers - arm64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - cruse/kube-proxy-arm64:v1.17.3-beta.0 k8s.gcr.io/kube-proxy:v1.17.3
+        - cruse/pause-arm64:3.1 k8s.gcr.io/pause:3.1
+      when: ansible_architecture == "aarch64"
+
+    - name: Tag additional images on workers - x86_64
+      shell:
+        cmd:
+          docker tag {{ item }} || true
+      with_items:
+        - kubesphere/kube-proxy:v1.17.3 k8s.gcr.io/kube-proxy:v1.17.3
+        - kubesphere/pause:3.1 k8s.gcr.io/pause:3.1
+      when: ansible_architecture == "x86_64"
