@@ -1,0 +1,294 @@
+# Copyright © Huawei Technologies Co., Ltd. 2020. All rights reserved.
+---
+# This playbook is used to install offline downloaded software packages, including NFS, Docker and K8S.
+# Before running the script, ensure that the required software packages has been uploaded to the 'dls_root_dir' directory defined in /etc/ansible/hosts.
+
+# install nfs server
+- hosts: localnode, nfs_server
+  remote_user: root
+
+  tasks:
+    ############################# Install NFS Server ##################################
+    - name: Install nfs-server
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i libtirpc* libtirpc-dev*;
+          dpkg -i rpcbind*;
+          dpkg -i libnfsidmap2*;
+          dpkg -i keyutils*;
+          dpkg -i nfs-common*;
+          dpkg -i nfs-kernel-server*
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: nfs
+
+    - name: Install Linux NFS - CentOS
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          yum install ./nfs/*.rpm -y
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: nfs
+
+    - name: Check NFS config directory
+      stat:
+        path: /etc/exports
+      register: nfs_config_folder
+      tags: nfs
+
+    - name: Create nfs config directory
+      file:
+        path: /etc/exports
+        state: directory
+      when: nfs_config_folder.stat.exists == false
+      tags: nfs
+
+    - name: Check NFS mount directory
+      stat:
+        path: "{{ nfs_shared_dir }}"
+      register: nfs_mount_folder
+      tags: nfs
+
+    - name: Create nfs mount directory
+      file:
+        path: "{{ nfs_shared_dir }}"
+        state: directory
+      when: nfs_mount_folder.stat.exists == false
+      tags: nfs
+
+    - name: Change permission of nfs mount directory
+      shell:
+        cmd:
+          chmod 755 {{nfs_shared_dir}};
+          chown hwMindX:hwMindX {{nfs_shared_dir}}
+      tags: nfs
+
+    - name: Add NFS config info
+      lineinfile:
+        path: /etc/exports
+        line: "{{ nfs_shared_dir }} *(rw,sync,no_root_squash)"
+        state: present
+      tags: nfs
+
+    # start service
+    - name: Start rpcbind service
+      shell:
+        cmd:
+          systemctl start rpcbind;
+          systemctl enable rpcbind
+      tags: nfs
+
+    - name: Start NFS service
+      shell:
+        cmd:
+          systemctl start nfs-server;
+          systemctl enable nfs-server;
+          systemctl restart nfs-kernel-server
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: nfs
+
+    - name: Start NFS service - CentOS
+      shell:
+        cmd:
+          systemctl enable nfs;
+          systemctl start nfs
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: nfs
+    ###################################################################################
+
+# install nfs client on workers
+- hosts: workers
+  remote_user: root
+
+  tasks:
+    ############################# Install NFS Client ##################################
+    - name: Install nfs client
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i libtirpc* libtirpc-dev*;
+          dpkg -i rpcbind*;
+          dpkg -i libnfsidmap2*;
+          dpkg -i keyutils*;
+          dpkg -i nfs-common*;
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: nfs
+
+    - name: Install Linux NFS - CentOS
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          yum install ./nfs/*.rpm -y
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: nfs
+
+# install docker in cluster
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    ############################# Install Docker ######################################
+    - name: Install prerequisite software - Ubuntu
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i libltdl7*
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: docker
+
+    - name: Install docker engine - Ubuntu
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i docker-ce_18.06.3*
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: docker
+
+    - name: Install docker engine - CentOS
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          yum install ./yum-utils/*.rpm -y;
+          yum install ./lvm2/*.rpm -y;
+          yum install ./docker/*.rpm -y
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: docker
+
+    - name: Docker daemon.json file
+      file:
+        path: /etc/docker
+        state: directory
+      tags: always
+    ###################################################################################
+
+# Set docker runtime on master nodes
+- hosts: master
+  remote_user: root
+
+  tasks:
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+          EOF
+      tags:
+        - docker
+        - basic_only
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags:
+        - docker
+        - basic_only
+
+# Set docker runtime on worker nodes
+- hosts: localnode, workers
+  remote_user: root
+
+  tasks:
+    - name: Modify docker runtime
+      shell:
+        cmd: |
+          cat <<EOF >/etc/docker/daemon.json
+          {
+            "registry-mirrors": ["https://dockerhub.azk8s.cn",
+                                 "https://docker.mirrors.ustc.edu.cn",
+                                 "http://hub-mirror.c.163.com"],
+            "insecure-registries": ["http://docker.mirrors.ustc.edu.cn"],
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "runtimes":
+            {
+              "ascend":
+              {
+                "path": "/usr/local/Ascend/toolbox/latest/Ascend-Docker-Runtime/ascend-docker-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "ascend"
+          }
+          EOF
+      tags:
+        - docker
+        - basic_only
+
+    - name: Effect modification for docker
+      shell:
+        cmd:
+          systemctl daemon-reload && systemctl restart docker;
+          systemctl enable docker
+      tags:
+        - docker
+        - basic_only
+
+# install kubernetes in cluster
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    ############################## Install Kubernetes #################################
+    - name: Install k8s server
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i cri-tools* conntrack* socat*;
+          dpkg -i kubernetes-cni*;
+          dpkg -i kubelet_1.17.3*;
+          dpkg -i kubectl_1.17.3*;
+          dpkg -i kubeadm_1.17.3*
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: kubernetes
+
+    - name: Hold version
+      shell:
+        cmd: apt-mark hold kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
+      when:
+        - ansible_distribution == 'Ubuntu'
+      tags: kubernetes
+
+    - name: Install kubelet kubeadm kubectl
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          yum install ./kubernetes/*.rpm -y;
+          yum install ./versionlock/*.rpm -y
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: kubernetes
+
+    - name: Hold version
+      shell:
+        cmd:
+          yum versionlock kubelet-1.17.3 kubeadm-1.17.3 kubectl-1.17.3
+      when:
+        - ansible_distribution == 'CentOS'
+      tags: kubernetes
+
+    - name: Start kubernetes service
+      shell:
+        cmd:
+          systemctl enable kubelet && systemctl start kubelet
+      tags: kubernetes

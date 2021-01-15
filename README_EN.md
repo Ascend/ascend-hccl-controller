@@ -1,4 +1,4 @@
-# HCCL-Controller
+﻿# HCCL-Controller
 -   [Description](#description.md)
 -   [HCCL-Controller](#hccl-controller.md)
 -   [Environment Dependencies](#environment-dependencies.md)
@@ -79,52 +79,115 @@ Go 1.13 or later
 <h2 id="directory-structure.md">Directory Structure</h2>
 
 ```
-hcl-controller                             # HCL-CONTROLLER module of the deep learning component
-├─ build                                  # Compilation and test directory
-│   ├─ build.sh
-│   ├─ deploy.sh
-│   ├─ Dockerfile
-│   ├─ test.bat
-│   └─ test.sh
-├─ cmd/ring-controller
-│   └─ main.go                          # Program entry
-├─ doc/images                            # Document materials
-├─ hack
-│   ├─ update-codegen.sh
-│   └─ verify-codegen.sh
-├─ pkg                                  # Program file package
-│   ├─ apis/resourcecontroller
-│   │   ├─ v1alpha1
-│   │   │   ├─ doc.go
-│   │   │   ├─ register.go
-│   │   │   ├─ types.go
-│   │   │   └─ zz_generated.deepcopy.go
-│   │   └─ register.go
-│   ├─ resource-controller/signals
-│   │   ├─ signal.go
-│   │   ├─ signal_posix.go
-│   │   └─ signal_windows.go
-│   ├─ ring-controller/controller
-│   │   ├─ agent_interface.go
-│   │   ├─ businessagent.go
-│   │   ├─ businessagent_test.go
-│   │   ├─ businessworker.go
-│   │   ├─ businessworker_test.go
-│   │   ├─ controller.go
-│   │   ├─ controller_test.go
-│   │   └─ type.go
-│   └─ util/waitcycle
-│   │   └─ waitcycle.go
-├─ docker_run.sh
-├─ go.mod
-├─ go.sum
-└─ README.zh.md                       # README file.
+hccl-controller                                               # HCCL-CONTROLLER module of the deep learning component
+├── build                                                  # Compilation and test directory
+│   ├── build.sh
+│   ├── Dockerfile
+│   ├── hccl-controller.yaml
+│   ├── rbac.yaml
+│   ├── test.bat
+│   └── test.sh
+├── doc
+│   └── images                                             # Document materials
+│       ├── Controller-interaction-process.png
+│       ├── HCCL-Controller-process.png
+│       ├── icon-caution.gif
+│       ├── icon-danger.gif
+│       ├── icon-note.gif
+│       ├── icon-notice.gif
+│       ├── icon-tip.gif
+│       └── icon-warning.gif
+├── go.mod
+├── go.sum
+├── hack
+│   ├── update-codegen.sh
+│   └── verify-codegen.sh
+├── main.go                                                  # Program entry
+├── mindx-dl                                                 # MindX DL component documents and installation scripts
+│   ├── check_env                                           # Environment check script
+│   │   ├── check_env.sh
+│   │   └── check_env.yaml
+│   ├── collect_log                                         # Log collection script
+│   │   ├── collect_log.py
+│   │   └── collect_log.yaml
+│   ├── deploy                                              # MindX DL installation scripts
+│   │   ├── offline                                        # Offline installation script
+│   │   │   ├── offline_join_cluster.yaml
+│   │   │   └── steps
+│   │   │       ├── clean_services.yaml
+│   │   │       ├── entry.sh
+│   │   │       ├── init_kubernetes.yaml
+│   │   │       ├── offline_deploy_service.yaml
+│   │   │       ├── offline_install_packages.yaml
+│   │   │       ├── offline_load_images.yaml
+│   │   │       └── set_global_env.yaml
+│   │   ├── online                                         # Online installation script
+│   │       ├── online_join_cluster.yaml
+│   │       └── steps
+│   │           ├── clean_services.yaml
+│   │           ├── entry.sh
+│   │           ├── init_kubernetes.yaml
+│   │           ├── online_deploy_service.yaml
+│   │           ├── online_install_packages.yaml
+│   │           ├── online_load_images.yaml
+│   │           └── set_global_env.yaml
+│   ├── LICENSE
+│   ├── README_EN.md
+│   ├── README.md
+│   ├── Third\ Party\ Open\ Source\ Software\ Notice.md
+│   ├── uninstall                                            # Uninstallation script
+│   │   ├── entry.sh
+│   │   └── uninstall.yaml
+│   ├── upgrade                                              # Upgrade scripts
+│   │   ├── entry.sh
+│   │   ├── upgrade.yaml
+│   │   └── volcano-difference
+│   │       ├── gen-admission-secret.sh
+│   │       └── volcano-v0.4.0-r03.yaml
+│   └── yamls                                                # Component deployment files
+│       ├── ascendplugin-310-v20.2.0.yaml
+│       ├── ascendplugin-volcano-v20.2.0.yaml
+│       ├── cadvisor-v0.34.0-r40.yaml
+│       ├── calico.yaml
+│       ├── hccl-controller-v20.2.0.yaml
+│       └── volcano-v1.0.1-r40.yaml
+├── output                                                   # Compilation result output path
+│   └── README.md
+ ├──pkg                                                       # Program file package
+│   ├── apis
+│   │   └── resourcecontroller
+│   │       ├── register.go
+│   │       └── v1alpha1
+│   │           ├── doc.go
+│   │           ├── register.go
+│   │           ├── types.go
+│   │           └── zz_generated.deepcopy.go
+│   ├── resource-controller
+│   │   └── signals
+│   │       ├── signal.go
+│   │       ├── signal_posix.go
+│   │       └── signal_windows.go
+│   └── ring-controller
+│       └── controller
+│           ├── agent_interface.go
+│           ├── businessagent.go
+│           ├── businessagent_test.go
+│           ├── businessworker.go
+│           ├── businessworker_test.go
+│           ├── controller.go
+│           ├── controller_test.go
+│           └── type.go
+├── README_EN.md                                           # HCCL-Controller README file (English)
+└── README.md                                              # HCCL-Controller README file (Chinese)
 ```
 
 <h2 id="version-updates.md">Version Updates</h2>
 
 | Version   | Date   | Description  |
 | ---- | ---- | ---- |
+| V20.2.0| 2020-12-30    | Updated the Directory Structure section. |
 | V20.1.0| 2020-09-30    | This issue is the first official release.   |
+
+
 
 

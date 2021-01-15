@@ -7,7 +7,7 @@ metadata:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: hccl-controller-rolebingding
+  name: hccl-controller-rolebinding
 subjects:
   - kind: ServiceAccount
     name: hccl-controller
@@ -35,20 +35,20 @@ spec:
         masterselector: dls-master-node
       serviceAccountName: hccl-controller
       containers:
-      - name: hccl-controller
-        image: hccl-controller:v20.2.0
-        resources:
+        - name: hccl-controller
+          image: hccl-controller:v20.2.0
+          resources:
             requests:
               memory: 300Mi
               cpu: 500m
             limits:
               memory: 300Mi
               cpu: 500m
-        imagePullPolicy: Never
-        command: [ "/bin/bash", "-c", "--" ]
-        args: [ "umask 027;hccl-controller --logtostderr=false --log_dir=/var/log/atlas_dls/hccl-controller
+          imagePullPolicy: Never
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "umask 027;hccl-controller --logtostderr=false --log_dir=/var/log/atlas_dls/hccl-controller
          --log_file=/var/log/atlas_dls/hccl-controller/hccl-controller.log  --stderrthreshold=1 -v=5" ]
-        volumeMounts:
+          volumeMounts:
             - name: device-hcclcontroller
               mountPath: /var/log/atlas_dls/hccl-controller
             - name: localtime
