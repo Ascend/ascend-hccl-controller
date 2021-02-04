@@ -20,9 +20,9 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
-
 	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -56,7 +56,9 @@ type businessWorker struct {
 	jobNamespace         string
 	jobName              string
 	configmapName        string
-	configmapData        RankTable
+	// Version 1
+	configmapDataV1 RankTableV1
+	configmapDataV2 RankTableV2
 
 	statisticStopped  bool
 	cachedPodNum      int32
@@ -67,6 +69,7 @@ func newBusinessWorker(kubeclientset kubernetes.Interface, podsIndexer cache.Ind
 	dryRun bool, job *v1alpha1.Job) *businessWorker {
 	var replicasTotal int32
 	var groupList []*Group
+	var serverList []*Server
 
 	for _, taskSpec := range job.Spec.Tasks {
 		var deviceTotal int32
@@ -98,8 +101,10 @@ func newBusinessWorker(kubeclientset kubernetes.Interface, podsIndexer cache.Ind
 		jobNamespace:         job.Namespace,
 		jobName:              job.Name,
 		configmapName:        fmt.Sprintf("%s-%s", ConfigmapPrefix, job.Name),
-		configmapData: RankTable{Status: ConfigmapInitializing, GroupCount: strconv.Itoa(len(job.Spec.Tasks)),
+		configmapDataV1: RankTableV1{Status: ConfigmapInitializing, GroupCount: strconv.Itoa(len(job.Spec.Tasks)),
 			GroupList: groupList},
+		configmapDataV2: RankTableV2{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
+			Status: ConfigmapInitializing, Version: "1.0"},
 		statisticStopped:  false,
 		cachedPodNum:      0,
 		taskReplicasTotal: replicasTotal,
@@ -150,17 +155,6 @@ func (b *businessWorker) syncHandler(pod *apiCoreV1.Pod, podExist bool, podInfo 
 	return nil
 }
 
-func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
-	if !b.dryRun {
-		err := b.removePodInfo(podInfo.namespace, podInfo.name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	klog.V(L3).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
@@ -169,35 +163,65 @@ func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCo
 	klog.V(L3).Info("deviceId =>", deviceInfo)
 	klog.V(L4).Info("isExist ==>", exist)
 	if exist {
-		err := b.cachePodInfo(pod, deviceInfo)
-		if err != nil {
-			return err
+		switch JsonVersion {
+		case "v1":
+			err := b.cachePodInfoV1(pod, deviceInfo)
+			if err != nil {
+				return err
+			}
+		case "v2":
+			err := b.cachePodInfoV2(pod, deviceInfo)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
-	err := b.cacheZeroChipPodInfo(pod)
-	if err != nil {
-		return err
+	switch JsonVersion {
+	case "v1":
+		err := b.cacheZeroChipPodInfoV1(pod)
+		if err != nil {
+			return err
+		}
+	case "v2":
+		err := b.cacheZeroChipPodInfoV2(pod)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
+	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
+	switch JsonVersion {
+	case "v1":
+		err := b.removePodInfoV1(podInfo.namespace, podInfo.name)
+		if err != nil {
+			return err
+		}
+	case "v2":
+		err := b.removePodInfoV2(podInfo.namespace, podInfo.name)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cachePodInfo(pod *apiCoreV1.Pod, deviceInfo string) error {
+func (b *businessWorker) cachePodInfoV1(pod *apiCoreV1.Pod, deviceInfo string) error {
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 
-	for _, group := range b.configmapData.GroupList {
+	for _, group := range b.configmapDataV1.GroupList {
 		if group.GroupName != pod.Annotations[PodGroupKey] {
 			return nil
 		}
 		// check if current pod's info is already cached
-		for _, instance := range group.InstanceList {
-			if instance.PodName == pod.Name {
-				klog.V(L3).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-					pod.Name)
-				return nil
-			}
+		done := checkPodCache(group, pod)
+		if done {
+			return nil
 		}
 		// if pod use D chip, cache its info
 		var instance Instance
@@ -211,10 +235,9 @@ func (b *businessWorker) cachePodInfo(pod *apiCoreV1.Pod, deviceInfo string) err
 		b.modifyStatistics(1)
 
 		// update configmap if finishing caching all pods' info
-		if b.tableConstructionFinished() {
-			if err := b.endRankTableConstruction(); err != nil {
-				return err
-			}
+		errs := updateWithFinish(b)
+		if errs != nil {
+			return errs
 		}
 		break
 	}
@@ -222,12 +245,52 @@ func (b *businessWorker) cachePodInfo(pod *apiCoreV1.Pod, deviceInfo string) err
 	return nil
 }
 
-// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cacheZeroChipPodInfo(pod *apiCoreV1.Pod) error {
+func (b *businessWorker) cachePodInfoV2(pod *apiCoreV1.Pod, deviceInfo string) error {
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 
-	for _, group := range b.configmapData.GroupList {
+	var instance Instance
+	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
+		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+	}
+	rankFactor := len(instance.Devices)
+
+	// Build new server-level struct from device info
+	var server Server
+	server.ServerID = instance.ServerID
+	server.PodID = instance.PodName
+	podID, err := strconv.Atoi(server.PodID)
+	if err != nil {
+		return fmt.Errorf("parse name of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+	}
+
+	for _, device := range instance.Devices {
+		var serverDevice DeviceV2
+		serverDevice.DeviceID = device.DeviceID
+		serverDevice.DeviceIP = device.DeviceIP
+		serverDevice.RankID = strconv.Itoa(podID*rankFactor + len(server.DeviceList))
+
+		server.DeviceList = append(server.DeviceList, &serverDevice)
+	}
+
+	b.configmapDataV2.ServerList = append(b.configmapDataV2.ServerList, &server)
+	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
+	b.modifyStatistics(1)
+	// update configmap if finishing caching all pods' info
+	errs := updateWithFinish(b)
+	if errs != nil {
+		return errs
+	}
+
+	return nil
+}
+
+// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
+func (b *businessWorker) cacheZeroChipPodInfoV1(pod *apiCoreV1.Pod) error {
+	b.cmMu.Lock()
+	defer b.cmMu.Unlock()
+
+	for _, group := range b.configmapDataV1.GroupList {
 		// find pod's belonging task
 		if group.GroupName == pod.Annotations[PodGroupKey] {
 			// check if current pod's info is already cached
@@ -253,6 +316,25 @@ func (b *businessWorker) cacheZeroChipPodInfo(pod *apiCoreV1.Pod) error {
 	return nil
 }
 
+func (b *businessWorker) cacheZeroChipPodInfoV2(pod *apiCoreV1.Pod) error {
+	b.cmMu.Lock()
+	defer b.cmMu.Unlock()
+
+	var deviceList []*DeviceV2
+	server := Server{DeviceList: deviceList, ServerID: "", PodID: "-1"}
+
+	b.configmapDataV2.ServerList = append(b.configmapDataV2.ServerList, &server)
+	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
+	b.modifyStatistics(1)
+
+	// update configmap if finishing caching all pods' info
+	err := updateWithFinish(b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func updateWithFinish(b *businessWorker) error {
 	if b.tableConstructionFinished() {
 		if err := b.endRankTableConstruction(); err != nil {
@@ -274,15 +356,18 @@ func checkPodCache(group *Group, pod *apiCoreV1.Pod) bool {
 }
 
 // when pod is deleted, remove pod info from cache, and change configmap's status accordingly
-func (b *businessWorker) removePodInfo(namespace string, name string) error {
+func (b *businessWorker) removePodInfoV1(namespace string, name string) error {
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	hasInfoToRemove := false
 
-	for _, group := range b.configmapData.GroupList {
+	// Get last bit of pod name as podID
+	splited := strings.Split(name, "-")
+	podID := splited[len(splited)-1]
+	for _, group := range b.configmapDataV1.GroupList {
 		for idx, instance := range group.InstanceList {
 			// current pod's info is already cached, start to remove
-			if instance.PodName == name {
+			if instance.PodName == podID {
 				length := len(group.InstanceList)
 				group.InstanceList[idx] = group.InstanceList[length-1]
 				group.InstanceList = group.InstanceList[:length-1]
@@ -310,8 +395,47 @@ func (b *businessWorker) removePodInfo(namespace string, name string) error {
 	return nil
 }
 
+// when pod is deleted, remove pod info from cache Version 2, and change configmap's status accordingly
+func (b *businessWorker) removePodInfoV2(namespace string, name string) error {
+	b.cmMu.Lock()
+	defer b.cmMu.Unlock()
+	hasInfoToRemove := false
+
+	// Get last bit of pod name as podID
+	splited := strings.Split(name, "-")
+	podID := splited[len(splited)-1]
+	serverList := b.configmapDataV2.ServerList
+	for idx, server := range serverList {
+		if server.PodID == podID {
+			length := len(serverList)
+			serverList[idx] = serverList[length-1]
+			serverList = serverList[:length-1]
+			hasInfoToRemove = true
+			break
+		}
+	}
+
+	if !hasInfoToRemove {
+		klog.V(L3).Infof("no data of pod %s/%s can be removed", namespace, name)
+		return nil
+	}
+
+	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
+	klog.V(3).Infof("Config map data v2: %v", b.configmapDataV2)
+	err := b.updateConfigmap()
+	if err != nil {
+		return err
+	}
+
+	b.modifyStatistics(-1)
+	klog.V(L3).Infof("data of pod %s/%s is removed", namespace, name)
+
+	return nil
+}
+
 func (b *businessWorker) endRankTableConstruction() error {
-	b.configmapData.Status = ConfigmapCompleted
+	b.configmapDataV1.Status = ConfigmapCompleted
+	b.configmapDataV2.Status = ConfigmapCompleted
 	err := b.updateConfigmap()
 	if err != nil {
 		klog.Error("update configmap failed")
@@ -342,11 +466,16 @@ func (b *businessWorker) updateConfigmap() error {
 		return fmt.Errorf("invalid configmap label" + label910)
 	}
 
-	dataByteArray, err := json.Marshal(b.configmapData)
+	dataByteArray := []byte(nil)
+	switch JsonVersion {
+	case "v1":
+		dataByteArray, err = json.Marshal(b.configmapDataV1)
+	case "v2":
+		dataByteArray, err = json.Marshal(b.configmapDataV2)
+	}
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
 	}
-
 	cm.Data[ConfigmapKey] = string(dataByteArray[:])
 
 	if _, err := b.kubeclientset.CoreV1().ConfigMaps(b.jobNamespace).Update(cm); err != nil {

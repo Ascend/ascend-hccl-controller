@@ -280,7 +280,17 @@ func (b *businessAgent) convertAndCheckPod(obj interface{}, podExist bool, tmpOb
 
 func (b *businessAgent) updateConfigMap(obj interface{}, pod *v1.Pod, podExist bool,
 	podInfo *podIdentifier) (pass, isOver bool) {
-	if b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapData.Status == ConfigmapCompleted {
+	var configmapComplete bool
+
+	switch JsonVersion {
+	case "v1":
+		configmapComplete =
+			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV1.Status == ConfigmapCompleted
+	case "v2":
+		configmapComplete =
+			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV2.Status == ConfigmapCompleted
+	}
+	if configmapComplete {
 		b.workqueue.Forget(obj)
 		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)

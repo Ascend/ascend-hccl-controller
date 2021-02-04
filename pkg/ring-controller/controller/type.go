@@ -75,8 +75,12 @@ const (
 	oneMinitue       = 60
 )
 
+var (
+	JsonVersion = "v1"
+)
+
 // RankTable to hccl
-type RankTable struct {
+type RankTableV1 struct {
 	GroupList  []*Group `json:"group_list"`          // hccl group list
 	Status     string   `json:"status"`              // get hccl_json status
 	GroupCount string   `json:"group_count, string"` // hccl_json grouoCount
@@ -101,4 +105,26 @@ type Instance struct {
 type Device struct {
 	DeviceID string `json:"device_id"` // hccl deviceId
 	DeviceIP string `json:"device_ip"` // hccl deviceid
+}
+
+// RankTable to hccl - template #1
+type RankTableV2 struct {
+	ServerCount string    `json:"server_count"` // hccl_json server count
+	ServerList  []*Server `json:"server_list"`  // hccl_json server list
+	Status      string    `json:"status"`       // hccl_json status
+	Version     string    `json:"version"`      // hccl_json version
+}
+
+// Server to hccl
+type Server struct {
+	DeviceList []*DeviceV2 `json:"device"`    // device list in each server
+	ServerID   string      `json:"server_id"` // server id, represented by ip address
+	PodID      string      `json:"-"`         // pod id, equal to the last integer of pod name
+}
+
+// Device to hccl - template #1
+type DeviceV2 struct {
+	DeviceID string `json:"device_id"` // device id
+	DeviceIP string `json:"device_ip"` // device ip
+	RankID   string `json:"rank_id"`   // rank id
 }

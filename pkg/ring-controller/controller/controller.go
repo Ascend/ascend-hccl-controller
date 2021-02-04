@@ -355,16 +355,28 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	}
 
 	// retrieve configmap data
-	var configmapData RankTable
+	var configmapDataV1 RankTableV1
+	var configmapDataV2 RankTableV2
 	jobStartString := cm.Data[ConfigmapKey]
-	//
 	klog.V(L4).Info("jobstarting==>", jobStartString)
-	err = json.Unmarshal([]byte(jobStartString), &configmapData)
-	if err != nil {
-		return fmt.Errorf("parse configmap data error: %v", err)
-	}
-	if configmapData.Status != ConfigmapCompleted && configmapData.Status != ConfigmapInitializing {
-		return fmt.Errorf("configmap status abnormal: %v", err)
+
+	switch JsonVersion {
+	case "v1":
+		err = json.Unmarshal([]byte(jobStartString), &configmapDataV1)
+		if err != nil {
+			return fmt.Errorf("parse configmap data error: %v", err)
+		}
+		if configmapDataV1.Status != ConfigmapCompleted && configmapDataV1.Status != ConfigmapInitializing {
+			return fmt.Errorf("configmap status abnormal: %v", err)
+		}
+	case "v2":
+		err = json.Unmarshal([]byte(jobStartString), &configmapDataV2)
+		if err != nil {
+			return fmt.Errorf("parse configmap data error: %v", err)
+		}
+		if configmapDataV2.Status != ConfigmapCompleted && configmapDataV2.Status != ConfigmapInitializing {
+			return fmt.Errorf("configmap status abnormal: %v", err)
+		}
 	}
 
 	// create a business worker for current job
