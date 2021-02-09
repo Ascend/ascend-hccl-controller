@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@
 package controller
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -80,85 +78,6 @@ const (
 )
 
 var (
-	// Hccl.json template version
-	JsonVersion = "v2"
+	// JSONVersion of hccl.json
+	JSONVersion = "v2"
 )
-
-// RankTable interface to maintain properties
-type RankTable interface {
-	unmarshalToRankTable(jsonString string) error
-}
-
-// RankTableV1 to hccl
-type RankTableV1 struct {
-	GroupList  []*Group `json:"group_list"`          // hccl group list
-	Status     string   `json:"status"`              // get hccl_json status
-	GroupCount string   `json:"group_count, string"` // hccl_json grouoCount
-}
-
-// Group to hccl
-type Group struct {
-	InstanceList  []*Instance `json:"instance_list"`          // hccl InstaceList
-	GroupName     string      `json:"group_name"`             // hccl GroupName
-	DeviceCount   string      `json:"device_count, string"`   // hccl Devicecount
-	InstanceCount string      `json:"instance_count, string"` // hccl Instance Count
-}
-
-// Instance to hccl
-type Instance struct {
-	Devices  []Device `json:"devices"`   // hccl Deviceid
-	PodName  string   `json:"pod_name"`  // hccl PodName
-	ServerID string   `json:"server_id"` // hccl servceId
-}
-
-// Device to hccl
-type Device struct {
-	DeviceID string `json:"device_id"` // hccl deviceId
-	DeviceIP string `json:"device_ip"` // hccl deviceid
-}
-
-// RankTableV2 to hccl
-type RankTableV2 struct {
-	ServerList  []*Server `json:"server_list"`  // hccl_json server list
-	ServerCount string    `json:"server_count"` // hccl_json server count
-	Status      string    `json:"status"`       // hccl_json status
-	Version     string    `json:"version"`      // hccl_json version
-}
-
-// Server to hccl
-type Server struct {
-	DeviceList []*DeviceV2 `json:"device"`    // device list in each server
-	ServerID   string      `json:"server_id"` // server id, represented by ip address
-	PodID      string      `json:"-"`         // pod id, equal to the last integer of pod name
-}
-
-// DeviceV2 to hccl
-type DeviceV2 struct {
-	DeviceID string `json:"device_id"` // device id
-	DeviceIP string `json:"device_ip"` // device ip
-	RankID   string `json:"rank_id"`   // rank id
-}
-
-// Unmarshal json string to RankTableV1
-func (configMapDataV1 *RankTableV1) unmarshalToRankTable(jsonString string) error {
-	err := json.Unmarshal([]byte(jsonString), &configmapDataV1)
-	if err != nil {
-		return fmt.Errorf("parse configmap data error: %v", err)
-	}
-	if configmapDataV1.Status != ConfigmapCompleted && configmapDataV1.Status != ConfigmapInitializing {
-		return fmt.Errorf("configmap status abnormal: %v", err)
-	}
-	return nil
-}
-
-// Unmarshal json string to RankTableV2
-func (configMapDataV2 *RankTableV2) unmarshalToRankTable(jsonString string) error {
-	err := json.Unmarshal([]byte(jsonString), &configmapDataV2)
-	if err != nil {
-		return fmt.Errorf("parse configmap data error: %v", err)
-	}
-	if configmapDataV2.Status != ConfigmapCompleted && configmapDataV2.Status != ConfigmapInitializing {
-		return fmt.Errorf("configmap status abnormal: %v", err)
-	}
-	return nil
-}

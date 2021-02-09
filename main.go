@@ -1,5 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ func main() {
 	if jsonVersion != "v1" && jsonVersion != "v2" {
 		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
-	controller.JsonVersion = jsonVersion
+	controller.JSONVersion = jsonVersion
 
 	if version {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
@@ -159,7 +159,7 @@ func init() {
 		"Parallelism of pod events handling.")
 	flag.IntVar(&cmCheckInterval, "cmCheckInterval", cmCheckIntervalConst,
 		"Interval (seconds) to check job's configmap before building rank table.")
-	flag.IntVar(&cmCheckTimeout, "ceckTimeout", cmCheckTimeoutConst,
+	flag.IntVar(&cmCheckTimeout, "cmCheckTimeout", cmCheckTimeoutConst,
 		"Maximum time (seconds) to check creation of job's configmap.")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")

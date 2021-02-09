@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,8 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
-	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +29,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
-	"strconv"
 )
 
 // controller for each volcano job, list/watch corresponding pods and build configmap (rank table)
@@ -56,61 +53,11 @@ type businessWorker struct {
 	jobNamespace         string
 	jobName              string
 	configmapName        string
-	// Version 1
-	configmapDataV1 RankTableV1
-	configmapDataV2 RankTableV2
+	configmapData        RankTable
 
 	statisticStopped  bool
 	cachedPodNum      int32
 	taskReplicasTotal int32
-}
-
-func newBusinessWorker(kubeclientset kubernetes.Interface, podsIndexer cache.Indexer, recorder record.EventRecorder,
-	dryRun bool, job *v1alpha1.Job) *businessWorker {
-	var replicasTotal int32
-	var groupList []*Group
-	var serverList []*Server
-
-	for _, taskSpec := range job.Spec.Tasks {
-		var deviceTotal int32
-		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[ResourceName]
-			quantityValue := int32(quantity.Value())
-			if exist && quantityValue > 0 {
-				deviceTotal += quantityValue
-			}
-		}
-		deviceTotal *= taskSpec.Replicas
-
-		var instanceList []*Instance
-		group := Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
-			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
-		groupList = append(groupList, &group)
-		replicasTotal += taskSpec.Replicas
-	}
-
-	businessWorker := &businessWorker{
-		kubeclientset:        kubeclientset,
-		podsIndexer:          podsIndexer,
-		recorder:             recorder,
-		dryRun:               dryRun,
-		statisticSwitch:      make(chan struct{}),
-		jobUID:               string(job.UID),
-		jobVersion:           job.Status.Version,
-		jobCreationTimestamp: job.CreationTimestamp,
-		jobNamespace:         job.Namespace,
-		jobName:              job.Name,
-		configmapName:        fmt.Sprintf("%s-%s", ConfigmapPrefix, job.Name),
-		configmapDataV1: RankTableV1{Status: ConfigmapInitializing, GroupCount: strconv.Itoa(len(job.Spec.Tasks)),
-			GroupList: groupList},
-		configmapDataV2: RankTableV2{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
-			Status: ConfigmapInitializing, Version: "1.0"},
-		statisticStopped:  false,
-		cachedPodNum:      0,
-		taskReplicasTotal: replicasTotal,
-	}
-
-	return businessWorker
 }
 
 func (b *businessWorker) tableConstructionFinished() bool {
@@ -162,125 +109,15 @@ func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCo
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	klog.V(L3).Info("deviceId =>", deviceInfo)
 	klog.V(L4).Info("isExist ==>", exist)
-	if exist {
-		switch JsonVersion {
-		case "v1":
-			err := b.cachePodInfoV1(pod, deviceInfo)
-			if err != nil {
-				return err
-			}
-		case "v2":
-			err := b.cachePodInfoV2(pod, deviceInfo)
-			if err != nil {
-				return err
-			}
-		default:
-			klog.Fatalf("invalid json version value when cache pod info, should be v1/v2")
-		}
-		return nil
-	}
-	switch JsonVersion {
-	case "v1":
-		err := b.cacheZeroChipPodInfoV1(pod)
-		if err != nil {
-			return err
-		}
-	case "v2":
-		err := b.cacheZeroChipPodInfoV2(pod)
-		if err != nil {
-			return err
-		}
-	default:
-		klog.Fatalf("invalid json version value when cache zero pod info, should be v1/v2")
-	}
-	return nil
-}
 
-func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
-	switch JsonVersion {
-	case "v1":
-		err := b.removePodInfoV1(podInfo.namespace, podInfo.name)
-		if err != nil {
-			return err
-		}
-	case "v2":
-		err := b.removePodInfoV2(podInfo.namespace, podInfo.name)
-		if err != nil {
-			return err
-		}
-	default:
-		klog.Fatalf("invalid json version value when remove pod info, should be v1/v2")
-	}
-	return nil
-}
-
-// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cachePodInfoV1(pod *apiCoreV1.Pod, deviceInfo string) error {
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 
-	for _, group := range b.configmapDataV1.GroupList {
-		if group.GroupName != pod.Annotations[PodGroupKey] {
-			return nil
-		}
-		// check if current pod's info is already cached
-		done := checkPodCache(group, pod)
-		if done {
-			return nil
-		}
-		// if pod use D chip, cache its info
-		var instance Instance
-		klog.V(L3).Infof("devicedInfo  from pod => %v", deviceInfo)
-		err := json.Unmarshal([]byte(deviceInfo), &instance)
-		klog.V(L3).Infof("instace  from pod => %v", instance)
-		if err != nil {
-			return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-		}
-		group.InstanceList = append(group.InstanceList, &instance)
-		b.modifyStatistics(1)
-
-		// update configmap if finishing caching all pods' info
-		errs := updateWithFinish(b)
-		if errs != nil {
-			return errs
-		}
-		break
-	}
-
-	return nil
-}
-
-func (b *businessWorker) cachePodInfoV2(pod *apiCoreV1.Pod, deviceInfo string) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-
-	var instance Instance
-	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
-		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-	}
-	rankFactor := len(instance.Devices)
-
-	// Build new server-level struct from device info
-	var server Server
-	server.ServerID = instance.ServerID
-	server.PodID = instance.PodName
-	podID, err := strconv.Atoi(server.PodID)
+	err := b.configmapData.cachePodInfo(pod, deviceInfo)
 	if err != nil {
-		return fmt.Errorf("parse name of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+		return err
 	}
 
-	for _, device := range instance.Devices {
-		var serverDevice DeviceV2
-		serverDevice.DeviceID = device.DeviceID
-		serverDevice.DeviceIP = device.DeviceIP
-		serverDevice.RankID = strconv.Itoa(podID*rankFactor + len(server.DeviceList))
-
-		server.DeviceList = append(server.DeviceList, &serverDevice)
-	}
-
-	b.configmapDataV2.ServerList = append(b.configmapDataV2.ServerList, &server)
-	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
 	b.modifyStatistics(1)
 	// update configmap if finishing caching all pods' info
 	errs := updateWithFinish(b)
@@ -291,53 +128,25 @@ func (b *businessWorker) cachePodInfoV2(pod *apiCoreV1.Pod, deviceInfo string) e
 	return nil
 }
 
-// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cacheZeroChipPodInfoV1(pod *apiCoreV1.Pod) error {
+func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
+	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
+
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 
-	for _, group := range b.configmapDataV1.GroupList {
-		// find pod's belonging task
-		if group.GroupName == pod.Annotations[PodGroupKey] {
-			// check if current pod's info is already cached
-			done := checkPodCache(group, pod)
-			if done {
-				return nil
-			}
-			// if pod use D chip, cache its info
-			var deviceList []Device
-			instance := Instance{PodName: pod.Name, ServerID: "", Devices: deviceList}
-			group.InstanceList = append(group.InstanceList, &instance)
-			b.modifyStatistics(1)
-
-			// update configmap if finishing caching all pods' info
-			errs := updateWithFinish(b)
-			if errs != nil {
-				return errs
-			}
-			break
-		}
-	}
-
-	return nil
-}
-
-func (b *businessWorker) cacheZeroChipPodInfoV2(pod *apiCoreV1.Pod) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-
-	var deviceList []*DeviceV2
-	server := Server{DeviceList: deviceList, ServerID: "", PodID: "-1"}
-
-	b.configmapDataV2.ServerList = append(b.configmapDataV2.ServerList, &server)
-	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
-	b.modifyStatistics(1)
-
-	// update configmap if finishing caching all pods' info
-	err := updateWithFinish(b)
+	err := b.configmapData.removePodInfo(podInfo.namespace, podInfo.name)
 	if err != nil {
 		return err
 	}
+
+	klog.V(L3).Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
+	err = b.updateConfigmap()
+	if err != nil {
+		return err
+	}
+	b.modifyStatistics(-1)
+	klog.V(L3).Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
+
 	return nil
 }
 
@@ -361,88 +170,13 @@ func checkPodCache(group *Group, pod *apiCoreV1.Pod) bool {
 	return false
 }
 
-// when pod is deleted, remove pod info from cache, and change configmap's status accordingly
-func (b *businessWorker) removePodInfoV1(namespace string, name string) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-	hasInfoToRemove := false
-
-	// Get last bit of pod name as podID
-	splited := strings.Split(name, "-")
-	podID := splited[len(splited)-1]
-	for _, group := range b.configmapDataV1.GroupList {
-		for idx, instance := range group.InstanceList {
-			// current pod's info is already cached, start to remove
-			if instance.PodName == podID {
-				length := len(group.InstanceList)
-				group.InstanceList[idx] = group.InstanceList[length-1]
-				group.InstanceList = group.InstanceList[:length-1]
-				hasInfoToRemove = true
-				break
-			}
-		}
-		if hasInfoToRemove {
-			break
-		}
-	}
-	if !hasInfoToRemove {
-		klog.V(L3).Infof("no data of pod %s/%s can be removed", namespace, name)
-		return nil
-	}
-
-	klog.V(L3).Infof("start to remove data of pod %s/%s", namespace, name)
-	err := b.updateConfigmap()
-	if err != nil {
-		return err
-	}
-	b.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", namespace, name)
-
-	return nil
-}
-
-// when pod is deleted, remove pod info from cache Version 2, and change configmap's status accordingly
-func (b *businessWorker) removePodInfoV2(namespace string, name string) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-	hasInfoToRemove := false
-
-	// Get last bit of pod name as podID
-	splited := strings.Split(name, "-")
-	podID := splited[len(splited)-1]
-	serverList := b.configmapDataV2.ServerList
-	for idx, server := range serverList {
-		if server.PodID == podID {
-			length := len(serverList)
-			serverList[idx] = serverList[length-1]
-			serverList = serverList[:length-1]
-			hasInfoToRemove = true
-			break
-		}
-	}
-
-	if !hasInfoToRemove {
-		klog.V(L3).Infof("no data of pod %s/%s can be removed", namespace, name)
-		return nil
-	}
-
-	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
-	klog.V(L3).Infof("start to remove data of pod %s/%s", namespace, name)
-	err := b.updateConfigmap()
-	if err != nil {
-		return err
-	}
-
-	b.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", namespace, name)
-
-	return nil
-}
-
 func (b *businessWorker) endRankTableConstruction() error {
-	b.configmapDataV1.Status = ConfigmapCompleted
-	b.configmapDataV2.Status = ConfigmapCompleted
-	err := b.updateConfigmap()
+	err := b.configmapData.setStatus(ConfigmapCompleted)
+	if err != nil {
+		klog.Error("fail to set configmap status: %v", err)
+		return err
+	}
+	err = b.updateConfigmap()
 	if err != nil {
 		klog.Error("update configmap failed")
 		return err
@@ -472,15 +206,7 @@ func (b *businessWorker) updateConfigmap() error {
 		return fmt.Errorf("invalid configmap label" + label910)
 	}
 
-	dataByteArray := []byte(nil)
-	switch JsonVersion {
-	case "v1":
-		dataByteArray, err = json.Marshal(b.configmapDataV1)
-	case "v2":
-		dataByteArray, err = json.Marshal(b.configmapDataV2)
-	default:
-		klog.Fatalf("invalid json version value when marshal rank table, should be v1/v2")
-	}
+	dataByteArray, err := json.Marshal(b.configmapData)
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
 	}
