@@ -81,7 +81,7 @@ const (
 
 var (
 	// Hccl.json template version
-	JsonVersion = "v1"
+	JsonVersion = "v2"
 )
 
 // RankTable interface to maintain properties
