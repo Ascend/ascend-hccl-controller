@@ -140,7 +140,7 @@ type DeviceV2 struct {
 }
 
 // Unmarshal json string to RankTableV1
-func (configmapDataV1 *RankTableV1) unmarshalToRankTable(jsonString string) error {
+func (configMapDataV1 *RankTableV1) unmarshalToRankTable(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &configmapDataV1)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
@@ -152,7 +152,7 @@ func (configmapDataV1 *RankTableV1) unmarshalToRankTable(jsonString string) erro
 }
 
 // Unmarshal json string to RankTableV2
-func (configmapDataV2 *RankTableV2) unmarshalToRankTable(jsonString string) error {
+func (configMapDataV2 *RankTableV2) unmarshalToRankTable(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &configmapDataV2)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
