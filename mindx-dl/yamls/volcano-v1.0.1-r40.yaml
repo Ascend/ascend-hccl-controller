@@ -27,7 +27,8 @@ data:
       - name: binpack
     configurations:
       - arguments: {"host-arch":"huawei-arm|huawei-x86",
-      "accelerator":"huawei-Ascend910|nvidia-tesla-v100|nvidia-tesla-p40"}
+      "accelerator":"huawei-Ascend910|nvidia-tesla-v100|nvidia-tesla-p40",
+      "accelerator-type":"card|module"}
   
 ---
 apiVersion: v1
@@ -129,7 +130,7 @@ spec:
         - name: volcano-scheduler
           image: volcanosh/vc-scheduler:v1.0.1-r40
           imagePullPolicy: "IfNotPresent"
-          command: [ "/bin/ash", "-c", "--"]
+          command: [ "/bin/ash", "-c", "--" ]
           args: [ "umask 027;/vc-scheduler
           --scheduler-conf=/volcano.scheduler/volcano-scheduler.conf
           --logtostderr=false --log_dir=/var/log/ --log_file=/var/log/volcano-scheduler.log -v=3 2>&1" ]
@@ -236,8 +237,8 @@ spec:
         - name: admission
           image: volcanosh/vc-webhook-manager:v1.0.1-r40
           imagePullPolicy: IfNotPresent
-          command: [ "/bin/ash", "-c", "--"]
-          args: [ "umask 027;/vc-webhook-manager
+          command: [ "/bin/ash", "-c", "--" ]
+          args: [ "umask 027; /vc-webhook-manager
                   --tls-cert-file=/admission.local.config/certificates/tls.crt
                   --tls-private-key-file=/admission.local.config/certificates/tls.key
                   --ca-cert-file=/admission.local.config/certificates/ca.crt
