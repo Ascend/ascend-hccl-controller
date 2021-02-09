@@ -163,6 +163,6 @@ func init() {
 		"Maximum time (seconds) to check creation of job's configmap.")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")
-	flag.StringVar(&jsonVersion, "json", "v1",
+	flag.StringVar(&jsonVersion, "json", "v2",
 		"Select version of hccl json file (v1/v2).")
 }

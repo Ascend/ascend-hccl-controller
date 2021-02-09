@@ -361,12 +361,12 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 
 	switch JsonVersion {
 	case "v1":
-		err = configmapDataV1.UnMarshalToRankTable(jobStartString)
+		err = configmapDataV1.unmarshalToRankTable(jobStartString)
 		if err != nil {
 			return err
 		}
 	case "v2":
-		err = configmapDataV2.UnMarshalToTankTable(jobStartString)
+		err = configmapDataV2.unmarshalToRankTable(jobStartString)
 		if err != nil {
 			return err
 		}

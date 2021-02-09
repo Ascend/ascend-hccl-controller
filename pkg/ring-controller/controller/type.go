@@ -86,7 +86,7 @@ var (
 
 // RankTable interface to maintain properties
 type RankTable interface {
-	UnMarshalToRankTable(jsonString string) error
+	unmarshalToRankTable(jsonString string) error
 }
 
 // RankTableV1 to hccl
@@ -140,7 +140,7 @@ type DeviceV2 struct {
 }
 
 // Unmarshal json string to RankTableV1
-func (configmapDataV1 *RankTableV1) UnMarshalToRankTable(jsonString string) error {
+func (configmapDataV1 *RankTableV1) unmarshalToRankTable(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &configmapDataV1)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
@@ -151,8 +151,8 @@ func (configmapDataV1 *RankTableV1) UnMarshalToRankTable(jsonString string) erro
 	return nil
 }
 
-// Unmarshal json string to RankTableV1
-func (configmapDataV2 *RankTableV2) UnMarshalToTankTable(jsonString string) error {
+// Unmarshal json string to RankTableV2
+func (configmapDataV2 *RankTableV2) unmarshalToRankTable(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &configmapDataV2)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
