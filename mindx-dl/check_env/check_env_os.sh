@@ -29,6 +29,13 @@ function check_os_arch() {
     write_single_line_to_file "${tmp_output_file}" "architecture" "$(arch)"
 }
 
+# 逻辑cpu个数
+function check_logical_cpu() {
+    logic_cpu_count="$(cat /proc/cpuinfo| grep "processor" | wc -l 2>/dev/null)"
+
+    write_single_line_to_file "${tmp_output_file}" "number of logical cpu" "${logic_cpu_count}"
+}
+
 # cpu使用率
 function check_cpu_utilization() {
     idle_rate="$(top -n 1 2>/dev/null | grep -i '%cpu' | head -n 1 | awk '{print $8}')"
@@ -152,6 +159,7 @@ function check_date() {
 function do_check() {
     check_os_arch
     check_firwall_status
+    check_logical_cpu
     check_cpu_utilization
     check_available_memery
     check_date

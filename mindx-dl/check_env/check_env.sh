@@ -23,29 +23,33 @@ source ./check_env_utils.sh
 
 function help_document() {
     echo ""
-    echo "    注：配置检查项目需要修改${0}文件"
+    echo "Note: The ${0} file needs to be modified for configure check items."
     echo ""
-    echo "    -nt,  --nodetype  (必填) 集群中节点类型，三个可选项 ${MASTER_NODE}, ${WORKER_NODE}, ${MASTER_WORKER_NODE}"
-    echo "                             ${MASTER_NODE}：表示管理节点"
-    echo "                             ${WORKER_NODE}：表示计算节点"
-    echo "                             ${MASTER_WORKER_NODE}：表示既是管理节点也是计算节点"
+    echo "  -nt, --nodetype  (required) Node type in cluster."
+    echo "                              Three options: '${MASTER_NODE}', '${WORKER_NODE}', '${MASTER_WORKER_NODE}'. "
+    echo "                                ${MASTER_NODE}: management node"
+    echo "                                ${WORKER_NODE}: compute node"
+    echo "                                ${MASTER_WORKER_NODE}: this node is both a management node and a compute node."
     echo ""
-    echo "    -hw,  --hardware  (必填) 硬件形态，四个可选项 ${HW_COMMON}, ${HW_TRAIN}, ${HW_INFER}, ${HW_300T}"
-    echo "                             ${HW_COMMON}：表示通用服务器，且只能在 -nt 参数的值为${MASTER_NODE}时使用"
-    echo "                             ${HW_TRAIN}：表示Atlas 800训练服务器"
-    echo "                             ${HW_INFER}：表示Atlas 800推理服务器"
-    echo "                             ${HW_300T}：表示服务器插Atlas 300T训练卡"
+    echo "  -hw, --hardware  (required) Hardware form."
+    echo "                              Four options: '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}'"
+    echo "                                ${HW_COMMON}: Common server. This parameter can be used"
+    echo "                                        only when the '-nt' parameter is set to '${MASTER_NODE}'"
+    echo "                                ${HW_TRAIN}: Atlas 800 training servers"
+    echo "                                ${HW_INFER}: Atlas 800 inference servers"
+    echo "                                ${HW_300T}: servers(with Atlas 300T training cards)"
     echo ""
-    echo "    -ip               (选填) 本机ip，如：10.10.123.123"
-    echo "                             如果没有该参数，输出结果不会包含本机ip的信息"
+    echo "  -ip               (optional) local IP. For example: 10.10.123.123"
+    echo "                               If there is no such parameter, the output will not contain"
+    echo "                                 the information of local IP"
     echo ""
-    echo "    -h,   --help             显示帮助信息"
+    echo "  -h,  --help    This command's help information"
     echo ""
-    echo "    示例1，本节点是Atlas 800训练服务器，作为集群中的计算节点"
-    echo "        bash check_env.sh -nt ${WORKER_NODE} -hw ${HW_TRAIN}"
+    echo "Example 1: the node is an Atlas 800 training server, which acts as the compute node in the cluster."
+    echo "           bash check_env.sh -nt ${WORKER_NODE} -hw ${HW_TRAIN}"
     echo ""
-    echo "    示例2，本节点是通用服务器，在集群中是管理节点"
-    echo "        bash check_env.sh -nt ${MASTER_NODE} -hw ${HW_COMMON} -ip 10.10.123.123"
+    echo "Example 2: this node is a common server and a management node in the cluster."
+    echo "           bash check_env.sh -nt ${MASTER_NODE} -hw ${HW_COMMON} -ip 10.10.123.123"
     echo ""
     exit 0
 }
@@ -54,7 +58,7 @@ function help_document() {
 function check_param_nodetype() {
     if [[ "" == "${nodeType}" ]]
     then
-        echo -e "\n-nt参数不能为空!\n"
+        echo -e "\n'-nt(--nodetype)' cannot be empty!\n"
         exit 1
     fi
 
@@ -62,7 +66,7 @@ function check_param_nodetype() {
         [[ "${WORKER_NODE}" != "${nodeType}" ]] && \
         [[ "${MASTER_WORKER_NODE}" != "${nodeType}" ]]
     then
-        echo -e "\n-nt参数只能为${MASTER_NODE}, ${WORKER_NODE}, ${MASTER_WORKER_NODE}其中之一\n"
+        echo -e "\n'-nt(--nodetype)' can only be set to '${MASTER_NODE}', '${WORKER_NODE}', '${MASTER_WORKER_NODE}'.\n"
         exit 1
     fi
 }
@@ -71,7 +75,7 @@ function check_param_nodetype() {
 function check_param_hardware() {
     if [[ "" == "${hardWare}" ]]
     then
-        echo -e "\n-hw参数不能为空!\n"
+        echo -e "\n'-hw(--hardware)' cannot be empty!\n"
         exit 1
     fi
 
@@ -80,14 +84,14 @@ function check_param_hardware() {
         [[ "${HW_300T}" != "${hardWare}" ]] && \
         [[ "${HW_COMMON}" != "${hardWare}" ]]
     then
-        echo -e "\n-hw参数只能为${HW_COMMON}, ${HW_TRAIN}, ${HW_INFER}, ${HW_300T}其中之一\n"
+        echo -e "\n'-hw(--hardware)' can only be set to '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}'.\n"
         exit 1
     fi
 
     if [[ "${MASTER_NODE}" == "${nodeType}" && "${HW_COMMON}" != "${hardWare}" ]] || \
         [[ "${MASTER_NODE}" != "${nodeType}" && "${HW_COMMON}" == "${hardWare}" ]]
     then
-        echo -e "\n-hw(--hardware) ${HW_COMMON}和 -nt(--nodetype) ${MASTER_NODE}为固定搭配\n"
+        echo -e "\n'-hw(--hardware) ${HW_COMMON}' and '-nt(--nodetype) ${MASTER_NODE}' are fixed collocations\n"
         exit 1
     fi
 }
@@ -98,7 +102,7 @@ function check_param_ip() {
     if [[ ! "${host_ip}" =~ ${ip_regexp} ]] &&\
         [[ "${host_ip}" !=  "" ]]
     then
-        echo -e "\n${host_ip}不是一个有效ip地址\n"
+        echo -e "\n'${host_ip}' is not a valid IP address\n"
         exit 1
     fi
 }
@@ -121,7 +125,7 @@ function check_input_params() {
 function to_report_file() {
     print_host_info
     # 表头
-    sed -iE '/^hostname/a service*|*status*|*version*|*message code*|' "${tmp_output_file}"
+    sed -iE '/^hostname/a Service*|*Status*|*Version*|*Message Code*|' "${tmp_output_file}"
     # 表格格式化
     cat "${tmp_output_file}" | column -s "*" -t >> "${output_file}"
     # 添加行分隔符
@@ -211,7 +215,7 @@ do
         exit
         ;;
     *)
-        echo "$1不是一个有效的选项，请使用--help"
+        echo "'$1' is not a valid option, please use --help or -h."
         exit 1
         ;;
   esac
