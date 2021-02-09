@@ -17,7 +17,11 @@
 // Package controller for controller
 package controller
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 const (
 	// Key910 to get Configmap
@@ -76,10 +80,16 @@ const (
 )
 
 var (
+	// Hccl.json template version
 	JsonVersion = "v1"
 )
 
-// RankTable to hccl
+// RankTable interface to maintain properties
+type RankTable interface {
+	UnMarshalToRankTable(jsonString string) error
+}
+
+// RankTableV1 to hccl
 type RankTableV1 struct {
 	GroupList  []*Group `json:"group_list"`          // hccl group list
 	Status     string   `json:"status"`              // get hccl_json status
@@ -107,10 +117,10 @@ type Device struct {
 	DeviceIP string `json:"device_ip"` // hccl deviceid
 }
 
-// RankTable to hccl - template #1
+// RankTableV2 to hccl
 type RankTableV2 struct {
-	ServerCount string    `json:"server_count"` // hccl_json server count
 	ServerList  []*Server `json:"server_list"`  // hccl_json server list
+	ServerCount string    `json:"server_count"` // hccl_json server count
 	Status      string    `json:"status"`       // hccl_json status
 	Version     string    `json:"version"`      // hccl_json version
 }
@@ -122,9 +132,33 @@ type Server struct {
 	PodID      string      `json:"-"`         // pod id, equal to the last integer of pod name
 }
 
-// Device to hccl - template #1
+// DeviceV2 to hccl
 type DeviceV2 struct {
 	DeviceID string `json:"device_id"` // device id
 	DeviceIP string `json:"device_ip"` // device ip
 	RankID   string `json:"rank_id"`   // rank id
+}
+
+// Unmarshal json string to RankTableV1
+func (configmapDataV1 *RankTableV1) UnMarshalToRankTable(jsonString string) error {
+	err := json.Unmarshal([]byte(jsonString), &configmapDataV1)
+	if err != nil {
+		return fmt.Errorf("parse configmap data error: %v", err)
+	}
+	if configmapDataV1.Status != ConfigmapCompleted && configmapDataV1.Status != ConfigmapInitializing {
+		return fmt.Errorf("configmap status abnormal: %v", err)
+	}
+	return nil
+}
+
+// Unmarshal json string to RankTableV1
+func (configmapDataV2 *RankTableV2) UnMarshalToTankTable(jsonString string) error {
+	err := json.Unmarshal([]byte(jsonString), &configmapDataV2)
+	if err != nil {
+		return fmt.Errorf("parse configmap data error: %v", err)
+	}
+	if configmapDataV2.Status != ConfigmapCompleted && configmapDataV2.Status != ConfigmapInitializing {
+		return fmt.Errorf("configmap status abnormal: %v", err)
+	}
+	return nil
 }

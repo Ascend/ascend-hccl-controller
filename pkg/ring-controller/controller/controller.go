@@ -18,7 +18,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -362,21 +361,17 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 
 	switch JsonVersion {
 	case "v1":
-		err = json.Unmarshal([]byte(jobStartString), &configmapDataV1)
+		err = configmapDataV1.UnMarshalToRankTable(jobStartString)
 		if err != nil {
-			return fmt.Errorf("parse configmap data error: %v", err)
-		}
-		if configmapDataV1.Status != ConfigmapCompleted && configmapDataV1.Status != ConfigmapInitializing {
-			return fmt.Errorf("configmap status abnormal: %v", err)
+			return err
 		}
 	case "v2":
-		err = json.Unmarshal([]byte(jobStartString), &configmapDataV2)
+		err = configmapDataV2.UnMarshalToTankTable(jobStartString)
 		if err != nil {
-			return fmt.Errorf("parse configmap data error: %v", err)
+			return err
 		}
-		if configmapDataV2.Status != ConfigmapCompleted && configmapDataV2.Status != ConfigmapInitializing {
-			return fmt.Errorf("configmap status abnormal: %v", err)
-		}
+	default:
+		klog.Fatalf("invalid js value, should be v1/v2")
 	}
 
 	// create a business worker for current job

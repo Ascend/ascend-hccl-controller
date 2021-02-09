@@ -289,6 +289,8 @@ func (b *businessAgent) updateConfigMap(obj interface{}, pod *v1.Pod, podExist b
 	case "v2":
 		configmapComplete =
 			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV2.Status == ConfigmapCompleted
+	default:
+		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	if configmapComplete {
 		b.workqueue.Forget(obj)

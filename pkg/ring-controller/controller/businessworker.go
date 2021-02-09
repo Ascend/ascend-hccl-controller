@@ -174,6 +174,8 @@ func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCo
 			if err != nil {
 				return err
 			}
+		default:
+			klog.Fatalf("invalid json version value, should be v1/v2")
 		}
 		return nil
 	}
@@ -188,6 +190,8 @@ func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCo
 		if err != nil {
 			return err
 		}
+	default:
+		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	return nil
 }
@@ -205,6 +209,8 @@ func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
 		if err != nil {
 			return err
 		}
+	default:
+		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	return nil
 }
@@ -421,7 +427,7 @@ func (b *businessWorker) removePodInfoV2(namespace string, name string) error {
 	}
 
 	b.configmapDataV2.ServerCount = strconv.Itoa(len(b.configmapDataV2.ServerList))
-	klog.V(3).Infof("Config map data v2: %v", b.configmapDataV2)
+	klog.V(L3).Infof("start to remove data of pod %s/%s", namespace, name)
 	err := b.updateConfigmap()
 	if err != nil {
 		return err
@@ -472,6 +478,8 @@ func (b *businessWorker) updateConfigmap() error {
 		dataByteArray, err = json.Marshal(b.configmapDataV1)
 	case "v2":
 		dataByteArray, err = json.Marshal(b.configmapDataV2)
+	default:
+		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
