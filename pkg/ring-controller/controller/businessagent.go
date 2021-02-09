@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -280,7 +280,17 @@ func (b *businessAgent) convertAndCheckPod(obj interface{}, podExist bool, tmpOb
 
 func (b *businessAgent) updateConfigMap(obj interface{}, pod *v1.Pod, podExist bool,
 	podInfo *podIdentifier) (pass, isOver bool) {
-	if b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapData.Status == ConfigmapCompleted {
+	var configmapComplete bool
+
+	switch JsonVersion {
+	case "v1":
+		configmapComplete =
+			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV1.Status == ConfigmapCompleted
+	case "v2":
+		configmapComplete =
+			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV2.Status == ConfigmapCompleted
+	}
+	if configmapComplete {
 		b.workqueue.Forget(obj)
 		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
