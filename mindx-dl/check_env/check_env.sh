@@ -2,7 +2,7 @@
 
 # 配置检查项，需要检查设置为"yes"，不检查设置为"no"
 check_env_os="yes" # 检查操作系统相关内容
-check_env_runpkg="yes" # 检查驱动和固件相关内容
+check_env_driver_firmware="yes" # 检查驱动和固件相关内容
 check_env_docker="yes" # 检查docker相关内容
 check_env_k8s="yes" # 检查Kubernetes相关内容
 check_env_mindxdl="yes" # 检查MindX DL组件相关内容
@@ -140,7 +140,7 @@ function to_report_file() {
 
 function to_officia_report() {
     # 有新的检查，先删除旧的检查报告
-    if [[ "${check_env_os}${check_env_runpkg}${check_env_k8s}${check_env_docker}${check_env_mindxdl}" =~ yes ]] &&
+    if [[ "${check_env_os}${check_env_driver_firmware}${check_env_k8s}${check_env_docker}${check_env_mindxdl}" =~ yes ]] &&
         [[ -e "${tmp_output_file}" ]]
     then
         rm -f "${output_file}"
@@ -168,7 +168,7 @@ function execute_check() {
     fi
 
     # 检查驱动和固件相关内容
-    if [[ -e "${current_dir}/check_env_runpkg.sh" ]] && [[ "yes" == "${check_env_runpkg}" ]]
+    if [[ -e "${current_dir}/check_env_runpkg.sh" ]] && [[ "yes" == "${check_env_driver_firmware}" ]]
     then
         bash check_env_runpkg.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
