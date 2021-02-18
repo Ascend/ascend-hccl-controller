@@ -6,28 +6,50 @@
 
   tasks:
     - name: Change file mode
-      file:
-        path: "{{ playbook_dir }}/check_env.sh"
-        mode: 0500
+      shell:
+        cmd:
+          chmod 500 {{ playbook_dir }}/check_env*.sh
       ignore_errors: True
 
+    # 管理节点
     - name: Check MindX-DL env - master nodes
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
           dos2unix *;
-          bash check_env.sh master "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+          bash check_env.sh -nt master -hw common -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
         - ansible_hostname not in groups["workers"]
 
-    - name: Check MindX-DL env - master-worker nodes
+    # 既是管理节点又是训练节点
+    - name: Check MindX-DL env - master-worker nodes(train)
       shell:
         chdir: "{{ playbook_dir }}"
         cmd:
           dos2unix *;
-          bash check_env.sh master-worker "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+          bash check_env.sh -nt master-worker -hw train -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
-        - ansible_hostname in groups["workers"]
+        - ansible_hostname in groups["training_node"]
+
+    # 既是管理节点又是推理节点
+    - name: Check MindX-DL env - master-worker nodes(infer)
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          dos2unix *;
+          bash check_env.sh -nt master-worker -hw infer -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+      when:
+        - ansible_hostname in groups["inference_node"]
+
+    # 既是管理节点又是300T节点
+    - name: Check MindX-DL env - master-worker nodes(300T)
+      shell:
+        chdir: "{{ playbook_dir }}"
+        cmd:
+          dos2unix *;
+          bash check_env.sh -nt master-worker -hw 300T -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+      when:
+        - ansible_hostname in groups["A300T_node"]
 
     - name: Set reports dir facts
       add_host:
@@ -63,7 +85,7 @@
 - hosts: workers
   remote_user: root
   vars:
-    tmp_dir: "/tmp"
+    tmp_dir: "/tmp/check_env"
 
   tasks:
     - name: Granting Permissions to the Worker Node
@@ -76,22 +98,63 @@
       when:
         - ansible_default_ipv4['address'] != master_ip
 
-    - name: Copy check_env.sh to workers
+    - name: Remove old directory
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
+      ignore_errors: True
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+    - name: Create check directory
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+      ignore_errors: True
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+
+
+    - name: Copy check file to workers
       copy:
-        src: "{{ playbook_dir }}/check_env.sh"
-        dest: "{{ tmp_dir }}/check_env.sh"
+        src: "{{ playbook_dir }}/"
+        dest: "{{ tmp_dir }}"
         mode: 0500
       when:
         - ansible_default_ipv4['address'] != master_ip
 
-    - name: Check MindX-DL env - worker nodes
+    # 训练节点
+    - name: Check MindX-DL env - worker nodes(train)
       shell:
         chdir: "{{ tmp_dir }}"
         cmd:
           unset KUBECONFIG;
-          bash check_env.sh worker "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+          bash check_env.sh -nt worker -hw train -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
       when:
         - ansible_default_ipv4['address'] != master_ip
+        - ansible_hostname in groups["training_node"]
+
+    # 推理节点
+    - name: Check MindX-DL env - worker nodes(infer)
+      shell:
+        chdir: "{{ tmp_dir }}"
+        cmd:
+          unset KUBECONFIG;
+          bash check_env.sh -nt worker -hw infer -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+        - ansible_hostname in groups["inference_node"]
+
+    # 300T节点
+    - name: Check MindX-DL env - worker nodes(300T)
+      shell:
+        chdir: "{{ tmp_dir }}"
+        cmd:
+          unset KUBECONFIG;
+          bash check_env.sh -nt worker -hw 300T -ip "{{ ansible_default_ipv4['address'] }}" >> /dev/null 2>&1
+      when:
+        - ansible_default_ipv4['address'] != master_ip
+        - ansible_hostname in groups["A300T_node"]
 
     - name: Revoking Permissions on a Worker Node
       shell:
@@ -125,9 +188,7 @@
     - name: Remove temporary file on workers
       shell:
         cmd:
-          rm -rf {{ tmp_dir }}/check_env.sh;
-          rm -rf {{ tmp_dir }}/env_check_report.txt;
-          rm -rf {{ tmp_dir }}/env_check_report_{{ ansible_default_ipv4['address'] }}.txt;
+          rm -rf {{ tmp_dir }}
       ignore_errors: True
       when:
         - ansible_default_ipv4['address'] != master_ip
