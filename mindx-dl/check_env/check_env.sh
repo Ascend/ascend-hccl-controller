@@ -162,31 +162,31 @@ function execute_check() {
      rm -f "${tmp_output_file}E"
 
     # 检查操作系统相关内容
-    if [[ -e "${current_dir}/check_env_os.sh" ]] && [[ "yes" == "${check_env_os}" ]]
+    if [[ "yes" == "${check_env_os}" ]] && [[ -e "${current_dir}/check_env_os.sh" ]]
     then
         bash check_env_os.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
 
     # 检查驱动和固件相关内容
-    if [[ -e "${current_dir}/check_env_runpkg.sh" ]] && [[ "yes" == "${check_env_driver_firmware}" ]]
+    if [[ "yes" == "${check_env_driver_firmware}" ]] && [[ -e "${current_dir}/check_env_runpkg.sh" ]]
     then
         bash check_env_runpkg.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
 
     # 检查docker相关内容
-    if [[ -e "${current_dir}/check_env_docker.sh" ]] && [[ "yes" == "${check_env_docker}" ]]
+    if [[ "yes" == "${check_env_docker}" ]] && [[ -e "${current_dir}/check_env_docker.sh" ]]
     then
         bash check_env_docker.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
 
     # 检查Kubernetes相关内容
-    if [[ -e "${current_dir}/check_env_k8s.sh" ]] && [[ "yes" == "${check_env_k8s}" ]]
+    if [[ "yes" == "${check_env_k8s}" ]] && [[ -e "${current_dir}/check_env_k8s.sh" ]]
     then
         bash check_env_k8s.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
 
     # 检查MindX DL组件相关内容
-    if [[ -e "${current_dir}/check_env_mindxdl.sh" ]] && [[ "yes" == "${check_env_mindxdl}" ]]
+    if [[ "yes" == "${check_env_mindxdl}" ]] && [[ -e "${current_dir}/check_env_mindxdl.sh" ]]
     then
         bash check_env_mindxdl.sh "$nodeType" "$hardWare" "$host_ip" "${tmp_output_file}" >/dev/null 2>&1
     fi
