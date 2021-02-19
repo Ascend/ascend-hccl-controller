@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 // WorkAgentInterface businesswork interface
 type WorkAgentInterface interface {
 	CheckConfigmapCreation(job *v1alpha1.Job) (*v1.ConfigMap, error)
-	CreateBusinessWorker(job *v1alpha1.Job) error
+	CreateBusinessWorker(job *v1alpha1.Job, ranktable RankTable, replicasTotal int32) error
 	DeleteBusinessWorker(namespace string, name string) error
 	IsBusinessWorkerExist(namespace string, name string) bool
 }
