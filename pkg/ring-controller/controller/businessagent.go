@@ -280,22 +280,14 @@ func (b *businessAgent) convertAndCheckPod(obj interface{}, podExist bool, tmpOb
 
 func (b *businessAgent) updateConfigMap(obj interface{}, pod *v1.Pod, podExist bool,
 	podInfo *podIdentifier) (pass, isOver bool) {
-	var configmapComplete bool
-
-	switch JsonVersion {
-	case "v1":
-		configmapComplete =
-			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV1.Status == ConfigmapCompleted
-	case "v2":
-		configmapComplete =
-			b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapDataV2.Status == ConfigmapCompleted
-	}
-	if configmapComplete {
+	if configmapComplete :=
+		b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].configmapData.getStatus() == ConfigmapCompleted; configmapComplete {
 		b.workqueue.Forget(obj)
 		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return false, true
 	}
+
 	// start to sync current pod
 	if err := b.businessWorker[podInfo.namespace+"/"+podInfo.jobName].syncHandler(pod, podExist, podInfo); err != nil {
 		b.workqueue.Forget(obj)
@@ -426,13 +418,35 @@ func (b *businessAgent) CheckConfigmapCreation(job *v1alpha1.Job) (*v1.ConfigMap
 	return cm, nil
 }
 
+// Make a new business worker
+func (b *businessAgent) MakeBusinessWorker(job *v1alpha1.Job, r RankTable, replicasTotal int32) *businessWorker {
+	businessWorker := &businessWorker{
+		kubeclientset:        b.kubeClientSet,
+		podsIndexer:          b.podsIndexer,
+		recorder:             b.recorder,
+		dryRun:               b.dryRun,
+		statisticSwitch:      make(chan struct{}),
+		jobUID:               string(job.UID),
+		jobVersion:           job.Status.Version,
+		jobCreationTimestamp: job.CreationTimestamp,
+		jobNamespace:         job.Namespace,
+		jobName:              job.Name,
+		configmapName:        fmt.Sprintf("%s-%s", ConfigmapPrefix, job.Name),
+		configmapData:        r,
+		statisticStopped:     false,
+		cachedPodNum:         0,
+		taskReplicasTotal:    replicasTotal,
+	}
+
+	return businessWorker
+}
+
 // CreateBusinessWorker create worker
-func (b *businessAgent) CreateBusinessWorker(job *v1alpha1.Job) error {
+func (b *businessAgent) CreateBusinessWorker(job *v1alpha1.Job, ranktable RankTable, replicasTotal int32) error {
 	b.rwMu.Lock()
 	defer b.rwMu.Unlock()
 
 	klog.V(L2).Infof("create business worker for %s/%s", job.Namespace, job.Name)
-
 	_, exist := b.businessWorker[job.Namespace+"/"+job.Name]
 	if exist {
 		klog.V(L2).Infof("business worker for %s/%s is already existed", job.Namespace, job.Name)
@@ -440,7 +454,7 @@ func (b *businessAgent) CreateBusinessWorker(job *v1alpha1.Job) error {
 	}
 
 	// initialize business worker for current job
-	businessWorker := newBusinessWorker(b.kubeClientSet, b.podsIndexer, b.recorder, b.dryRun, job)
+	businessWorker := b.MakeBusinessWorker(job, ranktable, replicasTotal)
 
 	// start to report rank table build statistic for current job
 	if b.displayStatistic {
@@ -449,7 +463,6 @@ func (b *businessAgent) CreateBusinessWorker(job *v1alpha1.Job) error {
 
 	// save current business worker
 	b.businessWorker[job.Namespace+"/"+job.Name] = businessWorker
-
 	klog.V(L2).Infof("create business worker for %s/%s success, %d pods need to be cached",
 		job.Namespace, job.Name, b.businessWorker[job.Namespace+"/"+job.Name].taskReplicasTotal)
 

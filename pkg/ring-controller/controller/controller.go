@@ -18,12 +18,12 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
@@ -360,27 +361,30 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	jobStartString := cm.Data[ConfigmapKey]
 	klog.V(L4).Info("jobstarting==>", jobStartString)
 
-	switch JsonVersion {
-	case "v1":
-		err = json.Unmarshal([]byte(jobStartString), &configmapDataV1)
-		if err != nil {
-			return fmt.Errorf("parse configmap data error: %v", err)
-		}
-		if configmapDataV1.Status != ConfigmapCompleted && configmapDataV1.Status != ConfigmapInitializing {
-			return fmt.Errorf("configmap status abnormal: %v", err)
-		}
-	case "v2":
-		err = json.Unmarshal([]byte(jobStartString), &configmapDataV2)
-		if err != nil {
-			return fmt.Errorf("parse configmap data error: %v", err)
-		}
-		if configmapDataV2.Status != ConfigmapCompleted && configmapDataV2.Status != ConfigmapInitializing {
-			return fmt.Errorf("configmap status abnormal: %v", err)
-		}
+	var ranktable RankTable
+	groupList, replicasTotal, err := generateGrouplist(job)
+	if err != nil {
+		return fmt.Errorf("generate group list from job error: %v", err)
 	}
 
+	if JSONVersion == "v1" {
+		err = configmapDataV1.unmarshalToRankTable(jobStartString)
+		if err != nil {
+			return err
+		}
+		ranktable = &RankTableV1{RankTableStatus: RankTableStatus{ConfigmapInitializing}, GroupCount: strconv.Itoa(len(job.Spec.Tasks)),
+			GroupList: groupList}
+	} else {
+		err = configmapDataV2.unmarshalToRankTable(jobStartString)
+		if err != nil {
+			return err
+		}
+		var serverList []*Server
+		ranktable = &RankTableV2{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
+			RankTableStatus: RankTableStatus{ConfigmapInitializing}, Version: "1.0"}
+	}
 	// create a business worker for current job
-	err = c.workAgentInterface.CreateBusinessWorker(job)
+	err = c.workAgentInterface.CreateBusinessWorker(job, ranktable, replicasTotal)
 	if err != nil {
 		return err
 	}
@@ -404,4 +408,28 @@ func startPerformanceMonitorServer() {
 	if error != nil {
 		klog.Error(error)
 	}
+}
+
+func generateGrouplist(job *v1alpha1.Job) ([]*Group, int32, error) {
+	var replicasTotal int32
+	var groupList []*Group
+	for _, taskSpec := range job.Spec.Tasks {
+		var deviceTotal int32
+
+		for _, container := range taskSpec.Template.Spec.Containers {
+			quantity, exist := container.Resources.Limits[ResourceName]
+			quantityValue := int32(quantity.Value())
+			if exist && quantityValue > 0 {
+				deviceTotal += quantityValue
+			}
+		}
+		deviceTotal *= taskSpec.Replicas
+
+		var instanceList []*Instance
+		group := Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
+			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
+		groupList = append(groupList, &group)
+		replicasTotal += taskSpec.Replicas
+	}
+	return groupList, replicasTotal, nil
 }

@@ -25,7 +25,7 @@ import (
 // WorkAgentInterface businesswork interface
 type WorkAgentInterface interface {
 	CheckConfigmapCreation(job *v1alpha1.Job) (*v1.ConfigMap, error)
-	CreateBusinessWorker(job *v1alpha1.Job) error
+	CreateBusinessWorker(job *v1alpha1.Job, ranktable RankTable, replicasTotal int32) error
 	DeleteBusinessWorker(namespace string, name string) error
 	IsBusinessWorkerExist(namespace string, name string) bool
 }
