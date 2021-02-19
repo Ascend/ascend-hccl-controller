@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
@@ -355,20 +356,34 @@ func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
 	}
 
 	// retrieve configmap data
-	var configmapData RankTable
+	var configmapDataV1 RankTableV1
+	var configmapDataV2 RankTableV2
 	jobStartString := cm.Data[ConfigmapKey]
-	//
 	klog.V(L4).Info("jobstarting==>", jobStartString)
-	err = json.Unmarshal([]byte(jobStartString), &configmapData)
+
+	var ranktable RankTable
+	groupList, replicasTotal, err := generateGrouplist(job)
 	if err != nil {
-		return fmt.Errorf("parse configmap data error: %v", err)
-	}
-	if configmapData.Status != ConfigmapCompleted && configmapData.Status != ConfigmapInitializing {
-		return fmt.Errorf("configmap status abnormal: %v", err)
+		return fmt.Errorf("generate group list from job error: %v", err)
 	}
 
-	// create a business worker for current job
-	err = c.workAgentInterface.CreateBusinessWorker(job)
+	if JSONVersion == "v1" {
+		err = configmapDataV1.unmarshalToRankTable(jobStartString)
+		if err != nil {
+			return err
+		}
+		ranktable = &RankTableV1{RankTableStatus: RankTableStatus{ConfigmapInitializing},
+			GroupCount: strconv.Itoa(len(job.Spec.Tasks)), GroupList: groupList}
+	} else {
+		err = configmapDataV2.unmarshalToRankTable(jobStartString)
+		if err != nil {
+			return err
+		}
+		var serverList []*Server
+		ranktable = &RankTableV2{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
+			RankTableStatus: RankTableStatus{ConfigmapInitializing}, Version: "1.0"}
+	}
+	err = c.workAgentInterface.CreateBusinessWorker(job, ranktable, replicasTotal)
 	if err != nil {
 		return err
 	}
@@ -392,4 +407,30 @@ func startPerformanceMonitorServer() {
 	if error != nil {
 		klog.Error(error)
 	}
+}
+
+func generateGrouplist(job *v1alpha1.Job) ([]*Group, int32, error) {
+	var replicasTotal int32
+	var groupList []*Group
+	for _, taskSpec := range job.Spec.Tasks {
+		var deviceTotal int32
+
+		for _, container := range taskSpec.Template.Spec.Containers {
+			quantity, exist := container.Resources.Limits[ResourceName]
+			if !exist {
+				continue
+			}
+			if quantityValue := int32(quantity.Value()); quantityValue > 0 {
+				deviceTotal += quantityValue
+			}
+		}
+		deviceTotal *= taskSpec.Replicas
+
+		var instanceList []*Instance
+		group := Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
+			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
+		groupList = append(groupList, &group)
+		replicasTotal += taskSpec.Replicas
+	}
+	return groupList, replicasTotal, nil
 }

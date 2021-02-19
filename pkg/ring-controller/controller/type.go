@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 // Package controller for controller
 package controller
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	// Key910 to get Configmap
@@ -75,30 +77,7 @@ const (
 	oneMinitue       = 60
 )
 
-// RankTable to hccl
-type RankTable struct {
-	GroupList  []*Group `json:"group_list"`          // hccl group list
-	Status     string   `json:"status"`              // get hccl_json status
-	GroupCount string   `json:"group_count, string"` // hccl_json grouoCount
-}
-
-// Group to hccl
-type Group struct {
-	InstanceList  []*Instance `json:"instance_list"`          // hccl InstaceList
-	GroupName     string      `json:"group_name"`             // hccl GroupName
-	DeviceCount   string      `json:"device_count, string"`   // hccl Devicecount
-	InstanceCount string      `json:"instance_count, string"` // hccl Instance Count
-}
-
-// Instance to hccl
-type Instance struct {
-	Devices  []Device `json:"devices"`   // hccl Deviceid
-	PodName  string   `json:"pod_name"`  // hccl PodName
-	ServerID string   `json:"server_id"` // hccl servceId
-}
-
-// Device to hccl
-type Device struct {
-	DeviceID string `json:"device_id"` // hccl deviceId
-	DeviceIP string `json:"device_ip"` // hccl deviceid
-}
+var (
+	// JSONVersion of hccl.json
+	JSONVersion = "v2"
+)

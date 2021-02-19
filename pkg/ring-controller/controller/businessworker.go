@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,12 @@ import (
 	"sync"
 	"time"
 
-	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
-
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
-	"strconv"
 )
 
 // controller for each volcano job, list/watch corresponding pods and build configmap (rank table)
@@ -61,51 +58,6 @@ type businessWorker struct {
 	statisticStopped  bool
 	cachedPodNum      int32
 	taskReplicasTotal int32
-}
-
-func newBusinessWorker(kubeclientset kubernetes.Interface, podsIndexer cache.Indexer, recorder record.EventRecorder,
-	dryRun bool, job *v1alpha1.Job) *businessWorker {
-	var replicasTotal int32
-	var groupList []*Group
-
-	for _, taskSpec := range job.Spec.Tasks {
-		var deviceTotal int32
-		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[ResourceName]
-			quantityValue := int32(quantity.Value())
-			if exist && quantityValue > 0 {
-				deviceTotal += quantityValue
-			}
-		}
-		deviceTotal *= taskSpec.Replicas
-
-		var instanceList []*Instance
-		group := Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
-			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
-		groupList = append(groupList, &group)
-		replicasTotal += taskSpec.Replicas
-	}
-
-	businessWorker := &businessWorker{
-		kubeclientset:        kubeclientset,
-		podsIndexer:          podsIndexer,
-		recorder:             recorder,
-		dryRun:               dryRun,
-		statisticSwitch:      make(chan struct{}),
-		jobUID:               string(job.UID),
-		jobVersion:           job.Status.Version,
-		jobCreationTimestamp: job.CreationTimestamp,
-		jobNamespace:         job.Namespace,
-		jobName:              job.Name,
-		configmapName:        fmt.Sprintf("%s-%s", ConfigmapPrefix, job.Name),
-		configmapData: RankTable{Status: ConfigmapInitializing, GroupCount: strconv.Itoa(len(job.Spec.Tasks)),
-			GroupList: groupList},
-		statisticStopped:  false,
-		cachedPodNum:      0,
-		taskReplicasTotal: replicasTotal,
-	}
-
-	return businessWorker
 }
 
 func (b *businessWorker) tableConstructionFinished() bool {
@@ -150,17 +102,6 @@ func (b *businessWorker) syncHandler(pod *apiCoreV1.Pod, podExist bool, podInfo 
 	return nil
 }
 
-func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
-	if !b.dryRun {
-		err := b.removePodInfo(podInfo.namespace, podInfo.name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	klog.V(L3).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
@@ -168,87 +109,43 @@ func (b *businessWorker) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCo
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	klog.V(L3).Info("deviceId =>", deviceInfo)
 	klog.V(L4).Info("isExist ==>", exist)
-	if exist {
-		err := b.cachePodInfo(pod, deviceInfo)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	err := b.cacheZeroChipPodInfo(pod)
+
+	b.cmMu.Lock()
+	defer b.cmMu.Unlock()
+
+	err := b.configmapData.cachePodInfo(pod, deviceInfo)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cachePodInfo(pod *apiCoreV1.Pod, deviceInfo string) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-
-	for _, group := range b.configmapData.GroupList {
-		if group.GroupName != pod.Annotations[PodGroupKey] {
-			return nil
-		}
-		// check if current pod's info is already cached
-		for _, instance := range group.InstanceList {
-			if instance.PodName == pod.Name {
-				klog.V(L3).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-					pod.Name)
-				return nil
-			}
-		}
-		// if pod use D chip, cache its info
-		var instance Instance
-		klog.V(L3).Infof("devicedInfo  from pod => %v", deviceInfo)
-		err := json.Unmarshal([]byte(deviceInfo), &instance)
-		klog.V(L3).Infof("instace  from pod => %v", instance)
-		if err != nil {
-			return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-		}
-		group.InstanceList = append(group.InstanceList, &instance)
-		b.modifyStatistics(1)
-
-		// update configmap if finishing caching all pods' info
-		if b.tableConstructionFinished() {
-			if err := b.endRankTableConstruction(); err != nil {
-				return err
-			}
-		}
-		break
+	b.modifyStatistics(1)
+	// update configmap if finishing caching all pods' info
+	errs := updateWithFinish(b)
+	if errs != nil {
+		return errs
 	}
 
 	return nil
 }
 
-// when pod is added, cache current pod info, check if all pods are cached, if true, update configmap
-func (b *businessWorker) cacheZeroChipPodInfo(pod *apiCoreV1.Pod) error {
+func (b *businessWorker) handleDeleteEvent(podInfo *podIdentifier) error {
+	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
+
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 
-	for _, group := range b.configmapData.GroupList {
-		// find pod's belonging task
-		if group.GroupName == pod.Annotations[PodGroupKey] {
-			// check if current pod's info is already cached
-			done := checkPodCache(group, pod)
-			if done {
-				return nil
-			}
-			// if pod use D chip, cache its info
-			var deviceList []Device
-			instance := Instance{PodName: pod.Name, ServerID: "", Devices: deviceList}
-			group.InstanceList = append(group.InstanceList, &instance)
-			b.modifyStatistics(1)
-
-			// update configmap if finishing caching all pods' info
-			errs := updateWithFinish(b)
-			if errs != nil {
-				return errs
-			}
-			break
-		}
+	err := b.configmapData.removePodInfo(podInfo.namespace, podInfo.name)
+	if err != nil {
+		return err
 	}
+
+	klog.V(L3).Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
+	err = b.updateConfigmap()
+	if err != nil {
+		return err
+	}
+	b.modifyStatistics(-1)
+	klog.V(L3).Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
 
 	return nil
 }
@@ -273,46 +170,13 @@ func checkPodCache(group *Group, pod *apiCoreV1.Pod) bool {
 	return false
 }
 
-// when pod is deleted, remove pod info from cache, and change configmap's status accordingly
-func (b *businessWorker) removePodInfo(namespace string, name string) error {
-	b.cmMu.Lock()
-	defer b.cmMu.Unlock()
-	hasInfoToRemove := false
-
-	for _, group := range b.configmapData.GroupList {
-		for idx, instance := range group.InstanceList {
-			// current pod's info is already cached, start to remove
-			if instance.PodName == name {
-				length := len(group.InstanceList)
-				group.InstanceList[idx] = group.InstanceList[length-1]
-				group.InstanceList = group.InstanceList[:length-1]
-				hasInfoToRemove = true
-				break
-			}
-		}
-		if hasInfoToRemove {
-			break
-		}
-	}
-	if !hasInfoToRemove {
-		klog.V(L3).Infof("no data of pod %s/%s can be removed", namespace, name)
-		return nil
-	}
-
-	klog.V(L3).Infof("start to remove data of pod %s/%s", namespace, name)
-	err := b.updateConfigmap()
+func (b *businessWorker) endRankTableConstruction() error {
+	err := b.configmapData.setStatus(ConfigmapCompleted)
 	if err != nil {
+		klog.Error("fail to set configmap status: %v", err)
 		return err
 	}
-	b.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", namespace, name)
-
-	return nil
-}
-
-func (b *businessWorker) endRankTableConstruction() error {
-	b.configmapData.Status = ConfigmapCompleted
-	err := b.updateConfigmap()
+	err = b.updateConfigmap()
 	if err != nil {
 		klog.Error("update configmap failed")
 		return err
@@ -346,7 +210,6 @@ func (b *businessWorker) updateConfigmap() error {
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
 	}
-
 	cm.Data[ConfigmapKey] = string(dataByteArray[:])
 
 	if _, err := b.kubeclientset.CoreV1().ConfigMaps(b.jobNamespace).Update(cm); err != nil {
