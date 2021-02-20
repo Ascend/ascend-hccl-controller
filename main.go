@@ -20,20 +20,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 	"os"
 	"path/filepath"
 	"time"
 
 	"hccl-controller/pkg/resource-controller/signals"
 	"hccl-controller/pkg/ring-controller/controller"
-	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
+	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
+	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
 )
 
 const (
@@ -53,8 +56,6 @@ var (
 	cmCheckTimeout     int
 	version            bool
 	jsonVersion        string
-	// BuildName build name
-	BuildName string
 	// BuildVersion  build version
 	BuildVersion string
 )
@@ -83,7 +84,7 @@ func main() {
 	if jsonVersion != "v1" && jsonVersion != "v2" {
 		klog.Fatalf("invalid json version value, should be v1/v2")
 	}
-	controller.JSONVersion = jsonVersion
+	agent.JSONVersion = jsonVersion
 
 	if version {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
@@ -111,27 +112,44 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Error building job clientset: %s", err.Error())
 	}
+	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
+	config := newConfig()
+	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
+	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
+	cacheIndexer := make(map[string]cache.Indexer, 1)
+	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
+	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
+	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
+		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
+	go jobInformerFactory.Start(stopCh)
+	go deploymentFactory.Start(stopCh)
+	if err = control.Run(jobParallelism, monitorPerformance, stopCh); err != nil {
+		klog.Fatalf("Error running controller: %s", err.Error())
+	}
+}
 
-	labelSelector := labels.Set(map[string]string{controller.Key910: controller.Val910}).AsSelector().String()
-	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(jobClient, time.Second*30,
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = labelSelector
-		}))
-	config := &controller.Config{
+func newConfig() *agent.Config {
+	return &agent.Config{
 		DryRun:           dryRun,
 		DisplayStatistic: displayStatistic,
 		PodParallelism:   podParallelism,
 		CmCheckInterval:  cmCheckInterval,
 		CmCheckTimeout:   cmCheckTimeout,
 	}
-	controller := controller.NewController(kubeClient, jobClient, config,
-		jobInformerFactory.Batch().V1alpha1().Jobs(), stopCh)
+}
 
-	go jobInformerFactory.Start(stopCh)
-
-	if err = controller.Run(jobParallelism, monitorPerformance, stopCh); err != nil {
-		klog.Fatalf("Error running controller: %s", err.Error())
-	}
+func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
+	informers.SharedInformerFactory, cinformers.SharedInformerFactory) {
+	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
+	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(jobClient, time.Second*30,
+		informers.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = labelSelector
+		}))
+	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30,
+		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = labelSelector
+		}))
+	return jobInformerFactory, deploymentFactory
 }
 
 func init() {
@@ -159,7 +177,7 @@ func init() {
 		"Parallelism of pod events handling.")
 	flag.IntVar(&cmCheckInterval, "cmCheckInterval", cmCheckIntervalConst,
 		"Interval (seconds) to check job's configmap before building rank table.")
-	flag.IntVar(&cmCheckTimeout, "ceckTimeout", cmCheckTimeoutConst,
+	flag.IntVar(&cmCheckTimeout, "cmCheckTimeout", cmCheckTimeoutConst,
 		"Maximum time (seconds) to check creation of job's configmap.")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")

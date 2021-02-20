@@ -22,6 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prashantv/gostub"
 	"github.com/stretchr/testify/assert"
+	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/controller/mock_cache"
 	"hccl-controller/pkg/ring-controller/controller/mock_controller"
 	"hccl-controller/pkg/ring-controller/controller/mock_kubernetes"
@@ -102,7 +103,7 @@ func TestController_createBusinessWorker(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAgent.EXPECT().CheckConfigmapCreation(gomock.Any()).Return(tt.configMap, nil)
 			c := &Controller{
-				workAgentInterface: mockAgent,
+				agent: mockAgent,
 			}
 			if err := c.createBusinessWorker(&v1alpha1.Job{}); (err != nil) != tt.wantErr {
 				t.Errorf("createBusinessWorker() error = %v, wantErr %v", err, tt.wantErr)
@@ -118,7 +119,7 @@ func TestController_syncHandler(t *testing.T) {
 	mockAgent.EXPECT().CreateBusinessWorker(gomock.Any()).Return(nil).Times(three)
 	mockAgent.EXPECT().CheckConfigmapCreation(gomock.Any()).Return(mockConfigMap(), nil).Times(three)
 	mockIndexr := mock_cache.NewMockIndexer(ctrl)
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(mockJob(), true, nil).Times(four)
+	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(agent.mockJob(), true, nil).Times(four)
 	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(nil, false, fmt.Errorf("mock error"))
 	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(nil, false, nil) // no pod existed
 
@@ -134,9 +135,9 @@ func TestController_syncHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Controller{
-				workAgentInterface: mockAgent,
-				jobsIndexer:        mockIndexr,
-				businessAgent:      createAgent(true),
+				agent:         mockAgent,
+				jobsIndexer:   mockIndexr,
+				businessAgent: agent.createAgent(true),
 			}
 			if err := c.syncHandler(tt.key); (err != nil) != tt.wantErr {
 				t.Errorf("syncHandler() error = %v, wantErr %v", err, tt.wantErr)
@@ -188,7 +189,7 @@ func TestNewController(t *testing.T) {
 	mockShared.EXPECT().AddEventHandler(gomock.Any()).Return()
 	mockShared.EXPECT().GetIndexer().Return(nil)
 	mockInformer.EXPECT().Informer().Return(mockShared).Times(three)
-	stub := gostub.StubFunc(&newBusinessAgent, createAgentForController(false), nil)
+	stub := gostub.StubFunc(&agent.newBusinessAgent, agent.createAgentForController(false), nil)
 	defer stub.Reset()
 	tests := []struct {
 		want *Controller
@@ -197,7 +198,7 @@ func TestNewController(t *testing.T) {
 		{
 			name: "normal situation,return controller instance",
 			want: &Controller{
-				businessAgent: createAgentForController(false),
+				businessAgent: agent.createAgentForController(false),
 			},
 		},
 	}
@@ -210,7 +211,7 @@ func TestNewController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewController(mockK8s, nil, config, mockInformer, make(chan struct{}))
+			got := NewController(mockK8s, nil, config, mockInformer, nil, make(chan struct{}))
 			if !reflect.DeepEqual(got.businessAgent, tt.want.businessAgent) {
 				t.Errorf("NewController() = %v, want %v", got, tt.want)
 			}
@@ -248,11 +249,11 @@ func TestController_Run(t *testing.T) {
 				jobsSynced: func() bool {
 					return true
 				},
-				jobsIndexer:        nil,
-				businessAgent:      createAgent(false),
-				workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-				recorder:           nil,
-				workAgentInterface: createAgent(false),
+				jobsIndexer:   nil,
+				businessAgent: agent.createAgent(false),
+				workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
+				recorder:      nil,
+				agent:         agent.createAgent(false),
 			}
 			go func() {
 				time.Sleep(1 * time.Second)
@@ -274,7 +275,7 @@ func TestController_enqueueJob(t *testing.T) {
 	}{
 		{
 			name:      "test1: Jod be added to queue",
-			obj:       mockJob(),
+			obj:       agent.mockJob(),
 			eventType: "add",
 		},
 	}
@@ -291,14 +292,14 @@ func TestController_enqueueJob(t *testing.T) {
 
 func mockController() *Controller {
 	return &Controller{
-		kubeclientset:      nil,
-		jobclientset:       nil,
-		jobsSynced:         nil,
-		jobsIndexer:        nil,
-		businessAgent:      createAgent(false),
-		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-		recorder:           nil,
-		workAgentInterface: createAgent(false),
+		kubeclientset: nil,
+		jobclientset:  nil,
+		jobsSynced:    nil,
+		jobsIndexer:   nil,
+		businessAgent: agent.createAgent(false),
+		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
+		recorder:      nil,
+		agent:         agent.createAgent(false),
 	}
 }
 
@@ -306,7 +307,7 @@ func mockController() *Controller {
 func TestController_processNextWorkItem(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockIndexr := mock_cache.NewMockIndexer(ctrl)
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(mockJob(), true, nil).Times(four)
+	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(agent.mockJob(), true, nil).Times(four)
 	var controllers []*Controller
 	contrl := mockController()
 	contrl.workqueue.AddRateLimited("vcjob/testpod/delete")
