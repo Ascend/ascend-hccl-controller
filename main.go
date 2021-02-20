@@ -1,5 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ var (
 	cmCheckInterval    int
 	cmCheckTimeout     int
 	version            bool
+	jsonVersion        string
 	// BuildName build name
 	BuildName string
 	// BuildVersion  build version
@@ -79,6 +80,10 @@ func main() {
 	if !validate(&kubeconfig) {
 		klog.Fatalf("file not in security directory")
 	}
+	if jsonVersion != "v1" && jsonVersion != "v2" {
+		klog.Fatalf("invalid json version value, should be v1/v2")
+	}
+	controller.JSONVersion = jsonVersion
 
 	if version {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
@@ -158,5 +163,6 @@ func init() {
 		"Maximum time (seconds) to check creation of job's configmap.")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")
-
+	flag.StringVar(&jsonVersion, "json", "v2",
+		"Select version of hccl json file (v1/v2).")
 }
