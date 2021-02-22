@@ -193,6 +193,7 @@ function check_service_cgroup() {
 }
 
 function do_check() {
+    write_category "k8s-related"
     check_kubelet_service
     check_kubeadm_service
     check_kubectl_service

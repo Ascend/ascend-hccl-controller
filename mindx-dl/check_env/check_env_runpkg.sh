@@ -111,7 +111,7 @@ function check_device_ip() {
     device_ips="$(cat /etc/hccn.conf | grep 'address' \
                                      | sort \
                                      | sed 's/address/device/g' \
-                                     | sed 's/^/ *|*/g' \
+                                     | sed 's/^/ *|* *|*/g' \
                                      | sed 's/$/*|* *|* *|/g')"
     if [[ "" == "${device_ips}" ]]
     then
@@ -128,7 +128,7 @@ function check_device_ip() {
         fi
     fi
 
-    local content_ips="device_ip configure info*|* *|* *|*${ips_message_code}*|\n${device_ips}"
+    local content_ips=" *|*device_ip configure info*|* *|* *|*${ips_message_code}*|\n${device_ips}"
     write_multiline_to_file "${tmp_output_file}" "${content_ips}"
     write_single_line_to_file "${tmp_output_file}" "duplicate device_ip" "${duplicate_line}" "" "${duplicate_message_code}"
 }
@@ -160,12 +160,12 @@ function check_device_link() {
                 then
                     status_message_code="${WARNING_DEVICE_LINK_DOWN_CODE}"
                 fi
-                link_content="${link_content}\n *|*device_${i}: ${link_status}*|* *|*${status_message_code}*|"
+                link_content="${link_content}\n *|* *|*device_${i}: ${link_status}*|* *|*${status_message_code}*|"
             done
         fi
     fi
 
-    local content="device link status*|* *|* *|*${link_message_code}*|${link_content}"
+    local content=" *|*device link status*|* *|* *|*${link_message_code}*|${link_content}"
     write_multiline_to_file "${tmp_output_file}" "${content}"
 }
 
@@ -189,17 +189,17 @@ function check_device_packages() {
                 if [[ "" == "${pkg_data}}" ]]
                 then
                     pkg_data_message_code="${INFO_DEVICE_PKG_EMPTY_CODE}"
-                    pkg_content="${pkg_content}\n *|*device_${i}: *|* *|*${pkg_data_message_code}*|"
+                    pkg_content="${pkg_content}\n *|* *|*device_${i}: *|* *|*${pkg_data_message_code}*|"
                 else
-                    pkg_data="$(echo "${pkg_data}" | sed 's/^/ *|*/g' | sed 's/$/*|* *|* *|/g')"
-                    pkg_content="${pkg_content}\n *|*device_${i}:*|* *|* *|\n${pkg_data}"
-                    pkg_content="${pkg_content}\n *|* *|* *|* *|"
+                    pkg_data="$(echo "${pkg_data}" | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|* *|/g')"
+                    pkg_content="${pkg_content}\n *|* *|*device_${i}:*|* *|* *|\n${pkg_data}"
+                    pkg_content="${pkg_content}\n *|* *|* *|* *|* *|"
                 fi
             done
         fi
     fi
 
-    local content="statistics of device's packages*|* *|* *|*${pkg_message_code}*|${pkg_content}"
+    local content=" *|*statistics of device's packages*|* *|* *|*${pkg_message_code}*|${pkg_content}"
     write_multiline_to_file "${tmp_output_file}" "${content}"
 }
 
@@ -225,6 +225,7 @@ function check_firmware() {
 }
 
 function do_check() {
+    write_category "drive/firmware-related"
     check_upgrade_tool
     check_firmware
     check_driver_version

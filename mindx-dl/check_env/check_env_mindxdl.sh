@@ -145,9 +145,9 @@ function check_service_by_name() {
                   write_single_line_to_file "${tmp_output_file}" "${service_name}" "${service_status}" "${service_image}" "${service_message_code}"
                   return
                 fi
-                service_image="$(echo "${service_image}" | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|/g')"
+                service_image="$(echo "${service_image}" | sed 's/^/ *|* *|* *|*/g' | sed 's/$/*|* *|/g')"
             fi
-            write_multiline_to_file "${tmp_output_file}" "${service_name}*|*${service_status} *|* *|*${service_message_code} *|\n${service_image}"
+            write_multiline_to_file "${tmp_output_file}" " *|*${service_name}*|*${service_status} *|* *|*${service_message_code} *|\n${service_image}"
         fi
     else
         # 没有权限访问k8s
@@ -288,9 +288,9 @@ function check_service_log_dir() {
     if [[ "" == "${log_dir_str}" ]]
     then
         message_code="${ERROR_NO_DIR_CODE}"
-        content="$(echo "${service_name}:" | sed 's/^/ *|*/g' | sed "s/$/*|* *|*${message_code}*|/g")"
+        content="$(echo "${service_name}:" | sed 's/^/ *|* *|*/g' | sed "s/$/*|* *|*${message_code}*|/g")"
     else
-        content="$(echo "${log_dir_str}" | sed "1i ${service_name}:" | sed 's/^/ *|*/g' | sed 's/$/*|* *|* *|/g')"
+        content="$(echo "${log_dir_str}" | sed "1i ${service_name}:" | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|* *|/g')"
     fi
 
     write_multiline_to_file "${tmp_output_file}" "${content}"
@@ -415,8 +415,8 @@ function check_node_label() {
             write_single_line_to_file "${tmp_output_file}" "node label" "${label_status}"
         else
             label_message_code="${ERROR_MISSING_LABEL_CODE}"
-            label_status="$(echo -e "missing label:\n${missed_label}" | sed 's/^/ *|*/g' | sed 's/$/*|* *|* *|/g')"
-            local content="node label*|* *|* *|*${label_message_code}*|\n${label_status}"
+            label_status="$(echo -e "missing label:\n${missed_label}" | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|* *|/g')"
+            local content=" *|*node label*|* *|* *|*${label_message_code}*|\n${label_status}"
             write_multiline_to_file "${tmp_output_file}" "${content}"
         fi
     fi
@@ -424,6 +424,7 @@ function check_node_label() {
 }
 
 function do_check() {
+    write_category "mindxdl-related"
     check_mindxdl_version
     check_mindxdl_log_dir
     # worker节点检查device-plugin识别的npu

@@ -125,15 +125,26 @@ function check_input_params() {
 function to_report_file() {
     print_host_info
     # 表头
-    sed -iE '/^hostname/a Service*|*Status*|*Version*|*Message Code*|' "${tmp_output_file}"
+    sed -iE '/^hostname/a Category*|*Check Items*|*Status*|*Version*|*Message Code*|' "${tmp_output_file}"
     # 表格格式化
     cat "${tmp_output_file}" | column -s "*" -t >> "${output_file}"
-    # 添加行分隔符
+    # 添加类别分隔符
     row_max_length=$(wc -L "${output_file}" | awk '{print $1}')
-    split_line_symbel=$(printf "%-${row_max_length}s\n" "-" | sed -e 's/ /-/g')
-    sed -iE "/^[A-Za-z]/i ${split_line_symbel}" "${output_file}"
+    split_category_symbel=$(printf "%-${row_max_length}s\n" "-" | sed -e 's/ /-/g')
+    sed -iE "/^[A-Za-z]/i ${split_category_symbel}" "${output_file}"
+    
+    # 空格开头的行添加分隔符
+    # 去掉开头的空格，该行长度
+    no_space_line_max_length=$(grep -E '^[ ]' "${output_file}" | head -n 1 | sed 's/^\s*//g' | wc -L)
+    # 以空格开头的行，空格长度
+    space_length=$(( ${row_max_length} - ${no_space_line_max_length} ))
+    no_space_symbel=$(printf "%-${no_space_line_max_length}s\n" "-" | sed -e 's/ /-/g')
+    space_symble=$(printf "%${space_length}s")
+    item_split_line_symble="$(echo "${space_symble}${no_space_symbel}")"
+    sed -Ei "/^${space_symble}\|\s{2}[A-Za-z]\+*/i\\${item_split_line_symble}" "${output_file}"
+    
     # 表尾
-    echo "${split_line_symbel}" >> "${output_file}"
+    echo "${split_category_symbel}" >> "${output_file}"
 
     chmod 400 "${output_file}"
 }
