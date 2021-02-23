@@ -19,9 +19,6 @@ from jinja2 import Template
 from kubernetes import client
 from kubernetes import config
 
-NOT_FOUND = 'not found'
-ALREADY_EXISTS = 'already exists'
-
 
 def get_core_v1_api():
     """
