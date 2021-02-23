@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ infer_job_name }}
+spec:
+    template:
+      spec:
+        nodeSelector:
+          {{ node_selector }}           #选择推理处理器节点
+        containers:
+        - image: {{ docker_image }}                  #推理镜像名称
+          imagePullPolicy: IfNotPresent
+          name: resnet50infer
+          resources:
+            requests:
+              huawei.com/Ascend310: {{ npu_count }}             #推理昇腾310处理器数量
+            limits:
+              huawei.com/Ascend310: {{ npu_count }}             #需要和上面requests数量保持一致
+          volumeMounts:
+          - name: localtime                       #容器时间和宿主机保持一致
+            mountPath: /etc/localtime
+        volumes:
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        restartPolicy: OnFailure
