@@ -78,7 +78,7 @@ def render_template(template_file, **kwargs):
     return yaml_json
 
 
-def get_pods_list_by_namespace(namespace):
+def get_pod_list_by_namespace(namespace):
     """
     :return: the JSON information about pods in a specified namespace.
     """
@@ -89,8 +89,8 @@ def get_pods_list_by_namespace(namespace):
     return pods_info_json
 
 
-def get_vcjob_logs(pod_name, namespace):
-    """logs of vcjob"""
+def get_vcjob_log(pod_name, namespace):
+    """log of vcjob"""
     core_api = get_core_v1_api()
     result = core_api.read_namespaced_pod_log(namespace=namespace,
                                               name=pod_name)

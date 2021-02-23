@@ -21,14 +21,14 @@ create, delete, query
 from kubernetes import client
 
 from utils import get_batch_v1_api
-from utils import get_pods_list_by_namespace
+from utils import get_pod_list_by_namespace
 from utils import render_template
 
 INFER_JOB_NAME = 'infer-test'
 
 
-def create_infer_job(api_obj):
-    """create a inference job"""
+def get_infer_param_dict():
+    """render infer config file"""
     infer_config_params = {
         'infer_job_name': INFER_JOB_NAME,
         'node_selector': {
@@ -43,14 +43,21 @@ def create_infer_job(api_obj):
     infer_config_dict = render_template(infer_yaml_file,
                                         **infer_config_params)
 
+    return infer_config_dict
+
+
+def create_infer_job(api_obj):
+    """create a inference job"""
+    infer_config_dict = get_infer_param_dict()
+
     result = api_obj.create_namespaced_job(namespace='default',
                                            body=infer_config_dict)
 
     print("=====create infer job: {}".format(result))
 
 
-def get_infer_job_with_namespace():
-    result_json = get_pods_list_by_namespace('default')
+def get_infer_job():
+    result_json = get_pod_list_by_namespace('default')
 
     print("=====query infer job in namespace: {}".format(result_json))
 
@@ -68,14 +75,13 @@ def delete_infer_job(api_obj):
 
 def main():
     # get api client
-    batch_v1_api = get_batch_v1_api()
+    batch_api = get_batch_v1_api()
 
-    create_infer_job(batch_v1_api)
+    create_infer_job(batch_api)
 
-    # wait for a few seconds and then query again.
-    get_infer_job_with_namespace()
+    get_infer_job()
 
-    delete_infer_job(batch_v1_api)
+    delete_infer_job(batch_api)
 
 
 if __name__ == '__main__':

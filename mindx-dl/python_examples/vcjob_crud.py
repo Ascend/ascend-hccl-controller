@@ -18,11 +18,12 @@
 create, delete, query
 """
 
-from configmap_crud import create_configmap
-from configmap_crud import delete_configmap
+from configmap_crud import create_config_map
+from configmap_crud import delete_config_map
+from configmap_crud import get_config_map_param_dict
 from utils import get_core_v1_api
 from utils import get_custom_obj_api
-from utils import get_vcjob_logs
+from utils import get_vcjob_log
 from utils import render_template
 from vcjob_config_sample import JOB_NAME
 from vcjob_config_sample import JOB_PARAMS_1P
@@ -68,7 +69,7 @@ def get_single_vcjob_info(api_obj):
     print("=====get single vcjob: {}".format(result))
 
 
-def get_namespace_vcjobs(api_job):
+def get_namespace_vcjob(api_job):
     """get vcjob by namespace"""
     result = api_job.list_namespaced_custom_object(
         group=VCJOB_GROUP,
@@ -79,26 +80,28 @@ def get_namespace_vcjobs(api_job):
     print("=====get namespaced vcjob: {}".format(result))
 
 
-def create_vcjob(custom_v1_api, core_v1_api):
-    """entry for creating vcjob"""
-    # get configmap config
-    cfg_map_file = "vcjob_configmap.yaml"
-    cfg_map_params = {'job_name': JOB_NAME}
-    cfg_map_dict = render_template(cfg_map_file, **cfg_map_params)
-
-    # get vcjob config
+def get_vcjob_param_dict():
+    """render vcjob config file"""
     job_desc_file = "vcjob.yaml"
     vcjob_config_dict = render_template(job_desc_file, **JOB_PARAMS_1P)
 
+    return vcjob_config_dict
+
+
+def create_vcjob(custom_v1_api, core_v1_api):
+    """entry for creating vcjob"""
+    cfg_map_dict = get_config_map_param_dict()
+    vcjob_config_dict = get_vcjob_param_dict()
+
     # don't change the order
-    create_configmap(core_v1_api, **cfg_map_dict)
+    create_config_map(core_v1_api, **cfg_map_dict)
     create_job(custom_v1_api, **vcjob_config_dict)
 
 
 def delete_vcjob(custom_v1_api, core_v1_api):
     """entry for deleting vcjob"""
     delete_job(custom_v1_api)
-    delete_configmap(core_v1_api)
+    delete_config_map(core_v1_api)
 
 
 def main():
@@ -108,13 +111,13 @@ def main():
 
     create_vcjob(custom_api, core_api)
 
-    get_namespace_vcjobs(custom_api)
+    get_namespace_vcjob(custom_api)
 
     get_single_vcjob_info(custom_api)
 
     # in this case, podname is 'test-job-default-test-0'
     pod_name = 'test-job-default-test-0'
-    get_vcjob_logs(pod_name, 'default')
+    get_vcjob_log(pod_name, 'default')
 
     delete_vcjob(custom_api, core_api)
 

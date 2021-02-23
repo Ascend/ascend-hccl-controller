@@ -23,7 +23,7 @@ from utils import render_template
 from vcjob_config_sample import JOB_NAME
 
 
-def create_configmap(api_obj, **cfg_map_dict):
+def create_config_map(api_obj, **cfg_map_dict):
     """create configmap"""
     result = api_obj.create_namespaced_config_map(
         namespace='default', body=cfg_map_dict)
@@ -31,7 +31,7 @@ def create_configmap(api_obj, **cfg_map_dict):
     print("=====create configmap: {}".format(result))
 
 
-def get_configmap(api_obj):
+def get_config_map(api_obj):
     """get configmap"""
     result = api_obj.list_namespaced_config_map(
         namespace='default')
@@ -39,7 +39,7 @@ def get_configmap(api_obj):
     print("=====get configmap: {}".format(result))
 
 
-def delete_configmap(api_obj):
+def delete_config_map(api_obj):
     """delete configmap"""
     cfg_name = 'rings-config-' + JOB_NAME
     result = api_obj.delete_namespaced_config_map(
@@ -48,18 +48,24 @@ def delete_configmap(api_obj):
     print("=====delete configmap: {}".format(result))
 
 
-def main():
-    core_v1_api = get_core_v1_api()
-
-    # create configmap
+def get_config_map_param_dict():
+    """render configmap config file"""
     cfg_map_file = "vcjob_configmap.yaml"
     cfg_map_params = {'job_name': JOB_NAME}
     cfg_map_dict = render_template(cfg_map_file, **cfg_map_params)
-    create_configmap(core_v1_api, **cfg_map_dict)
 
-    get_configmap(core_v1_api)
+    return cfg_map_dict
 
-    delete_configmap(core_v1_api)
+
+def main():
+    core_api = get_core_v1_api()
+
+    cfg_map_dict = get_config_map_param_dict()
+    create_config_map(core_api, **cfg_map_dict)
+
+    get_config_map(core_api)
+
+    delete_config_map(core_api)
 
 
 if __name__ == '__main__':
