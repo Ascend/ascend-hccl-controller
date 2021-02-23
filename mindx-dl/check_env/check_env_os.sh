@@ -58,22 +58,22 @@ function check_available_memery() {
 function check_disk_usage() {
     disk_usage_result="$(df -Th | grep -E '^/dev|Filesystem' | awk '{print $1"|"$2"|"$3"|"$4"|"$5"|"$6"|"$7}' \
                                                              | column -s '|' -t \
-                                                             | sed 's/^/ *|*/g' \
+                                                             | sed 's/^/ *|* *|*/g' \
                                                              | sed 's/$/*|* *|* *|/g')"
-    local content="disk usage*|* *|* *|* *|\n${disk_usage_result}"
+    local content=" *|*disk usage*|* *|* *|* *|\n${disk_usage_result}"
     write_multiline_to_file "${tmp_output_file}" "${content}"
 }
 
 # swap空间
 function check_swap_usage() {
     swap_message_code=" "
-    swap_usage_content="$(free -h | grep -E 'Swap: |total' | sed 's/^/ *|*/g' | sed 's/$/*|* *|* *|/g')"
-    swap_size="$(echo "${swap_usage_content}" | grep "Swap:" | awk '{print $2}')"
+    swap_usage_content="$(free -h | grep -E 'Swap: |total' | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|* *|/g')"
+    swap_size="$(echo "${swap_usage_content}" | grep "Swap:" | awk '{print $3}')"
     if [[ "${EMPTY_SWAP_SIZE}" != "${swap_size}" ]]
     then
         swap_message_code="${ERROR_SWAP_NOT_EMPTY_CODE}"
     fi
-    local content="swap usage*|* *|* *|*${swap_message_code}*|\n${swap_usage_content}"
+    local content=" *|*swap usage*|* *|* *|*${swap_message_code}*|\n${swap_usage_content}"
     write_multiline_to_file "${tmp_output_file}" "${content}"
 }
 
@@ -157,6 +157,7 @@ function check_date() {
 }
 
 function do_check() {
+    write_category "os-related"
     check_os_arch
     check_firwall_status
     check_logical_cpu

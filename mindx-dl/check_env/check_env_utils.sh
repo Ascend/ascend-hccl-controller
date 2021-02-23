@@ -36,6 +36,14 @@ DOCKER_IMAGES="docker images"
 #     一共四列，如果某一列的值为空，则使用一个空白字符串（如：" "）填充，效果为|* *|
 #     最后会通过命令：column -s '*' -t 来格式化整个文件，达到对齐的目的
 
+# 输出category
+function write_category() {
+    category="$1"
+
+    local content="${category}*|* *|* *|* *|* *|"
+    echo -e "${content}" >> "${tmp_output_file}"
+}
+
 # 构造指定格式的输出
 function write_single_line_to_file() {
     local tmp_output_file="$1"
@@ -61,7 +69,7 @@ function write_single_line_to_file() {
         message_code="${ONE_BLANK_SPACE_STR}"
     fi
 
-    local content="${service}*|*${status}*|*${version}*|*${message_code}*|"
+    local content=" *|*${service}*|*${status}*|*${version}*|*${message_code}*|"
     echo -e "${content}" >> "${tmp_output_file}"
 }
 

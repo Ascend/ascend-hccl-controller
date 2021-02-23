@@ -92,12 +92,12 @@ function check_image_disk_usage() {
         else
             disk_usage_content="$(df -h "${docker_root_dir}" | awk '{print $1"|"$2"|"$3"|"$4"|"$5"|"$6}' | column -s '|' -t)"
             usage="$(echo "${disk_usage_content}" | grep '/dev' | awk -F ' ' '{print $5}' | awk -F '%' '{print $1}')"
-            disk_usage_content="$(echo "${disk_usage_content}" | sed 's/^ //g' | sed 's/^/ *|*/g' | sed 's/$/*|* *|* *|/g')"
+            disk_usage_content="$(echo "${disk_usage_content}" | sed 's/^ //g' | sed 's/^/ *|* *|*/g' | sed 's/$/*|* *|* *|/g')"
             if (( "${DEFAULT_DISK_USAGE_LIMIT}" <= "${usage}" ))
             then
                 image_disk_message_code="${WARNING_IMAGE_DISK_USAGE_CODE}"
             fi
-            local content="disk usage of docker images*|* *|* *|*${image_disk_message_code}*|\n${disk_usage_content}"
+            local content=" *|*disk usage of docker images*|* *|* *|*${image_disk_message_code}*|\n${disk_usage_content}"
             write_multiline_to_file "${tmp_output_file}" "${content}"
             return
         fi
@@ -107,6 +107,7 @@ function check_image_disk_usage() {
 }
 
 function do_check() {
+    write_category "docker-related"
     check_docker_version
     # 非master节点执行docker runtime检查
     if [[ "${MASTER_NODE}" != "${nodeType}" ]]
