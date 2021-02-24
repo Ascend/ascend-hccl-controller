@@ -57,8 +57,8 @@ def delete_job(api_obj):
     print("=====delete vcjob: {}".format(result))
 
 
-def get_single_vcjob_info(api_obj):
-    """get single vcjob"""
+def get_vcjob(api_obj):
+    """get vcjob"""
     result = api_obj.get_namespaced_custom_object(
         group=VCJOB_GROUP,
         version=VCJOB_API_VERSION,
@@ -67,17 +67,6 @@ def get_single_vcjob_info(api_obj):
         name=JOB_NAME)
 
     print("=====get single vcjob: {}".format(result))
-
-
-def get_namespace_vcjob(api_job):
-    """get vcjob by namespace"""
-    result = api_job.list_namespaced_custom_object(
-        group=VCJOB_GROUP,
-        version=VCJOB_API_VERSION,
-        namespace='default',
-        plural=VCJOB_PLURAL)
-
-    print("=====get namespaced vcjob: {}".format(result))
 
 
 def get_vcjob_param_dict():
@@ -111,9 +100,7 @@ def main():
 
     create_vcjob(custom_api, core_api)
 
-    get_namespace_vcjob(custom_api)
-
-    get_single_vcjob_info(custom_api)
+    get_vcjob(custom_api)
 
     # in this case, podname is 'test-job-default-test-0'
     pod_name = 'test-job-default-test-0'

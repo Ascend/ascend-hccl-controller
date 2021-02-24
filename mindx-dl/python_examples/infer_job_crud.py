@@ -21,7 +21,6 @@ create, delete, query
 from kubernetes import client
 
 from utils import get_batch_v1_api
-from utils import get_pod_list_by_namespace
 from utils import render_template
 
 INFER_JOB_NAME = 'infer-test'
@@ -56,10 +55,12 @@ def create_infer_job(api_obj):
     print("=====create infer job: {}".format(result))
 
 
-def get_infer_job():
-    result_json = get_pod_list_by_namespace('default')
+def get_infer_job(api_obj):
+    """query infer job"""
+    result = api_obj.read_namespaced_job(name=INFER_JOB_NAME,
+                                         namespace='default')
 
-    print("=====query infer job in namespace: {}".format(result_json))
+    print("=====query infer job in namespace: {}".format(result))
 
 
 def delete_infer_job(api_obj):
@@ -79,7 +80,7 @@ def main():
 
     create_infer_job(batch_api)
 
-    get_infer_job()
+    get_infer_job(batch_api)
 
     delete_infer_job(batch_api)
 

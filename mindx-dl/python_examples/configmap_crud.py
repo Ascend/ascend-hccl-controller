@@ -22,6 +22,8 @@ from utils import get_core_v1_api
 from utils import render_template
 from vcjob_config_sample import JOB_NAME
 
+CFG_NAME = 'rings-config-' + JOB_NAME
+
 
 def create_config_map(api_obj, **cfg_map_dict):
     """create configmap"""
@@ -33,17 +35,16 @@ def create_config_map(api_obj, **cfg_map_dict):
 
 def get_config_map(api_obj):
     """get configmap"""
-    result = api_obj.list_namespaced_config_map(
-        namespace='default')
+    result = api_obj.read_namespaced_config_map(name=CFG_NAME,
+                                                namespace='default')
 
     print("=====get configmap: {}".format(result))
 
 
 def delete_config_map(api_obj):
     """delete configmap"""
-    cfg_name = 'rings-config-' + JOB_NAME
     result = api_obj.delete_namespaced_config_map(
-        name=cfg_name, namespace='default')
+        name=CFG_NAME, namespace='default')
 
     print("=====delete configmap: {}".format(result))
 

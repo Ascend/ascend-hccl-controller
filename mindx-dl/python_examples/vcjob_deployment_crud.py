@@ -25,7 +25,6 @@ from configmap_crud import delete_config_map
 from configmap_crud import get_config_map_param_dict
 from utils import get_app_v1_api
 from utils import get_core_v1_api
-from utils import get_pod_list_by_namespace
 from utils import render_template
 from vcjob_config_sample import JOB_NAME
 from vcjob_config_sample import JOB_PARAMS_1P
@@ -50,9 +49,10 @@ def delete_deployment(api_job):
     print('=====delete deployment vcjob: {}'.format(result))
 
 
-def get_pods_info_by_namespace():
+def get_deployment_vcjob(api_obj):
     """query deployment vcjob"""
-    result = get_pod_list_by_namespace('default')
+    result = api_obj.read_namespaced_deployment(name=JOB_NAME,
+                                                namespace='default')
 
     print('=====query deployment vcjob: {}'.format(result))
 
@@ -88,7 +88,7 @@ def main():
 
     create_deployment_vcjob(app_api, core_api)
 
-    get_pods_info_by_namespace()
+    get_deployment_vcjob()
 
     delete_deployment_vcjob(app_api, core_api)
 
