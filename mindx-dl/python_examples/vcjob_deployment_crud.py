@@ -88,7 +88,7 @@ def main():
 
     create_deployment_vcjob(app_api, core_api)
 
-    get_deployment_vcjob()
+    get_deployment_vcjob(app_api)
 
     delete_deployment_vcjob(app_api, core_api)
 
