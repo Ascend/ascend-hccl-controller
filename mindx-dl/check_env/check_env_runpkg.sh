@@ -89,7 +89,7 @@ function check_npu_number() {
         then
             # upgrade-tool工具
             npu_num="$(echo "${device_info}" | grep 'deviceId' | wc -l)"
-            if [[ "" == "${npu_num}" ]]
+            if [[ "0" == "${npu_num}" ]]
             then
                 npu_message_code="${INFO_NO_NUP_NUM_CODE}"
             fi
