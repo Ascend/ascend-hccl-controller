@@ -103,8 +103,8 @@ function check_os_user() {
     message_code_2=""
 
     # 检查HwHiAiUser
-    uid1="$(id HwHiAiUser 2>/dev/null | awk -F '[=(]' '{print $2}')"
-    gid1="$(id HwHiAiUser 2>/dev/null | awk -F '[=(]' '{print $4}')"
+    uid1="$(id HwHiAiUser 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    gid1="$(id HwHiAiUser 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
 
     # HwHiAiUser不存在
     if [[ "" == "${uid1}" ]] || [[ "" == "${gid1}" ]]
@@ -112,7 +112,7 @@ function check_os_user() {
         content_1="User 'HwHiAiUser' not exists"
         message_code_1="${ERROR_USER_NOT_EXISTS_CODE}"
     else
-        if [[ "${HWHIAIUSER_ID}" != "${uid1}" ]] && [[ "${HWHIAIUSER_ID}" != "${gid1}" ]]
+        if [[ "${HWHIAIUSER_ID}" != "${uid1}" ]] || [[ "${HWHIAIUSER_ID}" != "${gid1}" ]]
         then
         # HwHiAiUser gid和uid不为1000
             message_code_1="${ERROR_USER_ID_ERROR_CODE}"
@@ -121,13 +121,13 @@ function check_os_user() {
     fi
 
     # 检查hwMindX
-    uid2="$(id hwMindX 2>/dev/null | awk -F '[=(]' '{print $2}')"
-    gid2="$(id hwMindX 2>/dev/null | awk -F '[=(]' '{print $4}')"
+    uid2="$(id hwMindX 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    gid2="$(id hwMindX 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
 
     # hwMindX不存在
     if [[ "" == "${uid2}" ]] || [[ "" == "${gid2}" ]]
     then
-        content_1="User 'hwMindX' not exists"
+        content_2="User 'hwMindX' not exists"
         message_code_2="${ERROR_USER_NOT_EXISTS_CODE}"
     else
         if [[ "${HWMINDX_ID}" != "${uid2}" ]] || [[ "${HWMINDX_ID}" != "${gid2}" ]]
