@@ -1,0 +1,91 @@
+apiVersion: batch.volcano.sh/v1alpha1   # 不可修改，必须使用volcano的api
+kind: Job                               # 暂时只支持Job类型
+metadata:
+  name: {{ job_name }}                  # 注意和ConfigMap的name的对应关系
+  labels:
+    ring-controller.atlas: ascend-910   # 和ConfigMap中的标签一致，不可修改
+spec:
+  minAvailable: {{ node_count }}
+  schedulerName: volcano                # 使用volcano调度器调度任务
+  policies:
+    - event: PodEvicted
+      action: RestartJob
+  plugins:
+    ssh: []
+    env: []
+    svc: []
+  maxRetry: {{ max_retry }}
+  queue: default
+  tasks:
+  - name: "default-test"
+    replicas: {{ node_count }}                   # 单机此处为1
+    template:
+      metadata:
+        labels:
+          app: tf
+          ring-controller.atlas: ascend-910      # 和ConfigMap中的标签一致，不可修改
+      spec:
+        containers:
+        - image: {{ docker_image }}              # 训练框架镜像，自行修改
+          imagePullPolicy: IfNotPresent
+          name: tf
+          env:
+          - name: RANK_TABLE_FILE
+            value: "/user/serverid/devindex/config/hccl.json"  # ConfigMap中data挂载路径，如需修改要和下面ConfigMap的挂载路径一致
+          command: {{ command }}
+          args: {{ args }}
+          resources:
+            requests:
+              huawei.com/Ascend910: {{ npu_count }}
+            limits:
+              huawei.com/Ascend910: {{ npu_count }}            # 目前需要和上面requests保持一致
+          volumeMounts:
+          - name: ascend-910-config
+            mountPath: /user/serverid/devindex/config
+          - name: code
+            mountPath: {{ container_code_path }}               # 容器内训练脚本路径
+          - name: data
+            mountPath: {{ container_data_path }}               # 容器内训练数据集路径
+          - name: output
+            mountPath: {{ container_output_path }}             # 容器内训练输出路径
+          - name: localtime
+            mountPath: /etc/localtime
+        nodeSelector:
+          {{ node_selector }}
+        volumes:
+        - name: ascend-910-config
+          configMap:
+           name: rings-config-{{ job_name }}   # 对应configMap的name
+        {% if use_nfs %}                       # 是否使用NFS
+        - name: code
+          nfs:
+            server: {{ nfs_server_ip }}        # nfs服务器地址
+            path: {{ host_code_path }}         # 物理机上训练脚本的路径
+        - name: data
+          nfs:
+            server: {{ nfs_server_ip }}
+            path: {{ host_data_path }}         # 物理机上训练数据集的路径
+        - name: output
+          nfs:
+            server: {{ nfs_server_ip }}
+            path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
+        {% else %}
+        - name: code
+          hostpath:
+            path: {{ host_code_path }}         # 物理机上训练脚本的路径
+        - name: data
+          hostpath:
+            path: {{ host_data_path }}         # 物理机上训练数据集的路径
+        - name: output
+          hostpath:
+            path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
+        {% endif %}
+        - name: localtime
+          hostPath:
+            path: /etc/localtime               # 配置docker的时间
+        env:
+        - name: {{ job_name }}     # 和Jobname保持一致
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        restartPolicy: OnFailure
