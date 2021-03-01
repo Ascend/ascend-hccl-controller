@@ -103,51 +103,51 @@ function check_os_user() {
     message_code_2=""
 
     # 检查HwHiAiUser
-    uid1="$(id HwHiAiUser 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
-    gid1="$(id HwHiAiUser 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    hwhiaiuser_uid="$(id HwHiAiUser 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    hwhiaiuser_gid="$(id HwHiAiUser 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
 
     # HwHiAiUser不存在
-    if [[ "" == "${uid1}" ]] || [[ "" == "${gid1}" ]]
+    if [[ "" == "${hwhiaiuser_uid}" ]] || [[ "" == "${hwhiaiuser_gid}" ]]
     then
-        content_1="User 'HwHiAiUser' not exists"
-        message_code_1="${ERROR_USER_NOT_EXISTS_CODE}"
+        hwhiaiuser_content="User 'HwHiAiUser' not exists"
+        hwhiaiuser_message_code="${ERROR_USER_NOT_EXISTS_CODE}"
     else
-        if [[ "${HWHIAIUSER_ID}" != "${uid1}" ]] || [[ "${HWHIAIUSER_ID}" != "${gid1}" ]]
+        if [[ "${HWHIAIUSER_ID}" != "${hwhiaiuser_uid}" ]] || [[ "${HWHIAIUSER_ID}" != "${hwhiaiuser_gid}" ]]
         then
         # HwHiAiUser gid和uid不为1000
-            message_code_1="${ERROR_USER_ID_ERROR_CODE}"
+            hwhiaiuser_message_code="${ERROR_USER_ID_ERROR_CODE}"
         fi
-        content_1="HwHiAiUser(uid:${uid1}, gid:${gid1})"
+        hwhiaiuser_content="HwHiAiUser(uid:${hwhiaiuser_uid}, gid:${hwhiaiuser_gid})"
     fi
 
     # 检查hwMindX
-    uid2="$(id hwMindX 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
-    gid2="$(id hwMindX 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    hwmindx_uid="$(id hwMindX 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
+    hwmindx_gid="$(id hwMindX 2>/dev/null | awk '{print $2}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
 
     # hwMindX不存在
-    if [[ "" == "${uid2}" ]] || [[ "" == "${gid2}" ]]
+    if [[ "" == "${hwmindx_uid}" ]] || [[ "" == "${hwmindx_gid}" ]]
     then
-        content_2="User 'hwMindX' not exists"
-        message_code_2="${ERROR_USER_NOT_EXISTS_CODE}"
+        hwmindx_content="User 'hwMindX' not exists"
+        hwmindx_message_code="${ERROR_USER_NOT_EXISTS_CODE}"
     else
-        if [[ "${HWMINDX_ID}" != "${uid2}" ]] || [[ "${HWMINDX_ID}" != "${gid2}" ]]
+        if [[ "${HWMINDX_ID}" != "${hwmindx_uid}" ]] || [[ "${HWMINDX_ID}" != "${hwmindx_gid}" ]]
         then
             # hwMindX gid和uid不为9000
-            message_code_2="${ERROR_USER_ID_ERROR_CODE}"
+            hwmindx_message_code="${ERROR_USER_ID_ERROR_CODE}"
         else
             # hwMindX是否加入HwHiAiUser的用户组
             join_group_str="$(id hwMindX | grep -E 'groups=.*1000\(HwHiAiUser\)')"
             if [[ "" == "${join_group_str}" ]]
             then
-                message_code_2="${ERROR_NOT_JOIN_GROUP_CODE}"
+                hwmindx_message_code="${ERROR_NOT_JOIN_GROUP_CODE}"
             fi
         fi
-        content_2="hwMindX(uid:${uid2}, gid:${gid2})"
+        hwmindx_content="hwMindX(uid:${hwmindx_uid}, gid:${hwmindx_gid})"
     fi
 
     write_single_line_to_file "${tmp_output_file}" "user"
-    write_single_line_to_file "${tmp_output_file}" "    " "${content_1}" "" "${message_code_1}"
-    write_single_line_to_file "${tmp_output_file}" "    " "${content_2}" "" "${message_code_2}"
+    write_single_line_to_file "${tmp_output_file}" "    " "${hwhiaiuser_content}" "" "${hwhiaiuser_message_code}"
+    write_single_line_to_file "${tmp_output_file}" "    " "${hwmindx_content}" "" "${hwmindx_message_code}"
 
 }
 
