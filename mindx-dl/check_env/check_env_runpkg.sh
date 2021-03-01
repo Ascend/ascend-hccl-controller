@@ -128,14 +128,22 @@ function check_device_ip() {
         device_ips="$(echo "${device_ips}" | sed 's/$/*|* *|* *|/g')"
 
     fi
-    duplicate_line="$(echo "${duplicate_line}" | sed 's/^/ *|* *|*/g' \
-                                               | sed "s/$/*|* *|*${duplicate_message_code}*|/g")"
 
     local content_ips=" *|*device_ip configure info*|* *|* *|*${ips_message_code}*|\n${device_ips}"
     write_multiline_to_file "${tmp_output_file}" "${content_ips}"
 
-    local content_duplicate_ips=" *|*duplicate device_ip*|* *|* *|* *|\n${duplicate_line}"
-    write_multiline_to_file "${tmp_output_file}" "${content_duplicate_ips}"
+    line_count="$(echo "${duplicate_line}" | wc -l)"
+    if (( "${line_count}" > 1 ))
+    then
+        duplicate_line="$(echo "${duplicate_line}" | sed 's/^/ *|* *|*/g' \
+                                                   | sed "s/$/*|* *|* *|/g")"
+        local content_duplicate_ips=" *|*duplicate device_ip*|* *|* *|*${duplicate_message_code}*|\n${duplicate_line}"
+        write_multiline_to_file "${tmp_output_file}" "${content_duplicate_ips}"
+    else
+        write_single_line_to_file "${tmp_output_file}" "duplicate device_ip" "${duplicate_line}" "" "${duplicate_message_code}"
+    fi
+
+
 }
 
 # 检查设备网口状态
