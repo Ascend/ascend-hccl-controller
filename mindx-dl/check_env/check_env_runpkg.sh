@@ -24,6 +24,9 @@ INFO_NO_DEVICE_IP_FILE_CODE="info_2002"
 INFO_DEVICE_LINK_EMPTY_CODE="info_2003"
 INFO_DEVICE_PKG_EMPTY_CODE="info_2004"
 
+# 载入公共函数
+source ./check_env_utils.sh
+
 # firmware安装路径
 firmware_install_path="$(cat /etc/ascend_install.info 2>/dev/null | grep 'Firmware_Install_Path_Param' \
                                                                   | awk -F '=' '{print $2}')"
@@ -38,9 +41,6 @@ npu_num=""
 device_info=""
 hccn_tool_error="false"
 upgrade_tool_error="false"
-
-# 载入公共函数
-source ./check_env_utils.sh
 
 # 检查工具是否可用
 function check_hccn_tool() {
@@ -89,7 +89,7 @@ function check_npu_number() {
         then
             # upgrade-tool工具
             npu_num="$(echo "${device_info}" | grep 'deviceId' | wc -l)"
-            if [[ "" == "${npu_num}" ]]
+            if (( 0 == "${npu_num}" ))
             then
                 npu_message_code="${INFO_NO_NUP_NUM_CODE}"
             fi
@@ -106,31 +106,44 @@ function check_npu_number() {
 # 检查device_ip
 function check_device_ip() {
     ips_message_code=" "
-    duplicate_message_code=""
+    duplicate_message_code=" "
     duplicate_line="Device ip not configured"
     device_ips="$(cat /etc/hccn.conf | grep 'address' \
                                      | sort \
                                      | sed 's/address/device/g' \
-                                     | sed 's/^/ *|* *|*/g' \
-                                     | sed 's/$/*|* *|* *|/g')"
+                                     | sed 's/^/ *|* *|*/g')"
     if [[ "" == "${device_ips}" ]]
     then
         ips_message_code="${INFO_NO_DEVICE_IP_FILE_CODE}"
         duplicate_message_code="${INFO_NO_DEVICE_IP_FILE_CODE}"
     else
         # ip是否配置重复
-        duplicate_line="$(echo "${device_ips}" | awk -F "=" '{print $2} | uniq -d')"
+        duplicate_line="$(echo "${device_ips}" | awk -F "=" '{print $2}' | sort | uniq -d)"
         if [[ "" != "${duplicate_line}" ]]
         then
             duplicate_message_code="${ERROR_DEVICE_IP_DUPLICATE_CODE}"
         else
             duplicate_line="No duplicate device ip"
         fi
+        device_ips="$(echo "${device_ips}" | sed 's/$/*|* *|* *|/g')"
+
     fi
 
     local content_ips=" *|*device_ip configure info*|* *|* *|*${ips_message_code}*|\n${device_ips}"
     write_multiline_to_file "${tmp_output_file}" "${content_ips}"
-    write_single_line_to_file "${tmp_output_file}" "duplicate device_ip" "${duplicate_line}" "" "${duplicate_message_code}"
+
+    line_count="$(echo "${duplicate_line}" | wc -l)"
+    if (( 1 < "${line_count}" ))
+    then
+        duplicate_line="$(echo "${duplicate_line}" | sed 's/^/ *|* *|*/g' \
+                                                   | sed "s/$/*|* *|* *|/g")"
+        local content_duplicate_ips=" *|*duplicate device_ip*|* *|* *|*${duplicate_message_code}*|\n${duplicate_line}"
+        write_multiline_to_file "${tmp_output_file}" "${content_duplicate_ips}"
+    else
+        write_single_line_to_file "${tmp_output_file}" "duplicate device_ip" "${duplicate_line}" "" "${duplicate_message_code}"
+    fi
+
+
 }
 
 # 检查设备网口状态
