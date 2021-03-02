@@ -71,13 +71,13 @@ spec:
             path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
         {% else %}
         - name: code
-          hostpath:
+          hostPath:
             path: {{ host_code_path }}         # 物理机上训练脚本的路径
         - name: data
-          hostpath:
+          hostPath:
             path: {{ host_data_path }}         # 物理机上训练数据集的路径
         - name: output
-          hostpath:
+          hostPath:
             path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
         {% endif %}
         - name: localtime
@@ -88,4 +88,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: XDL_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         restartPolicy: OnFailure

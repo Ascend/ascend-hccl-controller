@@ -15,7 +15,7 @@ spec:
       labels:
         app: tf
         ring-controller.atlas: ascend-910
-        deploy-name: {{ job_name }}
+        deploy-name: {{ job_name }}                          #和Deployment name保持一致
     spec:
       schedulerName: volcano                                 # 当类型为deployment时，设置为volcano，而不是default-scheduler
       containers:
@@ -25,6 +25,14 @@ spec:
         env:
         - name: RANK_TABLE_FILE
           value: "/user/serverid/devindex/config/hccl.json"  # ConfigMap中data挂载路径，如需修改要和下面ConfigMap的挂载路径一致
+        - name: deploy-with-volcano                          #和Deployment name保持一致
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: XDL_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         command: {{ command }}
         args: {{ args }}
         resources:
@@ -32,17 +40,17 @@ spec:
             huawei.com/Ascend910: {{ npu_count }}
           limits:
             huawei.com/Ascend910: {{ npu_count }}            # 目前需要和上面requests保持一致
-          volumeMounts:
-            - name: ascend-910-config
-              mountPath: /user/serverid/devindex/config
-            - name: code
-              mountPath: {{ container_code_path }}           # 容器内训练脚本路径
-            - name: data
-              mountPath: {{ container_data_path }}           # 容器内训练数据集路径
-            - name: output
-              mountPath: {{ container_output_path }}         # 容器内训练输出路径
-            - name: localtime
-              mountPath: /etc/localtime
+        volumeMounts:
+          - name: ascend-910-config
+            mountPath: /user/serverid/devindex/config
+          - name: code
+            mountPath: {{ container_code_path }}           # 容器内训练脚本路径
+          - name: data
+            mountPath: {{ container_data_path }}           # 容器内训练数据集路径
+          - name: output
+            mountPath: {{ container_output_path }}         # 容器内训练输出路径
+          - name: localtime
+            mountPath: /etc/localtime
       nodeSelector:
         {{ node_selector }}
       volumes:
@@ -64,13 +72,13 @@ spec:
           path: {{ host_output_path }}        # 物理机上模型保存的路径，和脚本有关
       {% else %}
       - name: code
-        hostpath:
+        hostPath:
           path: {{ host_code_path }}          # 物理机上训练脚本的路径
       - name: data
-        hostpath:
+        hostPath:
           path: {{ host_data_path }}          # 物理机上训练数据集的路径
       - name: output
-        hostpath:
+        hostPath:
           path: {{ host_output_path }}        # 物理机上模型保存的路径，和脚本有关
       {% endif %}
       - name: localtime
