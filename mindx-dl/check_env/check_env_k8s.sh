@@ -144,15 +144,16 @@ function check_calico_status() {
         calico_pod_status=${STATUS_PERMISSION_DENIED}
         calico_message_code="${INFO_PERMISSION_DENIED_CODE}"
     else
-        calico_pod_info="$(echo "${all_pods_info}" | grep -E "kube-system.*calico-node.*$(hostname) "))"
+        calico_pod_info="$(echo "${all_pods_info}" | grep -E "kube-system.*calico-node.*$(hostname) ")"
         if [[ "" == "${calico_pod_info}" ]]
         then
+            calico_pod_status="${STATUS_SERVER_NOT_INSTALL}"
             calico_message_code="${ERROR_NO_POD_INFO_CODE}"
         else
             ready_status="$(echo "${calico_pod_info}" | awk '{print $3}')"
             run_status="$(echo "${calico_pod_info}" | awk '{print $4}')"
             local status=""
-            if [[ "1/1" != "${ready_status}" ]] && [[ "${POD_STATUS_RUNNING}" != "${run_status}" ]]
+            if [[ "1/1" != "${ready_status}" ]] || [[ "${POD_STATUS_RUNNING}" != "${run_status}" ]]
             then
                 status="${STATUS_ERROR}"
                 calico_message_code="${ERROR_CALICO_STATUS_CODE}"
