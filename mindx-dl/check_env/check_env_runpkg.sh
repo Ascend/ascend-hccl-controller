@@ -89,7 +89,7 @@ function check_npu_number() {
         then
             # upgrade-tool工具
             npu_num="$(echo "${device_info}" | grep 'deviceId' | wc -l)"
-            if [[ "0" == "${npu_num}" ]]
+            if (( 0 == "${npu_num}" ))
             then
                 npu_message_code="${INFO_NO_NUP_NUM_CODE}"
             fi
@@ -133,7 +133,7 @@ function check_device_ip() {
     write_multiline_to_file "${tmp_output_file}" "${content_ips}"
 
     line_count="$(echo "${duplicate_line}" | wc -l)"
-    if (( "${line_count}" > 1 ))
+    if (( 1 < "${line_count}" ))
     then
         duplicate_line="$(echo "${duplicate_line}" | sed 's/^/ *|* *|*/g' \
                                                    | sed "s/$/*|* *|* *|/g")"
