@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 // Package agent for logic
 package agent
 
@@ -36,7 +37,7 @@ type Worker interface {
 	WorkerCommon
 }
 
-// NewVCJobWorker: Generates a Worker that handles the VCJob type
+// NewVCJobWorker : Generates a Worker that handles the VCJob type
 func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable v1.RankTabler, replicasTotal int32) *VCJobWorker {
 	jobWorker := &VCJobWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),

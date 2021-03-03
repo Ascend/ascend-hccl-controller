@@ -37,15 +37,15 @@ import (
 
 // Model to define same func, controller to use this function to finish some thing.
 type Model interface {
-	ModelCommon
+	Common
 	EventAdd(tagentInterface *agent2.BusinessAgent) error
 	EventUpdate(tagentInterface *agent2.BusinessAgent) error
 	GenerateGrouplist() ([]*v1.Group, int32, error)
 	GetReplicas() string
 }
 
-// ModelCommon : some normal function
-type ModelCommon interface {
+// Common : some normal function
+type Common interface {
 	GetCacheIndex() cache.Indexer
 	GetModelKey() string
 }
@@ -79,7 +79,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	agent.RwMutex.RUnlock()
 
 	// check if job's corresponding configmap is created successfully via volcano controller
-	cm, err := checkConfigmapCreation(job.JobNamespace, job.JobName, agent.KubeClientSet, agent.Config)
+	cm, err := checkCMCreation(job.JobNamespace, job.JobName, agent.KubeClientSet, agent.Config)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	return nil
 }
 
-// EventUpdate: to handle vcjob update event
+// EventUpdate : to handle vcjob update event
 func (job *VCJobModel) EventUpdate(agent *agent2.BusinessAgent) error {
 	if job.jobPhase == JobRestartPhase {
 		agent2.DeleteWorker(job.JobNamespace, job.JobName, agent)
@@ -152,10 +152,12 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 	return groupList, replicasTotal, nil
 }
 
-// checkConfigmapCreation check configmap
-func checkConfigmapCreation(namespace, name string, kubeClientSet kubernetes.Interface, config *agent2.Config) (*apiCoreV1.ConfigMap, error) {
+// checkCMCreation check configmap
+func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface, config *agent2.Config) (
+	*apiCoreV1.ConfigMap, error) {
 	var cm *apiCoreV1.ConfigMap
-	err := wait.PollImmediate(time.Duration(config.CmCheckTimeout)*time.Second, time.Duration(config.CmCheckTimeout)*time.Second,
+	err := wait.PollImmediate(time.Duration(config.CmCheckTimeout)*time.Second,
+		time.Duration(config.CmCheckTimeout)*time.Second,
 		func() (bool, error) {
 			var errTmp error
 
@@ -181,8 +183,8 @@ func checkConfigmapCreation(namespace, name string, kubeClientSet kubernetes.Int
 	return cm, nil
 }
 
-// ModelFactory: to generate model
-func ModelFactory(obj interface{}, eventType string, indexers map[string]cache.Indexer) (Model, error) {
+// Factory : to generate model
+func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexer) (Model, error) {
 	metaData, err := meta.Accessor(obj)
 	if err != nil {
 		return nil, fmt.Errorf("object has no meta: %v", err)
@@ -203,12 +205,14 @@ func ModelFactory(obj interface{}, eventType string, indexers map[string]cache.I
 			containers: t.Spec.Template.Spec.Containers, replicas: *t.Spec.Replicas,
 			DeployInfo: agent2.DeployInfo{DeployNamespace: t.Namespace, DeployName: t.Name,
 				DeployCreationTimestamp: t.CreationTimestamp}}
+	default:
+		return nil, fmt.Errorf("job factory err, %s ", key)
 	}
 
 	return model, nil
 }
 
-// RanktableFactory: return the version type of ranktable according to your input parameters
+// RanktableFactory : return the version type of ranktable according to your input parameters
 func RanktableFactory(model Model, jobStartString, JSONVersion string) (v1.RankTabler, int32, error) {
 	var ranktable v1.RankTabler
 	groupList, replicasTotal, err := model.GenerateGrouplist()

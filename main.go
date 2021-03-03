@@ -56,8 +56,6 @@ var (
 	cmCheckTimeout     int
 	version            bool
 	jsonVersion        string
-	// BuildName build name
-	BuildName string
 	// BuildVersion  build version
 	BuildVersion string
 )
@@ -115,15 +113,16 @@ func main() {
 		klog.Fatalf("Error building job clientset: %s", err.Error())
 	}
 
-	jobInformerFactory, deploymentFactory := NewInformerFactory(jobClient, kubeClient)
-	config := NewConifg()
+	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
+	config := newConifg()
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
-	cacheIndexer := make(map[string]cache.Indexer)
+	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
-	control := controller.NewController(kubeClient, jobClient, config,
-		jobInformer, deploymentInformer, cacheIndexer, stopCh)
+
+	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
+		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
 
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
@@ -132,7 +131,7 @@ func main() {
 	}
 }
 
-func NewConifg() *agent.Config {
+func newConifg() *agent.Config {
 	config := &agent.Config{
 		DryRun:           dryRun,
 		DisplayStatistic: displayStatistic,
@@ -143,7 +142,7 @@ func NewConifg() *agent.Config {
 	return config
 }
 
-func NewInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
+func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
 	informers.SharedInformerFactory, cinformers.SharedInformerFactory) {
 	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
 	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(jobClient, time.Second*30,

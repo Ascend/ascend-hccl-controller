@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog"
 )
 
-// RankTable interface to maintain properties
+// RankTabler interface to maintain properties
 type RankTabler interface {
 	// UnmarshalToRankTable：Unmarshal json string to RankTable
 	UnmarshalToRankTable(jsonString string) error
@@ -45,12 +45,12 @@ func (r *RankTableStatus) SetStatus(status string) error {
 	return nil
 }
 
-// GetStatus: Get status of RankTableStatus
+// GetStatus : Get status of RankTableStatus
 func (r *RankTableStatus) GetStatus() string {
 	return r.Status
 }
 
-// UnmarshalToRankTable： Unmarshal json string to RankTable
+// UnmarshalToRankTable ： Unmarshal json string to RankTable
 func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &r)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 	return nil
 }
 
-// CachePodInfo: cache pod info to RankTableV1
+// CachePodInfo : cache pod info to RankTableV1
 func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankIndex *int) error {
 	if len(r.GroupList) < 1 {
 		return fmt.Errorf("grouplist of ranktable is empty")

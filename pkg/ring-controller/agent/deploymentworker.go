@@ -25,7 +25,9 @@ import (
 	"time"
 )
 
-func NewDeployWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler, replicasTotal int32) *DeployWorker {
+// NewDeployWorker ： to create Deployment Worker
+func NewDeployWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler,
+	replicasTotal int32) *DeployWorker {
 	return &DeployWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
 		configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, deploy.DeployName),
@@ -63,7 +65,7 @@ func (w *DeployWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (for
 	return true, true
 }
 
-// Statistic:  no need to add lock here, deviation from true value is acceptable
+// Statistic : no need to add lock here, deviation from true value is acceptable
 func (w *DeployWorker) Statistic(stopTime time.Duration) {
 	for {
 		select {

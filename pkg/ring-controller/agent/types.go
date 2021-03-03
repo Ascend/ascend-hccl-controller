@@ -80,6 +80,8 @@ var (
 // * list/watch 910 pods, and assign each pod to corresponding handler
 //   (each business worker belongs to a volcano job, and contains a handler for building rank table)
 type BusinessAgent struct {
+	// Config Agent configuration file
+	Config *Config
 	// business worker for each volcano job
 	BusinessWorker  map[string]Worker
 	informerFactory informers.SharedInformerFactory
@@ -95,13 +97,11 @@ type BusinessAgent struct {
 
 	// event recorder
 	recorder record.EventRecorder
-	//Workqueue: A queue with a limited rate.This queue is used to put pod event information
+	// Workqueue: A queue with a limited rate.This queue is used to put pod event information
 	Workqueue workqueue.RateLimitingInterface
 
 	// if print only, do not delete anything.
 	dryRun bool
-	// Config Agent configuration file
-	Config *Config
 }
 
 // Config controller init configure
@@ -150,7 +150,7 @@ type JobInfo struct {
 	JobName string
 }
 
-//  DeployWorker for deployment model
+// DeployWorker for deployment model
 type DeployWorker struct {
 	// WorkerInfo: normal Worker info
 	WorkerInfo

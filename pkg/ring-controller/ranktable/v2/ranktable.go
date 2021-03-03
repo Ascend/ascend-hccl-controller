@@ -54,7 +54,7 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	return nil
 }
 
-// RemovePodInfo:Remove pod info from RankTableV2
+// RemovePodInfo :Remove pod info from RankTableV2
 func (r *RankTable) RemovePodInfo(namespace string, podID string) error {
 	hasInfoToRemove := false
 	serverList := r.ServerList

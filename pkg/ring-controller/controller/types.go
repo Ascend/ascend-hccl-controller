@@ -19,11 +19,13 @@ package controller
 
 import (
 	"hccl-controller/pkg/ring-controller/agent"
+	v1 "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
+	v1alpha1informers "volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1"
 )
 
 const (
@@ -45,6 +47,10 @@ const (
 
 // Controller initialize business agent
 type Controller struct {
+	// component for recycle resources
+	agent *agent.BusinessAgent
+
+	cacheIndexers map[string]cache.Indexer
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
@@ -63,7 +69,14 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
-	// component for recycle resources
-	agent         *agent.BusinessAgent
-	cacheIndexers map[string]cache.Indexer
+}
+
+// InformerInfo : Defining what the Controller will use
+type InformerInfo struct {
+	// CacheIndexers : to store different type cache index
+	CacheIndexers map[string]cache.Indexer
+	// JobInformer : vcjob type informer
+	JobInformer v1alpha1informers.JobInformer
+	// DeployInformer: deployment type informer
+	DeployInformer v1.DeploymentInformer
 }

@@ -265,7 +265,7 @@ func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
 	return true
 }
 
-// DeleteWorker: Delete worker(namespace/name) from BusinessWorker map in agent
+// DeleteWorker : Delete worker(namespace/name) from BusinessWorker map in agent
 func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()

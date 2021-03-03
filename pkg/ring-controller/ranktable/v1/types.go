@@ -17,6 +17,7 @@
 package v1
 
 const (
+	// ResourceName NPU resource Name
 	ResourceName = "huawei.com/Ascend910"
 	// ConfigmapCompleted Staus
 	ConfigmapCompleted = "completed"
@@ -62,7 +63,7 @@ type Group struct {
 
 // Instance to hccl
 type Instance struct {
-	Devices  []Device `json:"devices"`   // hccl Deviceid
+	Devices  []Device `json:"devices"`   // hccl Device
 	PodName  string   `json:"pod_name"`  // hccl PodName
 	ServerID string   `json:"server_id"` // hccl servceId
 }
@@ -70,5 +71,5 @@ type Instance struct {
 // Device to hccl
 type Device struct {
 	DeviceID string `json:"device_id"` // hccl deviceId
-	DeviceIP string `json:"device_ip"` // hccl deviceid
+	DeviceIP string `json:"device_ip"` // hccl deviceIp
 }

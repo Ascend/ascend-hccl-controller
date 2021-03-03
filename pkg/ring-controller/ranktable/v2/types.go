@@ -18,6 +18,7 @@ package v2
 
 import v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 
+// RankTable : ranktable of v2
 type RankTable struct {
 	v1.RankTableStatus
 	ServerList  []*Server `json:"server_list"`  // hccl_json server list
@@ -32,7 +33,7 @@ type Server struct {
 	PodID      string    `json:"-"`         // pod id, equal to the last integer of pod name
 }
 
-// DeviceV2 to hccl
+// Device to hccl
 type Device struct {
 	v1.Device
 	RankID string `json:"rank_id"` // rank id

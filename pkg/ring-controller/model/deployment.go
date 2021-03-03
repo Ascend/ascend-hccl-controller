@@ -29,10 +29,10 @@ func (deploy *DeployModel) GetReplicas() string {
 	return strconv.Itoa(int(deploy.replicas))
 }
 
-// EventAdd: to handle deployment add event
+// EventAdd : to handle deployment add event
 func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	// check if job's corresponding configmap is created successfully via volcano controller
-	cm, err := checkConfigmapCreation(deploy.DeployNamespace, deploy.DeployName, agent.KubeClientSet, agent.Config)
+	cm, err := checkCMCreation(deploy.DeployNamespace, deploy.DeployName, agent.KubeClientSet, agent.Config)
 	if err != nil {
 		return err
 	}

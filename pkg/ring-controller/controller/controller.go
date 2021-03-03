@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -40,12 +39,11 @@ import (
 	"time"
 	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
-	v1alpha1informers "volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1"
 )
 
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
-	jobInformer v1alpha1informers.JobInformer, deployInformer v1.DeploymentInformer, cacheIndexers map[string]cache.Indexer,
+	informerInfo InformerInfo,
 	stopCh <-chan struct{}) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
@@ -60,49 +58,23 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 	if err != nil {
 		klog.Fatalf("Error creating business agent: %s", err.Error())
 	}
-	controller := &Controller{
+	c := &Controller{
 		kubeclientset: kubeclientset,
 		jobclientset:  jobclientset,
-		jobsSynced:    jobInformer.Informer().HasSynced,
-		deploySynced:  deployInformer.Informer().HasSynced,
+		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
+		deploySynced:  informerInfo.DeployInformer.Informer().HasSynced,
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
 		recorder:      recorder,
 		agent:         agents,
-		cacheIndexers: cacheIndexers,
+		cacheIndexers: informerInfo.CacheIndexers,
 	}
-	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, agent.EventAdd)
-		},
-		UpdateFunc: func(old, new interface{}) {
-			if !reflect.DeepEqual(old, new) {
-				controller.enqueueJob(new, agent.EventUpdate)
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, agent.EventDelete)
-		},
-	})
-
-	deployInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, agent.EventAdd)
-		},
-		UpdateFunc: func(old, new interface{}) {
-			if !reflect.DeepEqual(old, new) {
-				controller.enqueueJob(new, agent.EventUpdate)
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, agent.EventDelete)
-		},
-	})
-	return controller
+	informerInfo.addEventHandle(c)
+	return c
 }
 
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
-// is closed, at which point it will shutdown the workqueue and wait for
+// is closed, at which point it will shutdown the WorkQueue and wait for
 // workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
@@ -202,7 +174,7 @@ func (c *Controller) processNextWorkItem() bool {
 // it into a namespace/name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than Job.
 func (c *Controller) enqueueJob(obj interface{}, eventType string) {
-	models, err := model.ModelFactory(obj, eventType, c.cacheIndexers)
+	models, err := model.Factory(obj, eventType, c.cacheIndexers)
 	if err != nil {
 		pkgutilruntime.HandleError(err)
 		return
@@ -226,8 +198,7 @@ func (c *Controller) syncHandler(model model.Model) error {
 		if eventType == agent.EventDelete {
 			agent.DeleteWorker(namespace, name, c.agent)
 		}
-		klog.V(L2).Infof("undefined condition, eventType is %s, current key is %s", eventType, key)
-		return nil
+		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
 
 	switch eventType {
@@ -244,12 +215,28 @@ func (c *Controller) syncHandler(model model.Model) error {
 			return err
 		}
 	default:
-		// abnormal
-		klog.V(L2).Infof("undefined condition, eventType is %s, current key is %s", eventType, key)
 		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
 
 	return nil
+}
+
+func (in *InformerInfo) addEventHandle(controller *Controller) {
+	eventHandlerFunc := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			controller.enqueueJob(obj, agent.EventAdd)
+		},
+		UpdateFunc: func(old, new interface{}) {
+			if !reflect.DeepEqual(old, new) {
+				controller.enqueueJob(new, agent.EventUpdate)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			controller.enqueueJob(obj, agent.EventDelete)
+		},
+	}
+	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
 }
 
 // splitKeyFunc to splite key by format namespace,jobname,eventType
