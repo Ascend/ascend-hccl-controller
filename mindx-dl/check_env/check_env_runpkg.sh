@@ -79,7 +79,7 @@ function check_driver_version() {
     write_single_line_to_file "${tmp_output_file}" "npu-driver" "${npu_driver_status}" "${npu_driver_version}" "${driver_message_code}"
 }
 
-# 检查driver数量
+# 检查npu数量
 function check_npu_number() {
     npu_message_code=""
 
