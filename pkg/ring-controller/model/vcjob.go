@@ -35,17 +35,12 @@ import (
 	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
 )
 
-// Model to define same func, controller to use this function to finish some thing.
-type Model interface {
-	Common
+// ResourceEventHandler to define same func, controller to use this function to finish some thing.
+type ResourceEventHandler interface {
 	EventAdd(tagentInterface *agent2.BusinessAgent) error
 	EventUpdate(tagentInterface *agent2.BusinessAgent) error
 	GenerateGrouplist() ([]*v1.Group, int32, error)
 	GetReplicas() string
-}
-
-// Common : some normal function
-type Common interface {
 	GetCacheIndex() cache.Indexer
 	GetModelKey() string
 }
@@ -184,7 +179,7 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 }
 
 // Factory : to generate model
-func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexer) (Model, error) {
+func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexer) (ResourceEventHandler, error) {
 	metaData, err := meta.Accessor(obj)
 	if err != nil {
 		return nil, fmt.Errorf("object has no meta: %v", err)
@@ -193,7 +188,7 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	if len(metaData.GetNamespace()) > 0 {
 		key = metaData.GetNamespace() + "/" + metaData.GetName() + "/" + eventType
 	}
-	var model Model
+	var model ResourceEventHandler
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},
@@ -213,7 +208,7 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 }
 
 // RanktableFactory : return the version type of ranktable according to your input parameters
-func RanktableFactory(model Model, jobStartString, JSONVersion string) (v1.RankTabler, int32, error) {
+func RanktableFactory(model ResourceEventHandler, jobStartString, JSONVersion string) (v1.RankTabler, int32, error) {
 	var ranktable v1.RankTabler
 	groupList, replicasTotal, err := model.GenerateGrouplist()
 	if err != nil {

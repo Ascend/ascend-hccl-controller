@@ -45,9 +45,9 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if err != nil {
 		return err
 	}
-	jobWorker := agent2.NewDeployWorker(agent, deploy.DeployInfo, ranktable, replicasTotal)
+	deploymentWorker := agent2.NewDeploymentWorker(agent, deploy.DeployInfo, ranktable, replicasTotal)
 
-	// create a business worker for current job
+	// create a business worker for current deployment
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()
 
@@ -58,13 +58,13 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 		return nil
 	}
 
-	// start to report rank table build statistic for current job
+	// start to report rank table build statistic for current deployment
 	if agent.Config.DisplayStatistic {
-		go jobWorker.Statistic(BuildStatInterval)
+		go deploymentWorker.Statistic(BuildStatInterval)
 	}
 
 	// save current business worker
-	agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName] = jobWorker
+	agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName] = deploymentWorker
 	return nil
 }
 
@@ -74,7 +74,7 @@ func (deploy *DeployModel) EventUpdate(agent *agent2.BusinessAgent) error {
 	_, exist := agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
 	agent.RwMutex.RUnlock()
 	if !exist {
-		// for job update, if create business worker at job restart phase, the version will be incorrect
+		// for pod update,  the version will be incorrect
 		err := deploy.EventAdd(agent)
 		if err != nil {
 			return err
@@ -85,7 +85,6 @@ func (deploy *DeployModel) EventUpdate(agent *agent2.BusinessAgent) error {
 
 // GenerateGrouplist to create GroupList. in ranktable v1 will use it.
 func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
-	var replicasTotal int32
 	var groupList []*v1.Group
 	var deviceTotal int32
 
@@ -102,7 +101,6 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
 		InstanceCount: strconv.FormatInt(int64(deploy.replicas), decimal), InstanceList: instanceList}
 	groupList = append(groupList, &group)
-	replicasTotal += deploy.replicas
 
-	return groupList, replicasTotal, nil
+	return groupList, deploy.replicas, nil
 }

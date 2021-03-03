@@ -43,7 +43,7 @@ func (p *podIdentifier) String() string {
 }
 
 // NewBusinessAgent to create a agent. Agent is a framework, all types of workers can be
-// implemented in the form of woker interface in the agent framework run.
+// implemented in the form of worker interface in the agent framework run.
 // Agent monitors POD events with a specific label and implements the
 // combination of tasks through different workers at different times.
 var NewBusinessAgent = func(
@@ -172,7 +172,7 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 			return true
 		}
 		// llTODO: if someone create a single 910 pod without a job, how to handle?
-		klog.V(L3).Infof("syncing '%s' delayed: corresponding job worker may be uninitialized",
+		klog.V(L4).Infof("syncing '%s' delayed: corresponding job worker may be uninitialized",
 			podKeyInfo.String())
 		return false
 	}
@@ -208,16 +208,16 @@ func nameGenerationFunc(obj interface{}, eventType string) (string, error) {
 
 func splitWorkerKey(key string) (podInfo *podIdentifier, err error) {
 	parts := strings.Split(key, "/")
-	if len(parts) == splitNum {
-		podInfo := &podIdentifier{
-			namespace: parts[0],
-			name:      parts[1],
-			jobName:   parts[2],
-			eventType: parts[3],
-		}
-		return podInfo, nil
+	if len(parts) != splitNum {
+		return nil, fmt.Errorf("unexpected key format: %q", key)
 	}
-	return nil, fmt.Errorf("unexpected key format: %q", key)
+	podInfo = &podIdentifier{
+		namespace: parts[0],
+		name:      parts[1],
+		jobName:   parts[2],
+		eventType: parts[3],
+	}
+	return podInfo, nil
 }
 
 func preCheck(obj interface{}) (*podIdentifier, bool) {

@@ -85,7 +85,7 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 		go startPerformanceMonitorServer()
 	}
 
-	// Wait for the caches to be sync1ed before starting workers
+	// Wait for the caches to be synced before starting workers
 	klog.V(L4).Info("Waiting for informer caches to sync")
 	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced)
 	ok2 := cache.WaitForCacheSync(stopCh, c.deploySynced)
@@ -134,14 +134,14 @@ func (c *Controller) processNextWorkItem() bool {
 		// put back on the workqueue and attempted again after a back-off
 		// period.
 		defer c.workqueue.Done(obj)
-		var mo model.Model
+		var mo model.ResourceEventHandler
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
 		// form namespace/name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
-		if mo, ok = obj.(model.Model); !ok {
+		if mo, ok = obj.(model.ResourceEventHandler); !ok {
 			// As the item in the workqueue is actually invalid, we call
 			// Forget here else we'd go into a loop of attempting to
 			// process a work item that is invalid.
@@ -182,7 +182,7 @@ func (c *Controller) enqueueJob(obj interface{}, eventType string) {
 	c.workqueue.AddRateLimited(models)
 }
 
-func (c *Controller) syncHandler(model model.Model) error {
+func (c *Controller) syncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
 	klog.V(L2).Infof("syncHandler start, current key is %v", key)
 	namespace, name, eventType, err := splitKeyFunc(key)

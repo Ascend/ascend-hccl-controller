@@ -25,8 +25,8 @@ import (
 	"time"
 )
 
-// NewDeployWorker ： to create Deployment Worker
-func NewDeployWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler,
+// NewDeploymentWorker ： to create Deployment Worker
+func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler,
 	replicasTotal int32) *DeployWorker {
 	return &DeployWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
