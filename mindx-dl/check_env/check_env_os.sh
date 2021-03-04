@@ -99,8 +99,8 @@ function check_firwall_status() {
 
 # 检查用户
 function check_os_user() {
-    message_code_1=""
-    message_code_2=""
+    hwhiaiuser_message_code=""
+    hwmindx_message_code=""
 
     # 检查HwHiAiUser
     hwhiaiuser_uid="$(id HwHiAiUser 2>/dev/null | awk '{print $1}' | awk -F '=' '{print $2}' | awk -F '(' '{print $1}')"
@@ -148,7 +148,6 @@ function check_os_user() {
     write_single_line_to_file "${tmp_output_file}" "user"
     write_single_line_to_file "${tmp_output_file}" "    " "${hwhiaiuser_content}" "" "${hwhiaiuser_message_code}"
     write_single_line_to_file "${tmp_output_file}" "    " "${hwmindx_content}" "" "${hwmindx_message_code}"
-
 }
 
 function check_date() {
