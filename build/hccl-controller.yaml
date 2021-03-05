@@ -47,7 +47,7 @@ spec:
         imagePullPolicy: Never
         command: [ "/bin/bash", "-c", "--"]
         args: ["umask 027;hccl-controller --logtostderr=false --log_dir=/var/log/atlas_dls/hccl-controller
-         --log_file=/var/log/atlas_dls/hccl-controller/hccl-controller.log  --stderrthreshold=1 -v=5" ]
+         --log_file=/var/log/atlas_dls/hccl-controller/hccl-controller.log  --stderrthreshold=1 -v=3" ]
         volumeMounts:
           - name: device-hcclcontroller
             mountPath: /var/log/atlas_dls/hccl-controller

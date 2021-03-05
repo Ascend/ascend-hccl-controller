@@ -35,7 +35,6 @@ function mockgen_files() {
   mockgen k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface >"${MOCK_TOP}"/mock_v1/corev1_mock.go
   mockgen volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1 JobInformer >"${MOCK_TOP}"/mock_v1alpha1/former_mock.go
   mockgen k8s.io/client-go/kubernetes Interface >"${MOCK_TOP}"/mock_kubernetes/k8s_interface_mock.go
-  mockgen hccl-controller/pkg/ring-controller/controller WorkAgentInterface >"${MOCK_TOP}"/mock_controller/businessagent_mock.go
   mockgen k8s.io/client-go/tools/cache Indexer >"${MOCK_TOP}"/mock_cache/indexer_mock.go
   mockgen k8s.io/client-go/tools/cache SharedIndexInformer >"${MOCK_TOP}"/mock_cache/sharedInformer_mock.go
 }

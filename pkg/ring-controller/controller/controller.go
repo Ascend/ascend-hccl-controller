@@ -19,16 +19,9 @@ package controller
 
 import (
 	"fmt"
-	"net"
-	"net/http"
-	"net/http/pprof"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
-
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -38,55 +31,19 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
-	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	"net"
+	"net/http"
+	"net/http/pprof"
+	"reflect"
+	"strings"
+	"time"
 	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
-	v1alpha1informers "volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1"
 )
 
-// Controller initialize business agent
-type Controller struct {
-	// component for recycle resources
-	businessAgent *businessAgent
-
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
-
-	// jobclientset is a clientset for volcano job
-	jobclientset clientset.Interface
-
-	// component for resource batch/v1alpha1/Job
-	jobsSynced  cache.InformerSynced
-	jobsIndexer cache.Indexer
-
-	// workqueue is a rate limited work queue. This is used to queue work to be
-	// processed instead of performing it as soon as a change happens. This
-	// means we can ensure we only process a fixed amount of resources at a
-	// time, and makes it easy to ensure we are never processing the same item
-	// simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
-	// recorder is an event recorder for recording Event resources to the
-	// Kubernetes API.
-	recorder           record.EventRecorder
-	workAgentInterface WorkAgentInterface
-}
-
-// Config controller init configure
-type Config struct {
-	DryRun           bool
-	DisplayStatistic bool
-	PodParallelism   int
-	CmCheckInterval  int
-	CmCheckTimeout   int
-}
-
 // NewController returns a new sample controller
-func NewController(
-	kubeclientset kubernetes.Interface,
-	jobclientset clientset.Interface,
-	config *Config,
-	jobInformer v1alpha1informers.JobInformer,
+func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
+	informerInfo InformerInfo,
 	stopCh <-chan struct{}) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
@@ -97,47 +54,32 @@ func NewController(
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
-	businessAgent, err := newBusinessAgent(kubeclientset, recorder, config, stopCh)
+	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
 		klog.Fatalf("Error creating business agent: %s", err.Error())
 	}
-	controller := &Controller{
-		kubeclientset:      kubeclientset,
-		jobclientset:       jobclientset,
-		jobsSynced:         jobInformer.Informer().HasSynced,
-		jobsIndexer:        jobInformer.Informer().GetIndexer(),
-		businessAgent:      businessAgent,
-		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-		recorder:           recorder,
-		workAgentInterface: businessAgent,
+	c := &Controller{
+		kubeclientset: kubeclientset,
+		jobclientset:  jobclientset,
+		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
+		deploySynced:  informerInfo.DeployInformer.Informer().HasSynced,
+		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
+		recorder:      recorder,
+		agent:         agents,
+		cacheIndexers: informerInfo.CacheIndexers,
 	}
-
-	klog.V(L1).Info("Setting up event handlers")
-	// Set up an event handler for when Job resources change
-	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, EventAdd)
-		},
-		UpdateFunc: func(old, new interface{}) {
-			if !reflect.DeepEqual(old, new) {
-				controller.enqueueJob(new, EventUpdate)
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			controller.enqueueJob(obj, EventDelete)
-		},
-	})
-	return controller
+	informerInfo.addEventHandle(c)
+	return c
 }
 
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
-// is closed, at which point it will shutdown the workqueue and wait for
+// is closed, at which point it will shutdown the WorkQueue and wait for
 // workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
-	defer c.businessAgent.workqueue.ShuttingDown()
+	defer c.agent.Workqueue.ShuttingDown()
 	// monitor performance
 	if monitorPerformance {
 		go startPerformanceMonitorServer()
@@ -145,7 +87,9 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 
 	// Wait for the caches to be synced before starting workers
 	klog.V(L4).Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.jobsSynced); !ok {
+	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced)
+	ok2 := cache.WaitForCacheSync(stopCh, c.deploySynced)
+	if !(ok && ok2) {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -164,7 +108,7 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 	return nil
 }
 
-// runWorker is a long-running function that will continually call the
+// runMasterWorker is a long-running function that will continually call the
 // processNextWorkItem function in order to read and process a message on the
 // workqueue.
 func (c *Controller) runMasterWorker() {
@@ -190,35 +134,35 @@ func (c *Controller) processNextWorkItem() bool {
 		// put back on the workqueue and attempted again after a back-off
 		// period.
 		defer c.workqueue.Done(obj)
-		var key string
+		var mo model.ResourceEventHandler
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
 		// form namespace/name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
-		if key, ok = obj.(string); !ok {
+		if mo, ok = obj.(model.ResourceEventHandler); !ok {
 			// As the item in the workqueue is actually invalid, we call
 			// Forget here else we'd go into a loop of attempting to
 			// process a work item that is invalid.
 			c.workqueue.Forget(obj)
-			pkgutilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
-			return nil
+			return fmt.Errorf("expected string in workqueue but got %#v", obj)
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Job resource to be synced.
-		if err := c.syncHandler(key); err != nil {
+		// Job/Deployment resource to be synced.
+		if err := c.syncHandler(mo); err != nil {
 			c.workqueue.Forget(obj)
-			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing '%s': %s", mo.GetModelKey(), err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(L2).Infof("Successfully synced '%s'", key)
+		klog.V(L4).Infof("Successfully synced %+v ", mo)
 		return nil
 	}(obj)
 
 	if err != nil {
+		klog.Errorf("controller processNextWorkItem is failed, err %v", err)
 		pkgutilruntime.HandleError(err)
 		return true
 	}
@@ -230,31 +174,73 @@ func (c *Controller) processNextWorkItem() bool {
 // it into a namespace/name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than Job.
 func (c *Controller) enqueueJob(obj interface{}, eventType string) {
-	var key string
-	var err error
-	if key, err = c.KeyGenerationFunc(obj, eventType); err != nil {
+	models, err := model.Factory(obj, eventType, c.cacheIndexers)
+	if err != nil {
 		pkgutilruntime.HandleError(err)
 		return
 	}
-	c.workqueue.AddRateLimited(key)
+	c.workqueue.AddRateLimited(models)
 }
 
-// KeyGenerationFunc to generate key
-func (c *Controller) KeyGenerationFunc(obj interface{}, eventType string) (string, error) {
-	metaData, err := meta.Accessor(obj)
-
+func (c *Controller) syncHandler(model model.ResourceEventHandler) error {
+	key := model.GetModelKey()
+	klog.V(L2).Infof("syncHandler start, current key is %v", key)
+	namespace, name, eventType, err := splitKeyFunc(key)
 	if err != nil {
-		return "", fmt.Errorf("object has no meta: %v", err)
+		return fmt.Errorf("failed to split key: %v", err)
 	}
 
-	if len(metaData.GetNamespace()) > 0 {
-		return metaData.GetNamespace() + "/" + metaData.GetName() + "/" + eventType, nil
+	_, exists, err := model.GetCacheIndex().GetByKey(namespace + "/" + name)
+	if err != nil {
+		return fmt.Errorf("failed to get obj from indexer: %s", key)
 	}
-	return metaData.GetName() + "/" + eventType, nil
+	if !exists {
+		if eventType == agent.EventDelete {
+			agent.DeleteWorker(namespace, name, c.agent)
+		}
+		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
+	}
+
+	switch eventType {
+	case agent.EventAdd:
+		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
+		err := model.EventAdd(c.agent)
+		if err != nil {
+			return err
+		}
+	case agent.EventUpdate:
+		// unnecessary to handle
+		err := model.EventUpdate(c.agent)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
+	}
+
+	return nil
 }
 
-// SplitKeyFunc to splite key by format namespace,jobname,eventType
-func (c *Controller) SplitKeyFunc(key string) (namespace, name, eventType string, err error) {
+func (in *InformerInfo) addEventHandle(controller *Controller) {
+	eventHandlerFunc := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			controller.enqueueJob(obj, agent.EventAdd)
+		},
+		UpdateFunc: func(old, new interface{}) {
+			if !reflect.DeepEqual(old, new) {
+				controller.enqueueJob(new, agent.EventUpdate)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			controller.enqueueJob(obj, agent.EventDelete)
+		},
+	}
+	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
+}
+
+// splitKeyFunc to splite key by format namespace,jobname,eventType
+func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
 	parts := strings.Split(key, "/")
 	switch len(parts) {
 	case 2:
@@ -266,129 +252,6 @@ func (c *Controller) SplitKeyFunc(key string) (namespace, name, eventType string
 	default:
 		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
 	}
-}
-
-func (c *Controller) syncHandler(key string) error {
-	klog.V(L2).Infof("syncHandler start, current key is %s", key)
-
-	namespace, name, eventType, err := c.SplitKeyFunc(key)
-	if err != nil {
-		return fmt.Errorf("failed to split key: %v", err)
-	}
-
-	tempObj, exists, err := c.jobsIndexer.GetByKey(namespace + "/" + name)
-	if err != nil {
-		return fmt.Errorf("failed to get obj from indexer: %s", key)
-	}
-
-	switch eventType {
-	case EventAdd:
-		err := c.eventAdd(exists, namespace, name, tempObj, key)
-		if err != nil {
-			return err
-		}
-	case EventDelete:
-		if exists {
-			klog.V(L2).Infof("undefined condition, exist + delete, current key is %s", key)
-			return fmt.Errorf("undefined condition, exist + delete, current key is %s", key)
-		}
-		c.businessAgent.DeleteBusinessWorker(namespace, name)
-	case EventUpdate:
-		// unnecessary to handle
-		err := c.eventUpdate(exists, tempObj, namespace, name, key)
-		if err != nil {
-			return err
-		}
-	default:
-		// abnormal
-		klog.V(L2).Infof("undefined condition, eventType is %s, current key is %s", eventType, key)
-		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
-	}
-
-	return nil
-}
-
-func (c *Controller) eventAdd(exists bool, namespace string, name string, tempObj interface{}, key string) error {
-	if exists {
-		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
-		// check if job's corresponding configmap is created successfully via volcano controller
-		job, ok := tempObj.(*v1alpha1apis.Job)
-		if !ok {
-			klog.Error("event add => failed, job transform not ok")
-		}
-		err := c.createBusinessWorker(job)
-		if err != nil {
-			return err
-		}
-	}
-	// abnormal
-	klog.V(L2).Infof("undefined condition, not exist + add, current key is %s", key)
-	return nil
-}
-
-func (c *Controller) eventUpdate(exists bool, tempObj interface{}, namespace string, name string, key string) error {
-	if exists {
-		job, ok := tempObj.(*v1alpha1apis.Job)
-		if !ok {
-			klog.Error("update event -> failed")
-		}
-		if string(job.Status.State.Phase) == JobRestartPhase {
-			c.workAgentInterface.DeleteBusinessWorker(namespace, name)
-			return nil
-		}
-		if !c.businessAgent.IsBusinessWorkerExist(namespace, name) {
-			// for job update, if create business worker at job restart phase, the version will be incorrect
-			err := c.createBusinessWorker(job)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	klog.V(L2).Infof("undefined condition, not exist + update, current key is %s", key)
-	return nil
-}
-
-func (c *Controller) createBusinessWorker(job *v1alpha1apis.Job) error {
-	// check if job's corresponding configmap is created successfully via volcano controller
-	cm, err := c.workAgentInterface.CheckConfigmapCreation(job)
-	if err != nil {
-		return err
-	}
-
-	// retrieve configmap data
-	var configmapDataV1 RankTableV1
-	var configmapDataV2 RankTableV2
-	jobStartString := cm.Data[ConfigmapKey]
-	klog.V(L4).Info("jobstarting==>", jobStartString)
-
-	var ranktable RankTable
-	groupList, replicasTotal, err := generateGrouplist(job)
-	if err != nil {
-		return fmt.Errorf("generate group list from job error: %v", err)
-	}
-
-	if JSONVersion == "v1" {
-		err = configmapDataV1.unmarshalToRankTable(jobStartString)
-		if err != nil {
-			return err
-		}
-		ranktable = &RankTableV1{RankTableStatus: RankTableStatus{ConfigmapInitializing},
-			GroupCount: strconv.Itoa(len(job.Spec.Tasks)), GroupList: groupList}
-	} else {
-		err = configmapDataV2.unmarshalToRankTable(jobStartString)
-		if err != nil {
-			return err
-		}
-		var serverList []*Server
-		ranktable = &RankTableV2{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
-			RankTableStatus: RankTableStatus{ConfigmapInitializing}, Version: "1.0"}
-	}
-	err = c.workAgentInterface.CreateBusinessWorker(job, ranktable, replicasTotal)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func startPerformanceMonitorServer() {
@@ -403,34 +266,8 @@ func startPerformanceMonitorServer() {
 		Addr:    net.JoinHostPort("localhost", "6060"),
 		Handler: mux,
 	}
-	error := server.ListenAndServe()
-	if error != nil {
-		klog.Error(error)
+	err := server.ListenAndServe()
+	if err != nil {
+		klog.Error(err)
 	}
-}
-
-func generateGrouplist(job *v1alpha1.Job) ([]*Group, int32, error) {
-	var replicasTotal int32
-	var groupList []*Group
-	for _, taskSpec := range job.Spec.Tasks {
-		var deviceTotal int32
-
-		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[ResourceName]
-			if !exist {
-				continue
-			}
-			if quantityValue := int32(quantity.Value()); quantityValue > 0 {
-				deviceTotal += quantityValue
-			}
-		}
-		deviceTotal *= taskSpec.Replicas
-
-		var instanceList []*Instance
-		group := Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
-			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
-		groupList = append(groupList, &group)
-		replicasTotal += taskSpec.Replicas
-	}
-	return groupList, replicasTotal, nil
 }
