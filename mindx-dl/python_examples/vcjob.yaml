@@ -32,6 +32,14 @@ spec:
           env:
           - name: RANK_TABLE_FILE
             value: "/user/serverid/devindex/config/hccl.json"  # ConfigMap中data挂载路径，如需修改要和下面ConfigMap的挂载路径一致
+          - name: {{ job_name }}                               # 和Jobname保持一致
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: XDL_IP                                       # 物理节点的IP,用来标识Pod运行在哪个节点上
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
           command: {{ command }}
           args: {{ args }}
           resources:
@@ -71,21 +79,16 @@ spec:
             path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
         {% else %}
         - name: code
-          hostpath:
+          hostPath:
             path: {{ host_code_path }}         # 物理机上训练脚本的路径
         - name: data
-          hostpath:
+          hostPath:
             path: {{ host_data_path }}         # 物理机上训练数据集的路径
         - name: output
-          hostpath:
+          hostPath:
             path: {{ host_output_path }}       # 物理机上模型保存的路径，和脚本有关
         {% endif %}
         - name: localtime
           hostPath:
             path: /etc/localtime               # 配置docker的时间
-        env:
-        - name: {{ job_name }}     # 和Jobname保持一致
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
         restartPolicy: OnFailure

@@ -79,7 +79,7 @@ function check_driver_version() {
     write_single_line_to_file "${tmp_output_file}" "npu-driver" "${npu_driver_status}" "${npu_driver_version}" "${driver_message_code}"
 }
 
-# 检查driver数量
+# 检查npu数量
 function check_npu_number() {
     npu_message_code=""
 
@@ -126,7 +126,6 @@ function check_device_ip() {
             duplicate_line="No duplicate device ip"
         fi
         device_ips="$(echo "${device_ips}" | sed 's/$/*|* *|* *|/g')"
-
     fi
 
     local content_ips=" *|*device_ip configure info*|* *|* *|*${ips_message_code}*|\n${device_ips}"
@@ -142,8 +141,6 @@ function check_device_ip() {
     else
         write_single_line_to_file "${tmp_output_file}" "duplicate device_ip" "${duplicate_line}" "" "${duplicate_message_code}"
     fi
-
-
 }
 
 # 检查设备网口状态
@@ -238,7 +235,7 @@ function check_firmware() {
 }
 
 function do_check() {
-    write_category "drive/firmware-related"
+    write_category "driver/firmware-related"
     check_upgrade_tool
     check_firmware
     check_driver_version
