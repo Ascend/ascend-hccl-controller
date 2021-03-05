@@ -83,4 +83,4 @@ spec:
       {% endif %}
       - name: localtime
         hostPath:
-          path: /etc/localtime   # 配置docker的时间
+          path: /etc/localtime                # 配置docker的时间

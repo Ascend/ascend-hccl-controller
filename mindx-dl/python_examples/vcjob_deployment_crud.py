@@ -38,9 +38,9 @@ def create_deployment(api_obj, **vcjob_deployment_dict):
     print('=====create deployment vcjob: {}'.format(result))
 
 
-def delete_deployment(api_job):
+def delete_deployment(api_obj):
     """delete deployment vcjob"""
-    result = api_job.delete_namespaced_deployment(
+    result = api_obj.delete_namespaced_deployment(
         name=JOB_NAME,
         namespace='default',
         body=client.V1DeleteOptions(propagation_policy='Foreground',
