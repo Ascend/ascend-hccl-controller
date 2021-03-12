@@ -15,11 +15,12 @@
  */
 
 // Package controller for run the logic
-package controller
+package agent
 
 import (
 	"encoding/json"
 	"github.com/golang/mock/gomock"
+	"hccl-controller/pkg/ring-controller/controller"
 	"hccl-controller/pkg/ring-controller/controller/mock_kubernetes"
 	"hccl-controller/pkg/ring-controller/controller/mock_v1"
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -34,7 +35,7 @@ import (
 func Test_businessWorker_statistic(t *testing.T) {
 
 	tests := []struct {
-		worker *businessWorker
+		worker *controller.VCJobWorker
 		name   string
 	}{
 		{
@@ -47,7 +48,7 @@ func Test_businessWorker_statistic(t *testing.T) {
 		},
 		{
 			name:   "test3:cachePod number don't equals task",
-			worker: newMockBusinessWorkerforStatistic(int32(two), 1, true),
+			worker: newMockBusinessWorkerforStatistic(int32(controller.two), 1, true),
 		},
 	}
 	for _, tt := range tests {
@@ -59,14 +60,14 @@ func Test_businessWorker_statistic(t *testing.T) {
 					b.statisticSwitch <- struct{}{}
 				}()
 			}
-			b.statistic(twosecond)
+			b.statistic(controller.twosecond)
 
 		})
 	}
 }
 
-func newMockBusinessWorkerforStatistic(cachedPodNum, taskReplicasTotal int32, statisticStopped bool) *businessWorker {
-	return &businessWorker{
+func newMockBusinessWorkerforStatistic(cachedPodNum, taskReplicasTotal int32, statisticStopped bool) VCJobWorker {
+	return &VCJobWorker{
 		statisticSwitch:      make(chan struct{}),
 		podsIndexer:          nil,
 		jobVersion:           1,
@@ -146,7 +147,7 @@ func mockPodIdentify(event string) *podIdentifier {
 	}
 }
 
-func generateInstance(worker *businessWorker) {
+func generateInstance(worker *controller.VCJobWorker) {
 	var instance Instance
 	deviceInfo := mockJSON()
 	err := json.Unmarshal([]byte(deviceInfo), &instance)
@@ -180,13 +181,13 @@ func Test_businessWorker_handleDeleteEvent(t *testing.T) {
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockCm := mock_v1.NewMockConfigMapInterface(ctrl)
-	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockCm.EXPECT().Update(gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(four)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
-	job := mockJob()
+	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(controller.mockConfigMap(), nil).Times(controller.two)
+	mockCm.EXPECT().Update(gomock.Any()).Return(controller.mockConfigMap(), nil).Times(controller.two)
+	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(controller.four)
+	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(controller.four)
+	job := controller.mockJob()
 	tests := []struct {
-		worker  *businessWorker
+		worker  *controller.VCJobWorker
 		podInf  *podIdentifier
 		wantErr bool
 		name    string
@@ -222,11 +223,11 @@ func Test_businessWorker_handleAddUpdateEvent(t *testing.T) {
 	mockK8s, job, pod := initMock(t)
 	var pods []*apiCoreV1.Pod
 	pods = append(pods, pod.DeepCopy())
-	pod.Annotations[PodDeviceKey] = mockJSON()
+	pod.Annotations[controller.PodDeviceKey] = mockJSON()
 	pods = append(pods, pod.DeepCopy())
 	pod.Name = "test"
 	pods = append(pods, pod.DeepCopy())
-	pod.Annotations[PodDeviceKey] = "xxx"
+	pod.Annotations[controller.PodDeviceKey] = "xxx"
 	pods = append(pods, pod.DeepCopy())
 	tests := []testCaseForWorker{
 		newTestCaseForWorker("test1:no device info,run cachezeroPodInfo,no error", false,
@@ -253,12 +254,12 @@ func initMock(t *testing.T) (kubernetes.Interface, *v1alpha1.Job, *apiCoreV1.Pod
 	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
 	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
 	mockCm := mock_v1.NewMockConfigMapInterface(ctrl)
-	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockCm.EXPECT().Update(gomock.Any()).Return(mockConfigMap(), nil).Times(two)
-	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(four)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(four)
-	job := mockJob()
-	pod := mockPod()
+	mockCm.EXPECT().Get(gomock.Any(), gomock.Any()).Return(controller.mockConfigMap(), nil).Times(controller.two)
+	mockCm.EXPECT().Update(gomock.Any()).Return(controller.mockConfigMap(), nil).Times(controller.two)
+	mockV1.EXPECT().ConfigMaps(gomock.Any()).Return(mockCm).Times(controller.four)
+	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(controller.four)
+	job := controller.mockJob()
+	pod := controller.mockPod()
 	return mockK8s, job, pod
 
 }
