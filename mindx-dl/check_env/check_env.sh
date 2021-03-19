@@ -32,12 +32,13 @@ function help_document() {
     echo "                                ${MASTER_WORKER_NODE}: this node is both a management node and a compute node."
     echo ""
     echo "  -hw, --hardware  (required) Hardware form."
-    echo "                              Four options: '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}'"
+    echo "                              Four options: '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}', '${HW_300I_PRO}'"
     echo "                                ${HW_COMMON}: Common server. This parameter can be used"
     echo "                                        only when the '-nt' parameter is set to '${MASTER_NODE}'"
     echo "                                ${HW_TRAIN}: Atlas 800 training servers"
-    echo "                                ${HW_INFER}: Atlas 800 inference servers"
+    echo "                                ${HW_INFER}: Atlas 800 inference servers or servers with Atlas 300I(model 3000/3010) inference cards"
     echo "                                ${HW_300T}: servers(with Atlas 300T training cards)"
+    echo "                                ${HW_300I_PRO}: servers(with Atlas 300I Pro inference cards)"
     echo ""
     echo "  -ip               (optional) local IP. For example: 10.10.123.123"
     echo "                               If there is no such parameter, the output will not contain"
@@ -79,12 +80,20 @@ function check_param_hardware() {
         exit 1
     fi
 
-    if [[ "${HW_TRAIN}" != "${hardWare}" ]] && \
-        [[ "${HW_INFER}" != "${hardWare}" ]] && \
-        [[ "${HW_300T}" != "${hardWare}" ]] && \
-        [[ "${HW_COMMON}" != "${hardWare}" ]]
+    # 硬件形态不在规定范围内
+    is_valid='false'
+    for i in ${HW_ARR[@]}
+    do
+        if [[ "$i" == "${hardWare}" ]]
+        then
+            is_valid="true"
+            break
+        fi
+    done
+
+    if [[ ${is_valid} == 'false' ]]
     then
-        echo -e "\n'-hw(--hardware)' can only be set to '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}'.\n"
+        echo -e "\n'-hw(--hardware)' can only be set to '${HW_COMMON}', '${HW_TRAIN}', '${HW_INFER}', '${HW_300T}', '${HW_300I_PRO}'.\n"
         exit 1
     fi
 
@@ -109,7 +118,6 @@ function check_param_ip() {
 
 # 输出主机相关信息
 function print_host_info() {
-    sed -i "1i hostname: $(hostname)" "${tmp_output_file}"
     if [[ "" != "${host_ip}" ]]
     then
         sed -i "1i ip: ${host_ip}" "${tmp_output_file}"
@@ -123,16 +131,18 @@ function check_input_params() {
 }
 
 function to_report_file() {
-    print_host_info
     # 表头
-    sed -iE '/^hostname/a Category*|*Check Items*|*Status*|*Version*|*Message Code*|' "${tmp_output_file}"
+    sed -iE '1i Category*|*Check Items*|*Status*|*Version*|*Message Code*|' "${tmp_output_file}"
+
+    print_host_info
+
     # 表格格式化
     cat "${tmp_output_file}" | column -s "*" -t >> "${output_file}"
     # 添加类别分隔符
     row_max_length=$(wc -L "${output_file}" | awk '{print $1}')
     split_category_symbol=$(printf "%-${row_max_length}s\n" "-" | sed -e 's/ /-/g')
     sed -iE "/^[A-Za-z]/i ${split_category_symbol}" "${output_file}"
-    
+
     # 空格开头的行添加分隔符
     # 去掉开头的空格，该行长度
     no_space_line_max_length=$(grep -E '^[ ]' "${output_file}" | head -n 1 | sed 's/^\s*//g' | wc -L)
@@ -142,7 +152,6 @@ function to_report_file() {
     space_symbol=$(printf "%${space_length}s")
     item_split_line_symbol="$(echo "${space_symbol}${no_space_symbol}")"
     sed -Ei "/^${space_symbol}\|\s{2}[A-Za-z]\+*/i\\${item_split_line_symbol}" "${output_file}"
-    
     # 表尾
     echo "${split_category_symbol}" >> "${output_file}"
 

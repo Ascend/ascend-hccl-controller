@@ -30,6 +30,7 @@ def get_infer_param_dict():
     """render infer config file"""
     infer_config_params = {
         'infer_job_name': INFER_JOB_NAME,
+        # if using A300I Pro, change 'huawei-Ascend310' to 'huawei-Ascend710'
         'node_selector': {
             'accelerator': 'huawei-Ascend310',
             'host-arch': 'huawei-arm'  # huawei-arm/huawei-x86

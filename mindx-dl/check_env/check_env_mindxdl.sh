@@ -54,6 +54,8 @@ fi
 A910_LABEL="accelerator=huawei-Ascend910"
 # A310
 A310_LABEL="accelerator=huawei-Ascend310"
+# A710
+A710_LABEL="accelerator=huawei-Ascend710"
 # mindx dl master
 MINDXDL_MASTER_LABEL="masterselector=dls-master-node"
 # mindx dl worker
@@ -389,6 +391,10 @@ function check_node_label() {
         then
             # 310推理标签
             worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A310_LABEL}"
+        elif [[ "${hardWare}" == "${HW_300I_PRO}" ]]
+        then
+            # A300I Pro标签
+            worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A710_LABEL}"
         fi
     fi
 
