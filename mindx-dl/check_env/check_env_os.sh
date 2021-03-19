@@ -33,7 +33,7 @@ function check_hostname() {
     then
         hostname_error_code="${ERROR_HOSTNAME_CODE}"
     fi
-    write_single_line_to_file "${tmp_output_file}" "hostname" "$(host_name)" "" "${hostname_error_code}"
+    write_single_line_to_file "${tmp_output_file}" "hostname" "$(hostname)" "" "${hostname_error_code}"
 }
 
 function check_os_arch() {
