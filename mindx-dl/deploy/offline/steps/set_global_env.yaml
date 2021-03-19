@@ -22,13 +22,13 @@
     - name: Get valid hostname
       shell:
         cmd:
-          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | grep -v '[_.]' || true
+          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | grep -v '[A-Z_.]' || true
       register: result
 
     - name: Check hostname
       fail:
         msg: "The hostname of this node is illegal. \
-              Make sure there are no dots(.) or underscores(_) in the hostname."
+              Make sure there are no uppercase letters(A-Z), dots(.) or underscores(_) in the hostname."
       when: result.stdout != ansible_hostname
 
 - hosts: localnode, cluster
