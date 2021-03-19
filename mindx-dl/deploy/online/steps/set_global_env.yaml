@@ -19,42 +19,22 @@
   remote_user: root
 
   tasks:
-    - name: Close firewall - Ubuntu
+    - name: Get valid hostname
       shell:
         cmd:
-          ufw disable
-      when:
-        - ansible_distribution == 'Ubuntu'
+          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | grep -v '[_.]' || true
+      register: result
 
-    - name: Install selinux - CentOS
-      shell:
-        cmd:
-          yum install -y libselinux-python3 libselinux-python;
-          pip3.7 install selinux
-      environment:
-        http_proxy: "{{ proxy }}"
-        https_proxy: "{{ proxy }}"
-      when:
-        - ansible_distribution == 'CentOS'
+    - name: Check hostname
+      fail:
+        msg: "The hostname of this node is illegal. \
+              Make sure there are no dots(.) or underscores(_) in the hostname."
+      when: result.stdout != ansible_hostname
 
-    - name: Close firewall - CentOS
-      shell:
-        cmd:
-          systemctl stop firewalld.service;
-          systemctl disable firewalld.service
-      ignore_errors: True
-      when:
-        - ansible_distribution == 'CentOS'
+- hosts: localnode, cluster
+  remote_user: root
 
-    - name: Close SELinux - CentOS
-      shell:
-        cmd:
-          setenforce 0;
-          sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config;
-          sysctl --system
-      when:
-        - ansible_distribution == 'CentOS'
-
+  tasks:
     # delete router forward config
     - name: Delete restrictive forwarding
       lineinfile:

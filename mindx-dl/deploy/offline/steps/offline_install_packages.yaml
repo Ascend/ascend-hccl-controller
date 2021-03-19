@@ -292,3 +292,49 @@
         cmd:
           systemctl enable kubelet && systemctl start kubelet
       tags: kubernetes
+
+# Close Firewall
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    - name: Install ufw
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/"
+        cmd:
+          dpkg -i ufw*
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Close firewall
+      shell:
+        cmd:
+          ufw disable
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install selinux with pip - CentOS
+      shell:
+        chdir: "{{ dls_root_dir }}/base_software/selinux"
+        cmd:
+          pip3.7 install distro-1.5.0* selinux-0.2.1*
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close firewall - CentOS
+      shell:
+        cmd:
+          systemctl stop firewalld.service;
+          systemctl disable firewalld.service
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close SELinux - CentOS
+      shell:
+        cmd:
+          setenforce 0;
+          sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config;
+          sysctl --system
+      when:
+        - ansible_distribution == 'CentOS'

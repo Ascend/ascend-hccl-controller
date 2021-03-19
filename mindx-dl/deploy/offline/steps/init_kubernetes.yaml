@@ -167,6 +167,16 @@
         - basic_only
       with_items: "{{ groups['inference_node'] }}"
 
+    - name: Label A300I PRO nodes
+      shell:
+        cmd:
+          unset http_proxy https_proxy;
+          kubectl label nodes {{ item }} accelerator=huawei-Ascend710 --overwrite=true;
+      tags:
+        - init-workers
+        - basic_only
+      with_items: "{{ groups['A300I_PRO_node'] }}"
+
     - name: Label A300T nodes
       shell:
         cmd:

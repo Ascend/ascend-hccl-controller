@@ -17,6 +17,22 @@
 
 - hosts: localnode, cluster
   remote_user: root
+
+  tasks:
+    - name: Get valid hostname
+      shell:
+        cmd:
+          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | grep -v '[_.]' || true
+      register: result
+
+    - name: Check hostname
+      fail:
+        msg: "The hostname of this node is illegal. \
+              Make sure there are no dots(.) or underscores(_) in the hostname."
+      when: result.stdout != ansible_hostname
+
+- hosts: localnode, cluster
+  remote_user: root
   tasks:
     - name: create offline package directory
       file:
