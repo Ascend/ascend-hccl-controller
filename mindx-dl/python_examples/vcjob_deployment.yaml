@@ -15,21 +15,23 @@ spec:
       labels:
         app: tf
         ring-controller.atlas: ascend-910
-        deploy-name: {{ job_name }}                          #和Deployment name保持一致
+        deploy-name: {{ job_name }}                          # Consistent with deployment name
     spec:
-      schedulerName: volcano                                 # 当类型为deployment时，设置为volcano，而不是default-scheduler
+      schedulerName: volcano                                 # When the type is deployment, it is set to volcano instead of default scheduler
       containers:
       - image: {{ docker_image }}
         imagePullPolicy: IfNotPresent
         name: tf
         env:
         - name: RANK_TABLE_FILE
-          value: "/user/serverid/devindex/config/hccl.json"  # ConfigMap中data挂载路径，如需修改要和下面ConfigMap的挂载路径一致
-        - name: {{ job_name }}                               #和Deployment name保持一致
+          # If you need to modify the data mount path in ConfigMap,
+          # you need to modify it to be consistent with the mount path of the following ConfigMap
+          value: "/user/serverid/devindex/config/hccl.json"
+        - name: {{ job_name }}                               # Consistent with deployment name
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: XDL_IP                                       # 物理节点的IP,用来标识Pod运行在哪个节点上
+        - name: XDL_IP                                       # IP of the host, which is used to identify which node the pod runs on
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
@@ -39,16 +41,16 @@ spec:
           requests:
             huawei.com/Ascend910: {{ npu_count }}
           limits:
-            huawei.com/Ascend910: {{ npu_count }}           # 目前需要和上面requests保持一致
+            huawei.com/Ascend910: {{ npu_count }}           # At present, it needs to be consistent with the above requests
         volumeMounts:
           - name: ascend-910-config
             mountPath: /user/serverid/devindex/config
           - name: code
-            mountPath: {{ container_code_path }}           # 容器内训练脚本路径
+            mountPath: {{ container_code_path }}           # Training script path in container
           - name: data
-            mountPath: {{ container_data_path }}           # 容器内训练数据集路径
+            mountPath: {{ container_data_path }}           # Training dataset path in container
           - name: output
-            mountPath: {{ container_output_path }}         # 容器内训练输出路径
+            mountPath: {{ container_output_path }}         # Training output path in container
           - name: localtime
             mountPath: /etc/localtime
       nodeSelector:
@@ -56,31 +58,31 @@ spec:
       volumes:
       - name: ascend-910-config
         configMap:
-          name: rings-config-{{ job_name }}   # 对应configMap的name
-      {% if use_nfs %}                        # 是否使用NFS
+          name: rings-config-{{ job_name }}   # Name corresponding to ConfigMap
+      {% if use_nfs %}                        # Use NFS or not
       - name: code
         nfs:
-          server: {{ nfs_server_ip }}         # nfs服务器地址
-          path: {{ host_code_path }}          # 物理机上训练脚本的路径
+          server: {{ nfs_server_ip }}         # NFS server address
+          path: {{ host_code_path }}          # Training script path in host
       - name: data
         nfs:
           server: {{ nfs_server_ip }}
-          path: {{ host_data_path }}          # 物理机上训练数据集的路径
+          path: {{ host_data_path }}          # Training dataset path in host
       - name: output
         nfs:
           server: {{ nfs_server_ip }}
-          path: {{ host_output_path }}        # 物理机上模型保存的路径，和脚本有关
+          path: {{ host_output_path }}        # The path to save the model on the host is related to the training script
       {% else %}
       - name: code
         hostPath:
-          path: {{ host_code_path }}          # 物理机上训练脚本的路径
+          path: {{ host_code_path }}          # Training script path in host
       - name: data
         hostPath:
-          path: {{ host_data_path }}          # 物理机上训练数据集的路径
+          path: {{ host_data_path }}          # Training dataset path in host
       - name: output
         hostPath:
-          path: {{ host_output_path }}        # 物理机上模型保存的路径，和脚本有关
+          path: {{ host_output_path }}        # The path to save the model on the host is related to the training script
       {% endif %}
       - name: localtime
         hostPath:
-          path: /etc/localtime                # 配置docker的时间
+          path: /etc/localtime                # Ensure that the container time is consistent with the host

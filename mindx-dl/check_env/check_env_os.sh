@@ -12,6 +12,7 @@ ERROR_USER_NOT_EXISTS_CODE='error_1001'
 ERROR_USER_ID_ERROR_CODE='error_1002'
 ERROR_NOT_JOIN_GROUP_CODE='error_1003'
 ERROR_SWAP_NOT_EMPTY_CODE="error_1004"
+ERROR_HOSTNAME_CODE="error_1005"
 
 # info类
 INFO_NOT_SUPPORT_OS_CODE="info_1001"
@@ -24,6 +25,16 @@ EMPTY_SWAP_SIZE="0B"
 
 # 载入公共函数
 source ./check_env_utils.sh
+
+function check_hostname() {
+    hostname_error_code=""
+    host_name="$(hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | tr -d 'a-z0-9-')"
+    if [[ "${host_name}" != "" ]]
+    then
+        hostname_error_code="${ERROR_HOSTNAME_CODE}"
+    fi
+    write_single_line_to_file "${tmp_output_file}" "hostname" "$(hostname)" "" "${hostname_error_code}"
+}
 
 function check_os_arch() {
     write_single_line_to_file "${tmp_output_file}" "architecture" "$(arch)"
@@ -148,6 +159,7 @@ function check_os_user() {
     write_single_line_to_file "${tmp_output_file}" "user"
     write_single_line_to_file "${tmp_output_file}" "    " "${hwhiaiuser_content}" "" "${hwhiaiuser_message_code}"
     write_single_line_to_file "${tmp_output_file}" "    " "${hwmindx_content}" "" "${hwmindx_message_code}"
+
 }
 
 function check_date() {
@@ -157,6 +169,7 @@ function check_date() {
 
 function do_check() {
     write_category "os-related"
+    check_hostname
     check_os_arch
     check_firwall_status
     check_logical_cpu

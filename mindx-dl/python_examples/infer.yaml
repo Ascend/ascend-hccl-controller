@@ -5,19 +5,26 @@ metadata:
 spec:
     template:
       spec:
+        # Select inference processor node
         nodeSelector:
-          {{ node_selector }}           #选择推理处理器节点
+          {{ node_selector }}
         containers:
-        - image: {{ docker_image }}                  #推理镜像名称
+        # Docker image for inference
+        - image: {{ docker_image }}
           imagePullPolicy: IfNotPresent
           name: resnet50infer
           resources:
             requests:
-              huawei.com/Ascend310: {{ npu_count }}             #推理昇腾310处理器数量
+              # If using A300I Pro, change 'huawei-Ascend310' to 'huawei-Ascend710'
+              # number of Ascend-310
+              huawei.com/Ascend310: {{ npu_count }}
             limits:
-              huawei.com/Ascend310: {{ npu_count }}             #需要和上面requests数量保持一致
+              # If using A300I Pro, change 'huawei-Ascend310' to 'huawei-Ascend710'
+              # It needs to be consistent with the number of requests above
+              huawei.com/Ascend310: {{ npu_count }}
           volumeMounts:
-          - name: localtime                       #容器时间和宿主机保持一致
+          # Ensure that the container time is consistent with the host
+          - name: localtime
             mountPath: /etc/localtime
         volumes:
         - name: localtime

@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: rings-config-{{ job_name }}      # JobName需要和下面的Job的name属性一致，前缀"rings-config-"不能修改
+  name: rings-config-{{ job_name }}      # The prefix "rings-config-" cannot be modified
   labels:
-    ring-controller.atlas: ascend-910    # 不可修改，会根据该标签进行业务操作
+    ring-controller.atlas: ascend-910    # Not modifiable
 data:
   hccl.json: |
     {
