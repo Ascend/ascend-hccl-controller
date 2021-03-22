@@ -102,7 +102,8 @@
         chdir: "{{ deploy_yaml_dir }}"
         cmd:
           kubectl apply -f ascendplugin-volcano*.yaml;
-          kubectl apply -f ascendplugin-310*.yaml
+          kubectl apply -f ascendplugin-310*.yaml;
+          kubectl apply -f ascendplugin-710*.yaml
 
     - name: Deploy cadvisor
       shell:

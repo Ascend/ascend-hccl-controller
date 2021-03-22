@@ -1,7 +1,6 @@
 # Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
 ---
 # This playbook is used to uninstall MindX DL platform.
-# Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts
 
 # This play is used to remove 1).Services 2).Images 3).Logs 4).Log rotate config file on master node.
 - hosts: localnode, master
@@ -20,8 +19,6 @@
       private: no
       default: "no"
 
-  vars:
-     deploy_yaml_dir : "{{ dls_root_dir }}/yamls"
 
   tasks:
     # check interactive input
@@ -42,30 +39,55 @@
 
     - name: Remove volcano service
       shell:
-        chdir: "{{ deploy_yaml_dir }}"
         cmd:
-          kubectl delete -f volcano-*.yaml
+          kubectl delete CustomResourceDefinition jobs.batch.volcano.sh;
+          kubectl delete CustomResourceDefinition commands.bus.volcano.sh;
+          kubectl delete CustomResourceDefinition podgroups.scheduling.volcano.sh;
+          kubectl delete CustomResourceDefinition queues.scheduling.volcano.sh;
+          kubectl delete Job volcano-admission-init -n volcano-system;
+          kubectl delete Service volcano-admission-service -n volcano-system;
+          kubectl delete Deployment volcano-controllers -n volcano-system;
+          kubectl delete Deployment volcano-admission -n volcano-system;
+          kubectl delete Deployment volcano-scheduler -n volcano-system;
+          kubectl delete ClusterRoleBinding volcano-controllers-role -n volcano-system;
+          kubectl delete ClusterRoleBinding volcano-admission-role -n volcano-system;
+          kubectl delete ClusterRoleBinding volcano-scheduler-role -n volcano-system;
+          kubectl delete ClusterRole volcano-controllers -n volcano-system;
+          kubectl delete ClusterRole volcano-admission -n volcano-system;
+          kubectl delete ClusterRole volcano-scheduler -n volcano-system;
+          kubectl delete ServiceAccount volcano-controllers -n volcano-system;
+          kubectl delete ServiceAccount volcano-admission -n volcano-system;
+          kubectl delete ServiceAccount volcano-scheduler -n volcano-system;
+          kubectl delete ConfigMap volcano-scheduler-configmap -n volcano-system;
+          kubectl delete Namespace volcano-system;
       ignore_errors: True
 
     - name: Remove hccl-controller service
       shell:
-        chdir: "{{ deploy_yaml_dir }}"
         cmd:
-          kubectl delete -f hccl-controller*.yaml
+          kubectl delete Deployment hccl-controller;
+          kubectl delete ClusterRoleBinding hccl-controller-rolebinding;
+          kubectl delete ServiceAccount hccl-controller
       ignore_errors: True
 
     - name: Remove device-plugin service
       shell:
-        chdir: "{{ deploy_yaml_dir }}"
         cmd:
-          kubectl delete -f ascendplugin-volcano*.yaml;
-          kubectl delete -f ascendplugin-310*.yaml
+          kubectl delete DaemonSet ascend-device-plugin-daemonset -n kube-system;
+          kubectl delete DaemonSet ascend-device-plugin2-daemonset -n kube-system;
+          kubectl delete DaemonSet ascend-device-plugin710-daemonset -n kube-system;
+          kubectl delete ClusterRoleBinding pods-device-plugin -n kube-system;
       ignore_errors: True
 
     - name: Remove cadvisor service
       shell:
-        chdir: "{{ deploy_yaml_dir }}"
-        cmd: kubectl delete -f cadvisor-*.yaml
+        cmd:
+          kubectl delete DaemonSet cadvisor -n cadvisor;
+          kubectl delete ServiceAccount cadvisor -n cadvisor;
+          kubectl delete PodSecurityPolicy cadvisor;
+          kubectl delete ClusterRoleBinding cadvisor -n cadvisor;
+          kubectl delete ClusterRole cadvisor;
+          kubectl delete Namespace cadvisor;
       ignore_errors: True
 
     - name: Check whether all service component services are terminated

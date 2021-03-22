@@ -25,6 +25,7 @@
         - software-properties-common
         - libltdl7
         - nfs-common
+        - ufw
 
     - name: Register package_list - CentOS
       set_fact:
@@ -38,6 +39,8 @@
       with_items:
         - nfs-utils
         - yum-plugin-versionlock
+        - libselinux-python3
+        - libselinux-python
 
     - name: Install prerequisite software - Ubuntu
       shell:
@@ -127,7 +130,7 @@
         http_proxy: "{{ proxy }}"
         https_proxy: "{{ proxy }}"
       tags: docker
-      
+
     - name: Install docker - CentOS
       shell:
         cmd:
@@ -175,7 +178,7 @@
       shell:
         cmd:
           apt-get update;
-          apt-get install -y kubelet=1.17.3-00  kubeadm=1.17.3-00 kubectl=1.17.3-00
+          apt-get install -y kubelet=1.17.3-00 kubeadm=1.17.3-00 kubectl=1.17.3-00
       when:
         - ansible_distribution == 'Ubuntu'
       environment:
@@ -286,7 +289,7 @@
     - name: Modify docker runtime - workers
       shell:
         cmd: |
-          cat <<EOF >/etc/docker/daemon.json
+          cat <<EOF > /etc/docker/daemon.json
           {
             "registry-mirrors": ["https://dockerhub.azk8s.cn",
                                  "https://docker.mirrors.ustc.edu.cn",
@@ -413,5 +416,45 @@
           systemctl enable nfs;
           systemctl start nfs
       tags: nfs
+      when:
+        - ansible_distribution == 'CentOS'
+
+# Close Firewall
+- hosts: localnode, cluster
+  remote_user: root
+
+  tasks:
+    - name: Close firewall - Ubuntu
+      shell:
+        cmd:
+          ufw disable
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install selinux - CentOS
+      shell:
+        cmd:
+          pip3.7 install selinux
+      environment:
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close firewall - CentOS
+      shell:
+        cmd:
+          systemctl stop firewalld.service;
+          systemctl disable firewalld.service
+      ignore_errors: True
+      when:
+        - ansible_distribution == 'CentOS'
+
+    - name: Close SELinux - CentOS
+      shell:
+        cmd:
+          setenforce 0;
+          sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config;
+          sysctl --system
       when:
         - ansible_distribution == 'CentOS'
