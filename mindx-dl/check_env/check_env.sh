@@ -82,7 +82,7 @@ function check_param_hardware() {
 
     # 硬件形态不在规定范围内
     is_valid="false"
-    for i in ${HW_ARR[@]}
+    for i in "${HW_ARR[@]}"
     do
         if [[ "$i" == "${hardWare}" ]]
         then

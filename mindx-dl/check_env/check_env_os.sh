@@ -28,7 +28,7 @@ source ./check_env_utils.sh
 
 function check_hostname() {
     hostname_error_code=""
-    host_name="$(hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | tr -d '[a-z0-9-]')"
+    host_name="$(hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | tr -d 'a-z0-9-')"
     if [[ "${host_name}" != "" ]]
     then
         hostname_error_code="${ERROR_HOSTNAME_CODE}"
