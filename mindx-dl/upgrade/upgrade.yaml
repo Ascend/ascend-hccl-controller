@@ -127,32 +127,7 @@
       delay: 10
       tags: check
 
-- hosts: localnode
-  remote_user: root
-
-  tasks:
-    # Check status of components.
-    - name: Check cadvisor status
-      shell:
-        cmd:
-          kubectl get pods --all-namespaces -o wide | grep cadvisor |grep Running | wc -l
-      register: return_value
-      until: "return_value.stdout == '1'"
-      retries: 6
-      delay: 10
-      tags: check
-
-    - name: Check device plugin status
-      shell:
-        cmd:
-          kubectl get pods --all-namespaces | grep ascend-device-plugin |grep Running | wc -l
-      register: return_value
-      until: "return_value.stdout == '1'"
-      retries: 6
-      delay: 10
-      tags: check
-
-- hosts: master
+- hosts: localnode, master
   remote_user: root
   vars:
     HOST_COUNT: "{{ groups['workers'] | length }}"
@@ -217,3 +192,13 @@
           docker rmi {{ dp }}
       ignore_errors: True
       tags: remove-images
+
+    # remove the update files
+    - name: Remove update package files
+      file:
+        path: "{{ dls_root_dir }}/upgrade_dependencies"
+        state: absent
+      ignore_errors: True
+      when:
+        - ansible_hostname not in groups["master"]
+      tags: remove-files
