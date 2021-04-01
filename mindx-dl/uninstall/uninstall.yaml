@@ -1,6 +1,7 @@
 # Copyright © Huawei Technologies CO., Ltd. 2020-2020. All rights reserved
 ---
 # This playbook is used to uninstall MindX DL platform.
+# Before running the script, ensure that the dependent files are stored in the 'dls_root_dir' directory defined in /etc/ansible/hosts
 
 # This play is used to remove 1).Services 2).Images 3).Logs 4).Log rotate config file on master node.
 - hosts: localnode, master
