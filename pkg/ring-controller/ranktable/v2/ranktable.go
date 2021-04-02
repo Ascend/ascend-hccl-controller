@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package v2 : ranktable version v2
+// Package v2 ranktable version 2
 package v2
 
 import (
@@ -33,6 +33,14 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}
+
+	for _, server := range r.ServerList {
+		if server.PodID == instance.PodName {
+			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
+				pod.Name)
+		}
+	}
+
 	rankFactor := len(instance.Devices)
 
 	// Build new server-level struct from device info
@@ -71,6 +79,7 @@ func (r *RankTable) RemovePodInfo(namespace string, podID string) error {
 	if !hasInfoToRemove {
 		return fmt.Errorf("no data of pod %s/%s can be removed", namespace, podID)
 	}
+	r.ServerList = serverList
 	r.ServerCount = strconv.Itoa(len(r.ServerList))
 
 	return nil
