@@ -22,7 +22,7 @@
     - name: Get valid hostname
       shell:
         cmd:
-          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | tr -d '[a-z0-9-]'
+          hostname | grep -E '^[a-z0-9]' | grep -E '[a-z0-9]$' | tr -d 'a-z0-9-'
       register: result
 
     - name: Check hostname

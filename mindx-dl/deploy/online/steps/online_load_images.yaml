@@ -84,59 +84,29 @@
       tags:
         - basic_only
 
-    - name: Pull mindx images - arm64
+    - name: Pull mindx images
       shell:
         cmd:
           docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - vc-controller-manager_arm64:{{ volcano_version }}
-        - vc-scheduler_arm64:{{ volcano_version }}
-        - vc-webhook-manager_arm64:{{ volcano_version }}
-        - vc-webhook-manager-base_arm64:{{ volcano_version }}
-        - hccl-controller_arm64:{{ hccl_version }}
-      when: ansible_architecture == "aarch64"
+        - vc-controller-manager:{{ volcano_version }}
+        - vc-scheduler:{{ volcano_version }}
+        - vc-webhook-manager:{{ volcano_version }}
+        - vc-webhook-manager-base:{{ volcano_version }}
+        - hccl-controller:{{ hccl_version }}
       tags:
         - basic_only
 
-    - name: Pull mindx images - x86_64
-      shell:
-        cmd:
-          docker pull {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - vc-controller-manager_amd64:{{ volcano_version }}
-        - vc-scheduler_amd64:{{ volcano_version }}
-        - vc-webhook-manager_amd64:{{ volcano_version }}
-        - vc-webhook-manager-base_amd64:{{ volcano_version }}
-        - hccl-controller_amd64:{{ hccl_version }}
-      when: ansible_architecture == "x86_64"
-      tags:
-        - basic_only
-
-    - name: Tag mindx images - arm64
+    - name: Tag mindx images
       shell:
         cmd:
           docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - vc-controller-manager_arm64:{{ volcano_version }} volcanosh/vc-controller-manager:{{ volcano_version }}
-        - vc-scheduler_arm64:{{ volcano_version }} volcanosh/vc-scheduler:{{ volcano_version }}
-        - vc-webhook-manager_arm64:{{ volcano_version }} volcanosh/vc-webhook-manager:{{ volcano_version }}
-        - vc-webhook-manager-base_arm64:{{ volcano_version }} volcanosh/vc-webhook-manager-base:{{ volcano_version }}
-        - hccl-controller_arm64:{{ hccl_version }} hccl-controller:{{ hccl_version }}
-      when: ansible_architecture == "aarch64"
-      tags:
-        - basic_only
-
-    - name: Tag mindx images - x86_64
-      shell:
-        cmd:
-          docker tag {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - vc-controller-manager_amd64:{{ volcano_version }} volcanosh/vc-controller-manager:{{ volcano_version }}
-        - vc-scheduler_amd64:{{ volcano_version }} volcanosh/vc-scheduler:{{ volcano_version }}
-        - vc-webhook-manager_amd64:{{ volcano_version }} volcanosh/vc-webhook-manager:{{ volcano_version }}
-        - vc-webhook-manager-base_amd64:{{ volcano_version }} volcanosh/vc-webhook-manager-base:{{ volcano_version }}
-        - hccl-controller_amd64:{{ hccl_version }} hccl-controller:{{ hccl_version }}
-      when: ansible_architecture == "x86_64"
+        - vc-controller-manager:{{ volcano_version }} volcanosh/vc-controller-manager:{{ volcano_version }}
+        - vc-scheduler:{{ volcano_version }} volcanosh/vc-scheduler:{{ volcano_version }}
+        - vc-webhook-manager:{{ volcano_version }} volcanosh/vc-webhook-manager:{{ volcano_version }}
+        - vc-webhook-manager-base:{{ volcano_version }} volcanosh/vc-webhook-manager-base:{{ volcano_version }}
+        - hccl-controller:{{ hccl_version }} hccl-controller:{{ hccl_version }}
       tags:
         - basic_only
     # ========================================================================
@@ -218,47 +188,23 @@
       tags:
         - basic_only
 
-    - name: Pull mindx images - arm64
+    - name: Pull mindx images
       shell:
         cmd:
           docker pull {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
-        - cadvisor_arm64:{{ cadvisor_version }}
-      when: ansible_architecture == "aarch64"
+        - ascend-k8sdeviceplugin:{{ deviceplugin_version }}
+        - cadvisor:{{ cadvisor_version }}
       tags:
         - basic_only
 
-    - name: Pull mindx images - x86_64
-      shell:
-        cmd:
-          docker pull {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
-        - cadvisor_amd64:{{ cadvisor_version }}
-      when: ansible_architecture == "x86_64"
-      tags:
-        - basic_only
-
-    - name: Tag mindx images - arm64
+    - name: Tag mindx images
       shell:
         cmd:
           docker tag {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
-        - cadvisor_arm64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
-      when: ansible_architecture == "aarch64"
-      tags:
-        - basic_only
-
-    - name: Tag mindx images - x86_64
-      shell:
-        cmd:
-          docker tag {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
-        - cadvisor_amd64:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
-      when: ansible_architecture == "x86_64"
+        - ascend-k8sdeviceplugin:{{ deviceplugin_version }} ascend-k8sdeviceplugin:{{ deviceplugin_version }}
+        - cadvisor:{{ cadvisor_version }} google/cadvisor:{{ cadvisor_version }}
       tags:
         - basic_only
 
@@ -298,31 +244,16 @@
       tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Remove redundant images - arm64
+    - name: Remove redundant images
       shell:
         cmd:
           docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - vc-controller-manager_arm64:{{ volcano_version }}
-        - vc-scheduler_arm64:{{ volcano_version }}
-        - vc-webhook-manager_arm64:{{ volcano_version }}
-        - vc-webhook-manager-base_arm64:{{ volcano_version }}
-        - hccl-controller_arm64:{{ hccl_version }}
-      when: ansible_architecture == "aarch64"
-      tags: basic_only
-      ignore_errors: yes
-
-    - name: Remove redundant images - x86_64
-      shell:
-        cmd:
-          docker rmi {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - vc-controller-manager_amd64:{{ volcano_version }}
-        - vc-scheduler_amd64:{{ volcano_version }}
-        - vc-webhook-manager_amd64:{{ volcano_version }}
-        - vc-webhook-manager-base_amd64:{{ volcano_version }}
-        - hccl-controller_amd64:{{ hccl_version }}
-      when: ansible_architecture == "x86_64"
+        - vc-controller-manager:{{ volcano_version }}
+        - vc-scheduler:{{ volcano_version }}
+        - vc-webhook-manager:{{ volcano_version }}
+        - vc-webhook-manager-base:{{ volcano_version }}
+        - hccl-controller:{{ hccl_version }}
       tags: basic_only
       ignore_errors: yes
 
@@ -352,25 +283,12 @@
       tags: kubernetes_basic
       ignore_errors: yes
 
-    - name: Workers remove redundant images - arm64
+    - name: Workers remove redundant images
       shell:
         cmd:
           docker rmi {{ ascendhub_prefix }}/{{ item }}
       with_items:
-        - ascend-k8sdeviceplugin_arm64:{{ deviceplugin_version }}
-        - cadvisor_arm64:{{ cadvisor_version }}
-      when: ansible_architecture == "aarch64"
+        - ascend-k8sdeviceplugin:{{ deviceplugin_version }}
+        - cadvisor:{{ cadvisor_version }}
       tags: basic_only
       ignore_errors: yes
-
-    - name: Workers remove redundant images - x86_64
-      shell:
-        cmd:
-          docker rmi {{ ascendhub_prefix }}/{{ item }}
-      with_items:
-        - ascend-k8sdeviceplugin_amd64:{{ deviceplugin_version }}
-        - cadvisor_amd64:{{ cadvisor_version }}
-      when: ansible_architecture == "x86_64"
-      tags: basic_only
-      ignore_errors: yes
-
