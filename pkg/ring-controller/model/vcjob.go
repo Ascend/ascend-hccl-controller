@@ -66,12 +66,11 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	agent.RwMutex.RLock()
 	klog.V(L2).Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
+	agent.RwMutex.RUnlock()
 	if exist {
-		agent.RwMutex.RUnlock()
 		klog.V(L2).Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
 		return nil
 	}
-	agent.RwMutex.RUnlock()
 
 	// check if job's corresponding configmap is created successfully via volcano controller
 	cm, err := checkCMCreation(job.JobNamespace, job.JobName, agent.KubeClientSet, agent.Config)
@@ -214,24 +213,17 @@ func RanktableFactory(model ResourceEventHandler, jobStartString, JSONVersion st
 	if err != nil {
 		return nil, 0, fmt.Errorf("generate group list from job error: %v", err)
 	}
-
+	var rst v1.RankTableStatus
+	err = rst.UnmarshalToRankTable(jobStartString)
+	if err != nil {
+		return nil, 0, err
+	}
 	if JSONVersion == "v1" {
-		var configmapData v1.RankTable
-		err = configmapData.UnmarshalToRankTable(jobStartString)
-		if err != nil {
-			return nil, 0, err
-		}
-		ranktable = &v1.RankTable{RankTableStatus: v1.RankTableStatus{Status: agent2.ConfigmapInitializing},
+		ranktable = &v1.RankTable{RankTableStatus: v1.RankTableStatus{Status: rst.Status},
 			GroupCount: model.GetReplicas(), GroupList: groupList}
 	} else {
-		var configmapData v2.RankTable
-		err = configmapData.UnmarshalToRankTable(jobStartString)
-		if err != nil {
-			return nil, 0, err
-		}
-		var serverList []*v2.Server
-		ranktable = &v2.RankTable{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
-			RankTableStatus: v1.RankTableStatus{Status: agent2.ConfigmapInitializing}, Version: "1.0"}
+		ranktable = &v2.RankTable{ServerCount: "0", ServerList: []*v2.Server(nil),
+			RankTableStatus: v1.RankTableStatus{Status: rst.Status}, Version: "1.0"}
 	}
 	return ranktable, replicasTotal, nil
 }
