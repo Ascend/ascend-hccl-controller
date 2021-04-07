@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -185,7 +184,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	klog.V(L3).Infof("deviceId => %s", deviceInfo)
-	klog.V(L4).Infof("isExist ==> %s", exist)
+	klog.V(L4).Infof("isExist ==> %t", exist)
 
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
@@ -212,9 +211,7 @@ func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
 
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
-	split := strings.Split(podInfo.name, "-")
-	podID := split[len(split)-1]
-	err := b.configmapData.RemovePodInfo(podInfo.namespace, podID)
+	err := b.configmapData.RemovePodInfo(podInfo.namespace, podInfo.name)
 	if err != nil {
 		return err
 	}
@@ -233,7 +230,7 @@ func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
 func (b *WorkerInfo) endRankTableConstruction(namespace string) error {
 	err := b.configmapData.SetStatus(ConfigmapCompleted)
 	if err != nil {
-		klog.Error("fail to set configmap status: %v", err)
+		klog.Errorf("fail to set configmap status: %s", err)
 		return err
 	}
 	err = updateConfigMap(b, namespace)

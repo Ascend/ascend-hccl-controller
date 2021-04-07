@@ -86,9 +86,8 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 
 	// Wait for the caches to be synced before starting workers
 	klog.V(L4).Info("Waiting for informer caches to sync")
-	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced)
-	ok2 := cache.WaitForCacheSync(stopCh, c.deploySynced)
-	if !(ok && ok2) {
+	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced)
+	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -116,7 +115,7 @@ func (c *Controller) runMasterWorker() {
 }
 
 // processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling the syncHandler.
+// attempt to process it, by calling the SyncHandler.
 func (c *Controller) processNextWorkItem() bool {
 	klog.V(L4).Info("start to get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
@@ -147,9 +146,9 @@ func (c *Controller) processNextWorkItem() bool {
 			c.workqueue.Forget(obj)
 			return fmt.Errorf("expected string in workqueue but got %#v", obj)
 		}
-		// Run the syncHandler, passing it the namespace/name string of the
+		// Run the SyncHandler, passing it the namespace/name string of the
 		// Job/Deployment resource to be synced.
-		if err := c.syncHandler(mo); err != nil {
+		if err := c.SyncHandler(mo); err != nil {
 			c.workqueue.Forget(obj)
 			return fmt.Errorf("error syncing '%s': %s", mo.GetModelKey(), err.Error())
 		}
@@ -181,9 +180,10 @@ func (c *Controller) enqueueJob(obj interface{}, eventType string) {
 	c.workqueue.AddRateLimited(models)
 }
 
-func (c *Controller) syncHandler(model model.ResourceEventHandler) error {
+// SyncHandler : to do things from model
+func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
-	klog.V(L2).Infof("syncHandler start, current key is %v", key)
+	klog.V(L2).Infof("SyncHandler start, current key is %v", key)
 	namespace, name, eventType, err := splitKeyFunc(key)
 	if err != nil {
 		return fmt.Errorf("failed to split key: %v", err)
