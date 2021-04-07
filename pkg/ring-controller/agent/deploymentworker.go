@@ -21,7 +21,6 @@ import (
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
-	"strconv"
 	"time"
 )
 
@@ -93,13 +92,12 @@ func (w *DeployWorker) handleDeleteEvent(podInfo *podIdentifier) error {
 
 	w.cmMu.Lock()
 	defer w.cmMu.Unlock()
-	rank, ok := w.rankMap[podInfo.namespace+"/"+podInfo.name]
-
+	_, ok := w.rankMap[podInfo.namespace+"/"+podInfo.name]
 	if !ok {
 		return fmt.Errorf("rank map not exist, key is %s/%s", podInfo.namespace, podInfo.name)
 	}
-	rankIndex := strconv.Itoa(rank)
-	err := w.configmapData.RemovePodInfo(podInfo.namespace, rankIndex)
+
+	err := w.configmapData.RemovePodInfo(podInfo.namespace, podInfo.name)
 	if err != nil {
 		return err
 	}

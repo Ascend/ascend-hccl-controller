@@ -67,15 +67,15 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 		return fmt.Errorf("grouplist of ranktable is empty")
 	}
 	group := r.GroupList[0]
-	done := checkPodCache(group, pod)
-	if done {
-		return nil
+	err := checkPodCache(group, pod)
+	if err != nil {
+		return err
 	}
 	var instance Instance
 
 	// if pod use D chip, cache its info
 	klog.V(L3).Infof("devicedInfo  from pod => %v", deviceInfo)
-	err := json.Unmarshal([]byte(deviceInfo), &instance)
+	err = json.Unmarshal([]byte(deviceInfo), &instance)
 	klog.V(L3).Infof("instace  from pod => %v", instance)
 	if err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
@@ -111,13 +111,14 @@ func (r *RankTable) RemovePodInfo(namespace string, podID string) error {
 	return nil
 }
 
-func checkPodCache(group *Group, pod *apiCoreV1.Pod) bool {
+func checkPodCache(group *Group, pod *apiCoreV1.Pod) error {
 	for _, instance := range group.InstanceList {
 		if instance.PodName == pod.Name {
 			klog.V(L3).Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
 				pod.Name)
-			return true
+			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
+				pod.Name)
 		}
 	}
-	return false
+	return nil
 }
