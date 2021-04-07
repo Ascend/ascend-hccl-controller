@@ -60,9 +60,9 @@ function check_cpu_utilization() {
 }
 
 # 可用内存
-function check_available_memery() {
+function check_available_memory() {
     available_mem="$(free -h | grep 'Mem:' | awk '{print $7}')"
-    write_single_line_to_file "${tmp_output_file}" "available memery" "${available_mem}"
+    write_single_line_to_file "${tmp_output_file}" "available memory" "${available_mem}"
 }
 
 # 硬盘大小，使用率
@@ -174,7 +174,7 @@ function do_check() {
     check_firwall_status
     check_logical_cpu
     check_cpu_utilization
-    check_available_memery
+    check_available_memory
     check_date
     check_os_user
     check_disk_usage
