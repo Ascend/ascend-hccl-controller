@@ -162,10 +162,10 @@
     - name: Remove volcano images
       shell:
         cmd:
-          docker rmi {{ vA }}
-          docker rmi {{ vC }}
-          docker rmi {{ vS }}
-          docker rmi  $(docker images |grep webhook-manager-base|awk '{print $3}')
+          docker rmi {{ vA }};
+          docker rmi {{ vC }};
+          docker rmi {{ vS }};
+          docker rmi  $(docker images |grep vc-webhook-manager-base|awk '{print $3}');
       ignore_errors: True
       tags: remove-images
 
