@@ -165,6 +165,7 @@
           docker rmi {{ vA }}
           docker rmi {{ vC }}
           docker rmi {{ vS }}
+          docker rmi  $(docker images |grep webhook-manager-base|awk '{print $3}')
       ignore_errors: True
       tags: remove-images
 
