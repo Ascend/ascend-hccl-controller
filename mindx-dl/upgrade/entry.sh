@@ -134,7 +134,7 @@ function upgrade(){
         echo "Upgrade successfully!"
         # Choose whether remove previous version images.
         local remove
-        read -r -p "Do you want to remove previous version images?(yes/no)" remove
+        read -r -p "Do you want to remove previous version images(cannot rollback)?(yes/no)" remove
         while [ "$remove" != 'yes' ] && [ "$remove" != 'no' ];do
               read -r -p "Invalid input. Do you want to remove previous version images?(yes/no)" remove
         done
