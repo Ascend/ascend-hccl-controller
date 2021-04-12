@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,328 +14,161 @@
  * limitations under the License.
  */
 
-// Package controller for run the logic
 package controller
 
 import (
 	"fmt"
-	"github.com/golang/mock/gomock"
-	"github.com/prashantv/gostub"
-	"github.com/stretchr/testify/assert"
-	"hccl-controller/pkg/ring-controller/controller/mock_cache"
-	"hccl-controller/pkg/ring-controller/controller/mock_controller"
-	"hccl-controller/pkg/ring-controller/controller/mock_kubernetes"
-	"hccl-controller/pkg/ring-controller/controller/mock_v1"
-	"hccl-controller/pkg/ring-controller/controller/mock_v1alpha1"
-	v1 "k8s.io/api/core/v1"
+	. "github.com/agiledragon/gomonkey/v2"
+	. "github.com/smartystreets/goconvey/convey"
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/workqueue"
-	"net/http"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	cinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/cache"
 	"reflect"
 	"testing"
 	"time"
-	"volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	vofake "volcano.sh/volcano/pkg/client/clientset/versioned/fake"
+	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
 )
 
-// Test_startPerformanceMonitorServer test method startPerformanceMonitorServer
-func Test_startPerformanceMonitorServer(t *testing.T) {
-	tests := []struct {
-		name string
-	}{
-		{
-			name: "Http check ,response should be 200",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			go startPerformanceMonitorServer()
-			url := "http://localhost:6060/debug/pprof"
-			response, err := http.Get(url)
-			if err != nil || response == nil || response.Body == nil {
-				t.Fatalf("check performance server failed,%v", err)
-			}
-			defer response.Body.Close()
-			if response.StatusCode != status {
-				t.Errorf("check performance server failed,%v", err)
-			}
-
+// TestController_Run test Controller_Run
+func TestController_Run(t *testing.T) {
+	Convey("controller Controller_Run", t, func() {
+		ctr := newFakeController()
+		Convey("err != nil when cache not exist ", func() {
+			patches := ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
+				return false
+			})
+			defer patches.Reset()
+			err := ctr.Run(1, false, nil)
+			So(err, ShouldNotEqual, nil)
 		})
-	}
-}
 
-// TestController_createBusinessWorker  test  method createBusinessWorker
-func TestController_createBusinessWorker(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockAgent := mock_controller.NewMockWorkAgentInterface(ctrl)
-	mockAgent.EXPECT().CreateBusinessWorker(gomock.Any()).Return(nil)
-	tests := []struct {
-		configMap *v1.ConfigMap
-		name      string
-		wantErr   bool
-	}{
-		{
-			name:    "test1:return error for json format error",
-			wantErr: true,
-			configMap: &v1.ConfigMap{
-				Data: map[string]string{
-					ConfigmapKey: "XXX",
-				},
-			},
-		},
-		{
-			name:    "test2:return error for cm status error",
-			wantErr: true,
-			configMap: &v1.ConfigMap{
-				Data: map[string]string{
-					ConfigmapKey: "{\"status\":\"error\"}",
-				},
-			},
-		},
-		{
-			name:      "test3:normal situation, no errors",
-			wantErr:   false,
-			configMap: mockConfigMap(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockAgent.EXPECT().CheckConfigmapCreation(gomock.Any()).Return(tt.configMap, nil)
-			c := &Controller{
-				workAgentInterface: mockAgent,
-			}
-			if err := c.createBusinessWorker(&v1alpha1.Job{}); (err != nil) != tt.wantErr {
-				t.Errorf("createBusinessWorker() error = %v, wantErr %v", err, tt.wantErr)
-			}
+		Convey("err == nil when cache exist ", func() {
+			patches := ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
+				return true
+			})
+			defer patches.Reset()
+			err := ctr.Run(1, false, nil)
+			So(err, ShouldEqual, nil)
 		})
-	}
+	})
 }
 
-// TestController_syncHandler  test method  syncHandler
-func TestController_syncHandler(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockAgent := mock_controller.NewMockWorkAgentInterface(ctrl)
-	mockAgent.EXPECT().CreateBusinessWorker(gomock.Any()).Return(nil).Times(three)
-	mockAgent.EXPECT().CheckConfigmapCreation(gomock.Any()).Return(mockConfigMap(), nil).Times(three)
-	mockIndexr := mock_cache.NewMockIndexer(ctrl)
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(mockJob(), true, nil).Times(four)
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(nil, false, fmt.Errorf("mock error"))
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(nil, false, nil) // no pod existed
-
-	tests := []controllerTestCase{
-		mackTestCase("test1: Key format error, should return error", "vcjob/testpod/delete/error", true),
-		mackTestCase("test2:add event,no err returned", "vcjob/testpod/add", false),
-		mackTestCase("test3: update event,no err returned", "vcjob/testpod/update", false),
-		mackTestCase("test4: delete event but indexer have pod ,should return error", "vcjob/pod1/delete", true),
-		mackTestCase("test5: Unfinded situation, should return error", "vcjob/testpod/new", true),
-		mackTestCase("test6: Indexer return error, should return error", "vcjob/pod2/delete", true),
-		mackTestCase("test7: delete event,no err returned", "vcjob/pod3/delete", false),
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Controller{
-				workAgentInterface: mockAgent,
-				jobsIndexer:        mockIndexr,
-				businessAgent:      createAgent(true),
-			}
-			if err := c.syncHandler(tt.key); (err != nil) != tt.wantErr {
-				t.Errorf("syncHandler() error = %v, wantErr %v", err, tt.wantErr)
-			}
+// TestProcessNextWorkItem test ProcessNextWorkItem
+func TestProcessNextWorkItem(t *testing.T) {
+	Convey("controller ProcessNextWorkItem", t, func() {
+		ctr := newFakeController()
+		Convey("res == true when process  ", func() {
+			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
+				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
+				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
+				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			ctr.enqueueJob(obj, agent.EventAdd)
+			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *Controller,
+				m model.ResourceEventHandler) error {
+				return fmt.Errorf("undefined condition, things is %s", m.GetModelKey())
+			})
+			defer patches.Reset()
+			res := ctr.processNextWorkItem()
+			So(res, ShouldEqual, true)
+			So(ctr.workqueue.Len(), ShouldEqual, 0)
 		})
-	}
+
+		Convey("err != nil when cache not exist ", func() {
+			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
+				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
+				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
+				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			ctr.enqueueJob(obj, agent.EventAdd)
+			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *Controller,
+				m model.ResourceEventHandler) error {
+				return nil
+			})
+			defer patches.Reset()
+			res := ctr.processNextWorkItem()
+			So(res, ShouldEqual, true)
+			So(ctr.workqueue.Len(), ShouldEqual, 0)
+		})
+	})
 }
 
-type controllerTestCase struct {
-	name    string
-	key     string
-	wantErr bool
+// TestController_SyncHandler test Controller_SyncHandler
+func TestController_SyncHandler(t *testing.T) {
+	Convey("controller Controller_SyncHandler", t, func() {
+		ctr := newFakeController()
+		Convey("err != nil when splitKeyFunc return err  ", func() {
+			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test", GenerateName: "",
+				Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
+				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
+				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
+			patches := ApplyFunc(splitKeyFunc, func(_ string) (namespace, name, eventType string, err error) {
+				return "", "", "", fmt.Errorf("undefined condition")
+			})
+			defer patches.Reset()
+			err := ctr.SyncHandler(rs)
+			So(err, ShouldNotEqual, nil)
+		})
+		Convey("err != nil when index getByKey return err  ", func() {
+			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test", GenerateName: "",
+				Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
+				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
+				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
+			rs.GetCacheIndex().Add(obj)
+			patches := ApplyMethod(reflect.TypeOf(rs), "EventAdd", func(_ *model.VCJobModel,
+				_ *agent.BusinessAgent) error {
+				return nil
+			})
+			defer patches.Reset()
+			err := ctr.SyncHandler(rs)
+			So(err, ShouldEqual, nil)
+		})
+	})
 }
 
-func mackTestCase(name, key string, wantErr bool) controllerTestCase {
-	return controllerTestCase{
-		name:    name,
-		key:     key,
-		wantErr: wantErr,
-	}
+func newFakeController() *Controller {
+	config := newTestConfig()
+	kube := fake.NewSimpleClientset()
+	volcano := vofake.NewSimpleClientset()
+	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(volcano, time.Second*30,
+		informers.WithTweakListOptions(func(options *v1.ListOptions) {
+			return
+		}))
+	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kube, time.Second*30,
+		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+			return
+		}))
+	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
+	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
+	cacheIndexer := make(map[string]cache.Indexer, 1)
+	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
+	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
+	return NewController(kube, volcano, config, InformerInfo{JobInformer: jobInformer,
+		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, make(chan struct{}))
 }
 
-func mockConfigMap() *v1.ConfigMap {
-	return &v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				Key910: "ascend-910",
-			},
-		},
-		Data: map[string]string{
-			ConfigmapKey: "{\"status\":\"initializing\"}",
-		},
-		BinaryData: nil,
-	}
-}
-
-// TestNewController test method NewContrller
-func TestNewController(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockK8s := mock_kubernetes.NewMockInterface(ctrl)
-	mockV1 := mock_v1.NewMockCoreV1Interface(ctrl)
-	mockV1.EXPECT().Events(gomock.Any()).Return(nil).Times(three)
-	mockV1.EXPECT().Pods(gomock.Any()).Return(nil)
-	mockK8s.EXPECT().CoreV1().Return(mockV1).Times(two)
-	mockV1.Events("")
-	mockInformer := mock_v1alpha1.NewMockJobInformer(ctrl)
-	mockShared := mock_cache.NewMockSharedIndexInformer(ctrl)
-	mockShared.EXPECT().AddEventHandler(gomock.Any()).Return()
-	mockShared.EXPECT().GetIndexer().Return(nil)
-	mockInformer.EXPECT().Informer().Return(mockShared).Times(three)
-	stub := gostub.StubFunc(&newBusinessAgent, createAgentForController(false), nil)
-	defer stub.Reset()
-	tests := []struct {
-		want *Controller
-		name string
-	}{
-		{
-			name: "normal situation,return controller instance",
-			want: &Controller{
-				businessAgent: createAgentForController(false),
-			},
-		},
-	}
-	config := &Config{
+func newTestConfig() *agent.Config {
+	const (
+		PodParalle  = 1
+		CmCheckIn   = 3
+		CmCheckTout = 10
+	)
+	return &agent.Config{
 		DryRun:           false,
 		DisplayStatistic: false,
-		PodParallelism:   1,
-		CmCheckInterval:  decimal,
-		CmCheckTimeout:   oneMinitue,
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := NewController(mockK8s, nil, config, mockInformer, make(chan struct{}))
-			if !reflect.DeepEqual(got.businessAgent, tt.want.businessAgent) {
-				t.Errorf("NewController() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// TestController_Run test run
-func TestController_Run(t *testing.T) {
-	type args struct {
-		threadiness        int
-		monitorPerformance bool
-		stopCh             chan struct{}
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "normal situation,no error returned",
-			wantErr: false,
-			args: args{
-				threadiness:        1,
-				monitorPerformance: false,
-				stopCh:             make(chan struct{}),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Controller{
-				kubeclientset: nil,
-				jobclientset:  nil,
-				jobsSynced: func() bool {
-					return true
-				},
-				jobsIndexer:        nil,
-				businessAgent:      createAgent(false),
-				workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-				recorder:           nil,
-				workAgentInterface: createAgent(false),
-			}
-			go func() {
-				time.Sleep(1 * time.Second)
-				tt.args.stopCh <- struct{}{}
-			}()
-			if err := c.Run(tt.args.threadiness, tt.args.monitorPerformance, tt.args.stopCh); (err != nil) != tt.wantErr {
-				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// TestController_enqueueJob  test enqueueJob
-func TestController_enqueueJob(t *testing.T) {
-	tests := []struct {
-		name      string
-		obj       interface{}
-		eventType string
-	}{
-		{
-			name:      "test1: Jod be added to queue",
-			obj:       mockJob(),
-			eventType: "add",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := mockController()
-			c.enqueueJob(tt.obj, tt.eventType)
-			job, _ := c.workqueue.Get()
-			assert.NotNil(t, job)
-		})
-
-	}
-}
-
-func mockController() *Controller {
-	return &Controller{
-		kubeclientset:      nil,
-		jobclientset:       nil,
-		jobsSynced:         nil,
-		jobsIndexer:        nil,
-		businessAgent:      createAgent(false),
-		workqueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Jobs"),
-		recorder:           nil,
-		workAgentInterface: createAgent(false),
-	}
-}
-
-// TestController_processNextWorkItem  test  processNextWorkItem
-func TestController_processNextWorkItem(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockIndexr := mock_cache.NewMockIndexer(ctrl)
-	mockIndexr.EXPECT().GetByKey(gomock.Any()).Return(mockJob(), true, nil).Times(four)
-	var controllers []*Controller
-	contrl := mockController()
-	contrl.workqueue.AddRateLimited("vcjob/testpod/delete")
-	contrl.jobsIndexer = mockIndexr
-	controllers = append(controllers, contrl)
-	contrl2 := mockController()
-	contrl2.workqueue.AddRateLimited(nil)
-	controllers = append(controllers, contrl2)
-	tests := []struct {
-		controller *Controller
-		name       string
-		want       bool
-	}{
-		{
-			name:       "test1: normal situation, retrun true",
-			controller: controllers[0],
-			want:       true,
-		},
-		{
-			name:       "test2: obj format error, return true",
-			controller: controllers[1],
-			want:       true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.controller.processNextWorkItem(); got != tt.want {
-				t.Errorf("processNextWorkItem() = %v, want %v", got, tt.want)
-			}
-		})
+		PodParallelism:   PodParalle,
+		CmCheckInterval:  CmCheckIn,
+		CmCheckTimeout:   CmCheckTout,
 	}
 }
