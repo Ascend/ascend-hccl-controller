@@ -72,50 +72,91 @@
 
     ############################## Install Docker #####################################
     # ============================== Ubuntu 18.04 =====================================
-    - name: Docker install package file status - Ubuntu
-      stat:
-        path: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
-      register: docker_file_status
+    - name: OS release version - Ubuntu
+      shell:
+        cmd:
+          echo "$(lsb_release -cs)"
+      register: os_release_name
       tags: docker
       when:
         - ansible_distribution == 'Ubuntu'
 
-    - name: Download docker - Ubuntu/arm64
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/arm64/docker-ce_18.06.3~ce~3-0~ubuntu_arm64.deb
-        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
-        validate_certs: no
+    - name: Create docker-ce apt source - Ubuntu/arm64
+      lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        line: "deb [arch=arm64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu {{ os_release_name.stdout }} stable"
+        create: yes
+      tags: docker
       when:
         - ansible_architecture == "aarch64"
         - ansible_distribution == 'Ubuntu'
-        - docker_file_status.stat.exists == False
-      tags: docker
-      environment:
-        http_proxy: "{{ proxy }}"
-        https_proxy: "{{ proxy }}"
 
-    - name: Download docker - Ubuntu/x86_64
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/dists/bionic/pool/stable/amd64/docker-ce_18.06.3~ce~3-0~ubuntu_amd64.deb
-        dest: "{{ dls_root_dir }}/docker-ce_18.06.3_ce_3-0.deb"
-        validate_certs: no
+    - name: Create docker-ce apt source - Ubuntu/x86_64
+      lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        line: "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu {{ os_release_name.stdout }} stable"
+        create: yes
+      tags: docker
       when:
         - ansible_architecture == "x86_64"
         - ansible_distribution == 'Ubuntu'
-        - docker_file_status.stat.exists == False
+
+    - name: Download docker-ce source gpg key - Ubuntu
+      get_url:
+        dest: "{{ dls_root_dir }}/docker-install.gpg"
+        url: http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg
       tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
       environment:
         http_proxy: "{{ proxy }}"
         https_proxy: "{{ proxy }}"
 
-    - name: Install docker - Ubuntu
+    - name: Add docker-ce source gpg key - Ubuntu
       shell:
         chdir: "{{ dls_root_dir }}"
-        cmd:
-          dpkg -i docker-ce_18.06.3_ce_3-0.deb
+        cmd: apt-key add docker-install.gpg
+      tags: docker
       when:
         - ansible_distribution == 'Ubuntu'
+
+    - name: Update docker-ce packages - Ubuntu
+      shell:
+        cmd: apt-get update
       tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
+      environment:
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
+
+    - name: Register docker-ce package name - Ubuntu
+      shell:
+        cmd:
+          apt-cache madison docker-ce | grep -E "18.09.0.*http://mirrors.aliyun.com" | head -n 1 | awk '{print $3}'
+      register: docker_package_name
+      tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
+
+    - name: Install docker-ce - Ubuntu
+      shell:
+        cmd:
+          apt-get install -y docker-ce={{ docker_package_name.stdout }} docker-ce-cli={{ docker_package_name.stdout }} containerd.io
+      tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
+      environment:
+        http_proxy: "{{ proxy }}"
+        https_proxy: "{{ proxy }}"
+
+    - name: Remove docker-ce gpg file
+      file:
+        path: "{{ dls_root_dir }}/docker-install.gpg"
+        state: absent
+      tags: docker
+      when:
+        - ansible_distribution == 'Ubuntu'
     # =================================================================================
 
     # ===================== CentOS 7.6 ================================================
@@ -123,7 +164,8 @@
       shell:
         cmd:
           yum install -y yum-utils device-mapper-persistent-data lvm2;
-          yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+          yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo;
+          yum-config-manager --save --setopt=docker-ce-stable.sslverify=false
       when:
         - ansible_distribution == 'CentOS'
       environment:
@@ -134,7 +176,7 @@
     - name: Install docker - CentOS
       shell:
         cmd:
-          yum install -y docker-ce-18.06.3.ce
+          yum install -y docker-ce-18.09.0 docker-ce-cli-18.09.0 containerd.io
       environment:
         http_proxy: "{{ proxy }}"
         https_proxy: "{{ proxy }}"
@@ -192,6 +234,14 @@
       when:
         - ansible_distribution == 'Ubuntu'
       tags: kubernetes
+
+    - name: Remove kubernetes gpg file
+      file:
+        path: "{{ dls_root_dir }}/apt-key.gpg"
+        state: absent
+      tags: kubernetes
+      when:
+        - ansible_distribution == 'Ubuntu'
     # =================================================================================
 
     # ===================== CentOS 7.6 ================================================
