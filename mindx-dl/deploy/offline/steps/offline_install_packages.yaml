@@ -149,7 +149,9 @@
       shell:
         chdir: "{{ dls_root_dir }}/base_software/"
         cmd:
-          dpkg -i docker-ce_18.06.3*
+          dpkg -i containerd.io*;
+          dpkg -i docker-ce-cli_*;
+          dpkg -i docker-ce_*
       when:
         - ansible_distribution == 'Ubuntu'
       tags: docker

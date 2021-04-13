@@ -249,7 +249,7 @@
     - name: Uninstall docker on every node - Ubuntu
       shell:
         cmd:
-          apt-get --purge remove -y docker docker-ce docker-engine docker.io containerd runc;
+          apt-get --purge remove -y docker docker-ce docker-ce-cli docker-engine docker.io containerd runc;
           apt-get autoremove -y
       ignore_errors: True
       when:
@@ -259,7 +259,7 @@
     - name: Uninstall docker on every node - CentOS
       shell:
         cmd:
-          yum remove -y docker-ce;
+          yum remove -y docker-ce docker-ce-cli containerd.io;
           yum autoremove -y
       ignore_errors: True
       when:
