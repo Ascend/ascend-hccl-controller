@@ -3,9 +3,8 @@ module hccl-controller
 go 1.14
 
 require (
-	github.com/golang/mock v1.4.1
-	github.com/prashantv/gostub v1.0.1-0.20191007164320-bbe3712b9c4a
-	github.com/stretchr/testify v1.4.0
+	github.com/agiledragon/gomonkey/v2 v2.0.1
+	github.com/smartystreets/goconvey v1.6.0
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
@@ -35,4 +34,5 @@ replace (
 	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.17.8
 	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.17.8
 	k8s.io/sample-apiserver v0.0.0 => k8s.io/sample-apiserver v0.17.8
+	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
 )
