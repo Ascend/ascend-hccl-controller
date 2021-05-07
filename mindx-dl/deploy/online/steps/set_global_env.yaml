@@ -6,14 +6,20 @@
   remote_user: root
 
   tasks:
+    - name: Get calico yaml file content
+      shell: grep -vE "(\s).#|^#" "{{ dls_root_dir }}/yamls/calico.yaml"
+      register: calico_content
+
     - name: Get calico ip
-      shell: grep -vE "(\s).#|^#" "{{ dls_root_dir }}/yamls/calico.yaml" 2>&1 | grep -A 1 "CALICO_IPV4POOL_CIDR" | grep 'value:' | awk -F ":" '{print $2}' | sed "s/[ \"']//g"
-      ignore_errors: True
+      shell: echo "{{ calico_content.stdout }}" | grep -A 1 "CALICO_IPV4POOL_CIDR" | grep 'value:' | awk -F ":" '{print $2}' | sed "s/[ \"']//g"
       register: calico_ip
 
+    - name: Get init kubernetes yaml file content
+      shell: grep "pod-network-cidr" "{{ playbook_dir }}/init_kubernetes.yaml"
+      register: init_k8s_file_content
+
     - name: Get kubernetes cluster ip
-      shell: grep "pod-network-cidr" "{{ playbook_dir }}/init_kubernetes.yaml" 2>&1 | awk -F "=" '{print $2}' | sed "s/[ \"']//g"
-      ignore_errors: True
+      shell: echo "{{ init_k8s_file_content.stdout }}" | awk -F "=" '{print $2}' | sed "s/[ \"']//g"
       register: cluster_ip
 
     - name: Checking whether network ip addresses are consistent
