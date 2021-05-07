@@ -6,14 +6,41 @@
   remote_user: root
 
   tasks:
+    - name: Get calico yaml file content
+      shell: grep -vE "(\s).#|^#" "{{ dls_root_dir }}/yamls/calico.yaml"
+      register: calico_content
+
+    - name: Get calico ip
+      shell: echo "{{ calico_content.stdout }}" | grep -A 1 "CALICO_IPV4POOL_CIDR" | grep 'value:' | awk -F ":" '{print $2}' | sed "s/[ \"']//g"
+      register: calico_ip
+
+    - name: Get init kubernetes yaml file content
+      shell: grep "pod-network-cidr" "{{ playbook_dir }}/init_kubernetes.yaml"
+      register: init_k8s_file_content
+
+    - name: Get kubernetes cluster ip
+      shell: echo "{{ init_k8s_file_content.stdout }}" | awk -F "=" '{print $2}' | sed "s/[ \"']//g"
+      register: cluster_ip
+
+    - name: Checking whether network ip addresses are consistent
+      fail:
+        msg: "The Calico IP address is inconsistent with the kubernetes cluster IP address, perform the following steps: \
+             Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=', and change this value; \
+             Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line 'CALICO_IPV4POOL_CIDR'. \
+             Modify the next line and change the value of the field to the same value as that in step 1."
+      when:
+        (calico_ip.stdout != "" and cluster_ip.stdout != "" and calico_ip.stdout != cluster_ip.stdout)
+
     - name: Check master IP
       fail:
         msg: "Master IP is conflict with kubernetes cluster ip. To change the Kubernetes cluster IP address, perform the following steps: \
-               Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
-               Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
-               At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
+             Step 1, edit {{ playbook_dir }}/init_kubernetes.yaml, find the line '--pod-network-cidr=192.168.0.0/16', and change '192.168.0.0/16' to another; \
+             Step 2, edit {{ dls_root_dir }}/yamls/calico.yaml, find the line value: '192.168.0.0/16', and change '192.168.0.0/16' to another. \
+             At last, ensure that the IP addresses in Step 1 and Step 2 are the same."
       when:
-        - ansible_default_ipv4['address'].startswith("192.168")
+        (calico_ip.stdout != "" and calico_ip.stdout.startswith("192.168") and ansible_default_ipv4['address'].startswith("192.168"))
+        or
+        (cluster_ip.stdout != "" and cluster_ip.stdout.startswith("192.168") and ansible_default_ipv4['address'].startswith("192.168"))
 
 - hosts: localnode, cluster
   remote_user: root
