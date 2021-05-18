@@ -388,26 +388,28 @@ function check_node_label() {
     # worker节点
     if [[ "${nodeType}" =~ (.*)${WORKER_NODE} ]]
     then
-        if [[ "${hardWare}" == "${HW_300T}" ]]
-        then
-            # 300T标签
-            worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A910_LABEL}|${A300T_LABEL}"
-        elif [[ "${hardWare}" == "${HW_TRAIN}" ]]
-        then
-            # 910训练标签
-            worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A910_LABEL}"
-        elif [[ "${hardWare}" == "${HW_INFER}" ]]
-        then
-            # 310推理标签
-            worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A310_LABEL}"
-        elif [[ "${hardWare}" == "${HW_300I_PRO}" ]]
-        then
-            # A300I Pro标签
-            worker_label_filter="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${A710_LABEL}"
-        fi
+        worker_base_label="${MINDXDL_WORKER_LABEL}|${K8S_WORKER_LABEL}|${HOST_ARCH_LABEL}"
+        case "${hardWare}" in
+            "${HW_300T}")
+                # 300T标签
+                worker_label_filter="${worker_base_label}|${A910_LABEL}|${A300T_LABEL}"
+                ;;
+            "${HW_TRAIN}")
+                # 910训练标签
+                worker_label_filter="${worker_base_label}|${A910_LABEL}"
+                ;;
+            "${HW_INFER}")
+                # 310推理标签
+                worker_label_filter="${worker_base_label}|${A310_LABEL}"
+                ;;
+            "${HW_300I_PRO}")
+                # A300I Pro标签
+                worker_label_filter="${worker_base_label}|${A710_LABEL}"
+                ;;
+        esac
     fi
 
-    label_filter="${master_label_filter}|${worker_label_filter}|${HOST_ARCH_LABEL}"
+    label_filter="${master_label_filter}|${worker_label_filter}"
     # 根据节点类型和硬件形态得到的标准的标签，表现为行的形式，
     label_filter_rows="$(echo "${label_filter}" | sed "s/|/\\n/g" | grep -v " ")"
 
