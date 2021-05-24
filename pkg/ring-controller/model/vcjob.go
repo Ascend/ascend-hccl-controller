@@ -129,11 +129,7 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 		var deviceTotal int32
 
 		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[agent2.ResourceName]
-			quantityValue := int32(quantity.Value())
-			if exist && quantityValue > 0 {
-				deviceTotal += quantityValue
-			}
+			deviceTotal += agent2.GetNPUNum(container)
 		}
 		deviceTotal *= taskSpec.Replicas
 

@@ -74,6 +74,9 @@ const (
 var (
 	// JSONVersion of hccl.json
 	JSONVersion = "v2"
+	// ResourceList pod annotation
+	ResourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
+		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
 )
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:

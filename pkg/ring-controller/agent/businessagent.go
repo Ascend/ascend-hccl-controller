@@ -21,6 +21,7 @@ import (
 	"fmt"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -249,8 +250,7 @@ func isReferenceJobSameWithBsnsWorker(pod *apiCoreV1.Pod, jobName, bsnsWorkerUID
 func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
 	useChip := false
 	for _, container := range pod.Spec.Containers {
-		quantity, exist := container.Resources.Limits[ResourceName]
-		if exist && int(quantity.Value()) > 0 {
+		if GetNPUNum(container) > 0 {
 			useChip = true
 			break
 		}
@@ -263,6 +263,19 @@ func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
 		}
 	}
 	return true
+}
+
+// GetNPUNum get npu npuNum from container
+func GetNPUNum(c apiCoreV1.Container) int32 {
+	var qtt resource.Quantity
+	var exist bool
+	for _, res := range ResourceList {
+		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
+		if exist && int32(qtt.Value()) > 0 {
+			return int32(qtt.Value())
+		}
+	}
+	return 0
 }
 
 // DeleteWorker : Delete worker(namespace/name) from BusinessWorker map in agent
