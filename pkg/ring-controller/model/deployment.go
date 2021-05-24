@@ -89,11 +89,7 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 	var deviceTotal int32
 
 	for _, container := range deploy.containers {
-		quantity, exist := container.Resources.Limits[agent2.ResourceName]
-		quantityValue := int32(quantity.Value())
-		if exist && quantityValue > 0 {
-			deviceTotal += quantityValue
-		}
+		deviceTotal += agent2.GetNPUNum(container)
 	}
 	deviceTotal *= deploy.replicas
 
