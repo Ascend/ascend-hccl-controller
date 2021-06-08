@@ -30,11 +30,11 @@ func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.R
 	return &DeployWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
 		configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, deploy.DeployName),
-		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal,
-		rankMap: make(map[string]int, 1)}, DeployInfo: deploy}
+		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal},
+		DeployInfo: deploy}
 }
 
-func (w *DeployWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if pod.CreationTimestamp.Before(&w.DeployCreationTimestamp) {
@@ -85,30 +85,4 @@ func (w *DeployWorker) Statistic(stopTime time.Duration) {
 			time.Sleep(stopTime)
 		}
 	}
-}
-
-func (w *DeployWorker) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
-
-	w.cmMu.Lock()
-	defer w.cmMu.Unlock()
-	_, ok := w.rankMap[podInfo.namespace+"/"+podInfo.name]
-	if !ok {
-		return fmt.Errorf("rank map not exist, key is %s/%s", podInfo.namespace, podInfo.name)
-	}
-
-	err := w.configmapData.RemovePodInfo(podInfo.namespace, podInfo.name)
-	if err != nil {
-		return err
-	}
-
-	klog.V(L3).Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
-	err = updateConfigMap(&w.WorkerInfo, podInfo.namespace)
-	if err != nil {
-		return err
-	}
-	w.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
-
-	return nil
 }
