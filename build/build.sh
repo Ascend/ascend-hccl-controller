@@ -52,23 +52,15 @@ function build() {
 function mv_file() {
   mv "${TOP_DIR}"/${OUTPUT_NAME} "${TOP_DIR}"/output
   cp "${TOP_DIR}"/build/hccl-controller.yaml "${TOP_DIR}"/output/hccl-controller-"${build_version}".yaml
-
-}
-
-function build_docker_image() {
   cp "${TOP_DIR}"/build/${DOCKER_FILE_NAME} "${TOP_DIR}"/output
-  cd "${TOP_DIR}"/output
-  docker rmi "${docker_images_name}" || true
-  docker build -t "${docker_images_name}" --no-cache .
-  docker save "${docker_images_name}" | gzip >${docker_zip_name}
-  rm -f ${DOCKER_FILE_NAME}
 }
+
+
 
 function main() {
   clear_env
   build
   mv_file
-  build_docker_image
 }
 
 main
