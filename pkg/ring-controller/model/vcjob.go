@@ -184,6 +184,9 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 		key = metaData.GetNamespace() + "/" + metaData.GetName() + "/" + eventType
 	}
 	var model ResourceEventHandler
+	if _, ok := indexers[VCJobType]; !ok {
+		indexers[VCJobType] = nil
+	}
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},

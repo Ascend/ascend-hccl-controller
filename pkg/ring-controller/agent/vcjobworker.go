@@ -19,11 +19,13 @@ package agent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
+	"net"
 	"strconv"
 	"time"
 )
@@ -178,6 +180,23 @@ func (b *WorkerInfo) tableConstructionFinished() bool {
 
 	return b.cachedPodNum == b.taskReplicasTotal
 }
+
+func checkDeviceInfo(instance *v1.Instance) bool {
+	if err := net.ParseIP(instance.ServerID); err != nil {
+		return false
+	}
+	for _, item := range instance.Devices {
+
+		if i, err := strconv.Atoi(item.DeviceID); err != nil || i < 0 {
+			return false
+		}
+		if err := net.ParseIP(item.DeviceIP); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	klog.V(L4).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
@@ -185,7 +204,14 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	klog.V(L3).Infof("deviceId => %s", deviceInfo)
 	klog.V(L4).Infof("isExist ==> %t", exist)
-
+	var instance v1.Instance
+	ok := json.Unmarshal([]byte(deviceInfo), &instance)
+	if ok != nil {
+		return ok
+	}
+	if !checkDeviceInfo(&instance) {
+		return errors.New("deviceInfo failed the validation")
+	}
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	b.rankMap[podInfo.namespace+"/"+podInfo.name] = b.rankIndex

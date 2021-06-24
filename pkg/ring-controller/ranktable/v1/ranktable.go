@@ -20,9 +20,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"unicode/utf8"
 )
 
 // RankTabler interface to maintain properties
@@ -52,6 +52,10 @@ func (r *RankTableStatus) GetStatus() string {
 
 // UnmarshalToRankTable ： Unmarshal json string to RankTable
 func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
+	maximumMemory := 50 * 1024 * 1024
+	if utf8.RuneCount([]byte(jsonString)) > maximumMemory {
+		return fmt.Errorf("out of memory")
+	}
 	err := json.Unmarshal([]byte(jsonString), &r)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)

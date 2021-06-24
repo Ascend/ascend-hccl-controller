@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	"math"
 	"strings"
 	"time"
 
@@ -96,6 +97,7 @@ var NewBusinessAgent = func(
 	klog.V(L1).Info("waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, businessAgent.podInformer.HasSynced); !ok {
 		klog.Errorf("caches sync failed")
+		return businessAgent, fmt.Errorf("caches sync failed")
 	}
 
 	return businessAgent, businessAgent.run(config.PodParallelism)
@@ -271,6 +273,12 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 	var exist bool
 	for _, res := range ResourceList {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
+		if math.MaxInt32 < qtt.Value() {
+			return math.MaxInt32
+		}
+		if math.MinInt32 > qtt.Value() {
+			return math.MinInt32
+		}
 		if exist && int32(qtt.Value()) > 0 {
 			return int32(qtt.Value())
 		}
