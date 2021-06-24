@@ -185,7 +185,7 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	}
 	var model ResourceEventHandler
 	if _, ok := indexers[VCJobType]; !ok {
-		indexers[VCJobType] = nil
+		return nil, fmt.Errorf("The key does not exist err %v ", ok)
 	}
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:
