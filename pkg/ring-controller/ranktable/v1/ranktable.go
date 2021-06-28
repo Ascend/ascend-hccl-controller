@@ -70,15 +70,15 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 
 // CheckDeviceInfo ：validation of DeviceInfo
 func CheckDeviceInfo(instance *Instance) bool {
-	if err := net.ParseIP(instance.ServerID); err == nil {
+	if parsedIP := net.ParseIP(instance.ServerID); parsedIP == nil {
 		return false
 	}
 	for _, item := range instance.Devices {
 
-		if i, err := strconv.Atoi(item.DeviceID); err != nil || i < 0 {
+		if value, err := strconv.Atoi(item.DeviceID); err != nil || value < 0 {
 			return false
 		}
-		if err := net.ParseIP(item.DeviceIP); err == nil {
+		if parsedIP := net.ParseIP(item.DeviceIP); parsedIP == nil {
 			return false
 		}
 	}

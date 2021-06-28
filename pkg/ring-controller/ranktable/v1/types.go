@@ -40,7 +40,7 @@ const (
 	// L4 log level 4
 	L4 = 4
 
-	// MaximumMemory Memory limit
+	// MaximumMemory Memory limit unit B
 	MaximumMemory = 50 * 1024 * 1024
 )
 
