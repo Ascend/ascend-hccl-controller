@@ -68,7 +68,7 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 	return nil
 }
 
-// validation of DeviceInfo
+// CheckDeviceInfo ：validation of DeviceInfo
 func CheckDeviceInfo(instance *Instance) bool {
 	if err := net.ParseIP(instance.ServerID); err == nil {
 		return false
