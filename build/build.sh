@@ -6,7 +6,6 @@ set -e
 CUR_DIR=$(dirname "$(readlink -f "$0")")
 TOP_DIR=$(realpath "${CUR_DIR}"/..)
 export GO111MODULE="on"
-unset GOPATH
 VER_FILE="${TOP_DIR}"/service_config.ini
 build_version="beta"
 if [ -f "$VER_FILE" ]; then

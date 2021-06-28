@@ -68,7 +68,7 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 	return nil
 }
 func CheckDeviceInfo(instance *Instance) bool {
-	if err := net.ParseIP(instance.ServerID); err != nil {
+	if err := net.ParseIP(instance.ServerID); err == nil {
 		return false
 	}
 	for _, item := range instance.Devices {
@@ -76,7 +76,7 @@ func CheckDeviceInfo(instance *Instance) bool {
 		if i, err := strconv.Atoi(item.DeviceID); err != nil || i < 0 {
 			return false
 		}
-		if err := net.ParseIP(item.DeviceIP); err != nil {
+		if err := net.ParseIP(item.DeviceIP); err == nil {
 			return false
 		}
 	}
