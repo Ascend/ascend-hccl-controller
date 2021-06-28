@@ -41,7 +41,7 @@ const (
 	L4 = 4
 
 	// MaximumMemory Memory limit unit B
-	MaximumMemory = 50 * 1024 * 1024
+	maximumMemory = 50 * 1024 * 1024
 )
 
 // RankTableStatus to hccl

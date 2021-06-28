@@ -55,7 +55,7 @@ func (r *RankTableStatus) GetStatus() string {
 
 // UnmarshalToRankTable ： Unmarshal json string to RankTable
 func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
-	if utf8.RuneCount([]byte(jsonString)) > MaximumMemory {
+	if utf8.RuneCount([]byte(jsonString)) > maximumMemory {
 		return fmt.Errorf("out of memory")
 	}
 	err := json.Unmarshal([]byte(jsonString), &r)
