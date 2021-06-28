@@ -25,7 +25,6 @@ import (
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
-	"net"
 	"strconv"
 	"time"
 )
@@ -181,37 +180,16 @@ func (b *WorkerInfo) tableConstructionFinished() bool {
 	return b.cachedPodNum == b.taskReplicasTotal
 }
 
-func checkDeviceInfo(instance *v1.Instance) bool {
-	if err := net.ParseIP(instance.ServerID); err != nil {
-		return false
-	}
-	for _, item := range instance.Devices {
-
-		if i, err := strconv.Atoi(item.DeviceID); err != nil || i < 0 {
-			return false
-		}
-		if err := net.ParseIP(item.DeviceIP); err != nil {
-			return false
-		}
-	}
-	return true
-}
-
 func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	klog.V(L4).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
+	if !exist {
+		return errors.New("The key of" + PodDeviceKey + "does not exist ")
+	}
 	klog.V(L3).Infof("deviceId => %s", deviceInfo)
 	klog.V(L4).Infof("isExist ==> %t", exist)
-	var instance v1.Instance
-	ok := json.Unmarshal([]byte(deviceInfo), &instance)
-	if ok != nil {
-		return ok
-	}
-	if !checkDeviceInfo(&instance) {
-		return errors.New("deviceInfo failed the validation")
-	}
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	b.rankMap[podInfo.namespace+"/"+podInfo.name] = b.rankIndex
@@ -296,7 +274,10 @@ func getWorkName(labels map[string]string) string {
 	if label, ok := labels[VolcanoJobNameKey]; ok {
 		return label
 	}
-	return labels[DeploymentNameKey]
+	if label, ok := labels[DeploymentNameKey]; ok {
+		return label
+	}
+	return ""
 }
 
 func updateConfigMap(w *WorkerInfo, namespace string) error {

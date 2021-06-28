@@ -18,6 +18,7 @@
 package model
 
 import (
+	"errors"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	"k8s.io/klog"
@@ -38,7 +39,10 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	}
 
 	// retrieve configmap data
-	jobStartString := cm.Data[agent2.ConfigmapKey]
+	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
+	if !ok {
+		return errors.New("The key of " + agent2.ConfigmapKey + "does not exist")
+	}
 	klog.V(L4).Info("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, jobStartString, agent2.JSONVersion)

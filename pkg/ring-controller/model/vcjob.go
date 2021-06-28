@@ -17,6 +17,7 @@
 package model
 
 import (
+	errors2 "errors"
 	"fmt"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
@@ -79,7 +80,11 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	}
 
 	// retrieve configmap data
-	jobStartString := cm.Data[agent2.ConfigmapKey]
+	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
+	if !ok {
+		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
+	}
+
 	klog.V(L3).Info("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
@@ -185,6 +190,9 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	}
 	var model ResourceEventHandler
 	if _, ok := indexers[VCJobType]; !ok {
+		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+	}
+	if _, ok := indexers[DeploymentType]; !ok {
 		return nil, fmt.Errorf("The key does not exist err %v ", ok)
 	}
 	switch t := obj.(type) {
