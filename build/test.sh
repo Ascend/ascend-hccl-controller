@@ -10,7 +10,7 @@ function execute_test() {
     echo 'Failed' >"$file_input"
   else
     gocov convert cov.out | gocov-html >"$file_detail_output"
-    gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/collector/...
+    gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/pkg/ring-controller/...
   fi
 }
 
