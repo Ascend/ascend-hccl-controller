@@ -101,7 +101,7 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterIUrl, kubeconfig)
 	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
+		klog.Fatalf("Error building kubeconfig")
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)

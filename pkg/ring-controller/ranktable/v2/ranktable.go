@@ -19,6 +19,7 @@ package v2
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -33,7 +34,9 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}
-
+	if !v1.CheckDeviceInfo(&instance) {
+		return errors.New("deviceInfo failed the validation")
+	}
 	for _, server := range r.ServerList {
 		if server.PodID == instance.PodName {
 			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,

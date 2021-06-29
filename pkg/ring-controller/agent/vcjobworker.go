@@ -19,6 +19,7 @@ package agent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -178,14 +179,17 @@ func (b *WorkerInfo) tableConstructionFinished() bool {
 
 	return b.cachedPodNum == b.taskReplicasTotal
 }
+
 func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	klog.V(L4).Infof("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
+	if !exist {
+		return errors.New("The key of" + PodDeviceKey + "does not exist ")
+	}
 	klog.V(L3).Infof("deviceId => %s", deviceInfo)
 	klog.V(L4).Infof("isExist ==> %t", exist)
-
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	b.rankMap[podInfo.namespace+"/"+podInfo.name] = b.rankIndex
@@ -270,7 +274,10 @@ func getWorkName(labels map[string]string) string {
 	if label, ok := labels[VolcanoJobNameKey]; ok {
 		return label
 	}
-	return labels[DeploymentNameKey]
+	if label, ok := labels[DeploymentNameKey]; ok {
+		return label
+	}
+	return ""
 }
 
 func updateConfigMap(w *WorkerInfo, namespace string) error {

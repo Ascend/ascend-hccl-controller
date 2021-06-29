@@ -39,6 +39,9 @@ const (
 	L3 = 3
 	// L4 log level 4
 	L4 = 4
+
+	// MaximumMemory Memory limit unit B
+	maximumMemory = 50 * 1024 * 1024
 )
 
 // RankTableStatus to hccl

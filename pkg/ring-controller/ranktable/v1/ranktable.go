@@ -19,10 +19,13 @@ package v1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"net"
+	"strconv"
+	"unicode/utf8"
 )
 
 // RankTabler interface to maintain properties
@@ -52,6 +55,9 @@ func (r *RankTableStatus) GetStatus() string {
 
 // UnmarshalToRankTable ： Unmarshal json string to RankTable
 func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
+	if utf8.RuneCount([]byte(jsonString)) > maximumMemory {
+		return fmt.Errorf("out of memory")
+	}
 	err := json.Unmarshal([]byte(jsonString), &r)
 	if err != nil {
 		return fmt.Errorf("parse configmap data error: %v", err)
@@ -60,6 +66,26 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 		return fmt.Errorf("configmap status abnormal: %v", err)
 	}
 	return nil
+}
+
+// CheckDeviceInfo ：validation of DeviceInfo
+func CheckDeviceInfo(instance *Instance) bool {
+	if parsedIP := net.ParseIP(instance.ServerID); parsedIP == nil {
+		return false
+	}
+	if len(instance.Devices) == 0 {
+		return false
+	}
+	for _, item := range instance.Devices {
+
+		if value, err := strconv.Atoi(item.DeviceID); err != nil || value < 0 {
+			return false
+		}
+		if parsedIP := net.ParseIP(item.DeviceIP); parsedIP == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // CachePodInfo : cache pod info to RankTableV1
@@ -80,7 +106,9 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	if err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}
-
+	if !CheckDeviceInfo(&instance) {
+		return errors.New("deviceInfo failed the validation")
+	}
 	group.InstanceList = append(group.InstanceList, &instance)
 	*rankIndex++
 	return nil
