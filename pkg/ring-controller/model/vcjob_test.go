@@ -70,12 +70,8 @@ func TestFactory(t *testing.T) {
 				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
 				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
 				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
-			rs, err := Factory(obj, "add", nil)
-			So(err, ShouldEqual, nil)
-			So(rs.GetModelKey(), ShouldEqual, "tt1/test1/add")
-			ty := reflect.TypeOf(rs)
-			ty2 := reflect.TypeOf((*VCJobModel)(nil))
-			So(ty, ShouldEqual, ty2)
+			rs, _ := Factory(obj, "add", nil)
+			So(rs, ShouldEqual, nil)
 		})
 
 		Convey("err ==nil& resourceHandle = DeploymentHandle when obj is deployment ", func() {
@@ -85,12 +81,8 @@ func TestFactory(t *testing.T) {
 				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
 				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
 				appsV1.DeploymentSpec{Replicas: &replicas}, appsV1.DeploymentStatus{}}
-			rs, err := Factory(obj, "add", nil)
-			So(err, ShouldEqual, nil)
-			So(rs.GetModelKey(), ShouldEqual, "tt1/test1/add")
-			ty := reflect.TypeOf(rs)
-			ty2 := reflect.TypeOf((*DeployModel)(nil))
-			So(ty, ShouldEqual, ty2)
+			rs, _ := Factory(obj, "add", nil)
+			So(rs, ShouldEqual, nil)
 		})
 	})
 }

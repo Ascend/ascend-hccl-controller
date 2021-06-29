@@ -73,6 +73,9 @@ func CheckDeviceInfo(instance *Instance) bool {
 	if parsedIP := net.ParseIP(instance.ServerID); parsedIP == nil {
 		return false
 	}
+	if len(instance.Devices) == 0 {
+		return false
+	}
 	for _, item := range instance.Devices {
 
 		if value, err := strconv.Atoi(item.DeviceID); err != nil || value < 0 {
