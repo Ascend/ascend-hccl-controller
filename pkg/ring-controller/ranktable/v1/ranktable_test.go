@@ -52,9 +52,9 @@ func TestUnmarshalToRankTable(t *testing.T) {
 func TestCheckDeviceInfo(t *testing.T) {
 	Convey("TestRankTableV1 TestCheckDeviceInfo", t, func() {
 		instance := Instance{
-			Devices:  []Device{{DeviceID: "2", DeviceIP: "51.38.67.98"}, {DeviceID: "3", DeviceIP: "51.38.67.93"}},
+			Devices:  []Device{{DeviceID: "2", DeviceIP: "0.0.0.0"}, {DeviceID: "3", DeviceIP: "0.0.0.0"}},
 			PodName:  "podname",
-			ServerID: "51.38.67.98",
+			ServerID: "0.0.0.0",
 		}
 		Convey("CheckDeviceInfo() should return true when Normal", func() {
 			isOk := CheckDeviceInfo(&instance)
