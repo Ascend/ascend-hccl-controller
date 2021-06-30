@@ -36,6 +36,9 @@ spec:
       serviceAccountName: hccl-controller
       containers:
       - name: hccl-controller
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
         image: hccl-controller:v20.2.0
         resources:
           requests:
