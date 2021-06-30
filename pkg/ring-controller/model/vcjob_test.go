@@ -303,16 +303,6 @@ func TestVCJobModelEventUpdate(t *testing.T) {
 				CmTimeout*time.Millisecond, TimeSleep*time.Second), "Pods"),
 			BusinessWorker: make(map[string]agent.Worker, 1),
 		}
-		Convey("err == nil when jobPhase == JobRestartPhase", func() {
-			model.jobPhase = JobRestartPhase
-			patches := ApplyFunc(agent.DeleteWorker, func(_ string, _ string, _ *agent.BusinessAgent) {
-				return
-			})
-			defer patches.Reset()
-			err := model.EventUpdate(ag)
-			So(err, ShouldEqual, nil)
-			So(len(ag.BusinessWorker), ShouldEqual, 0)
-		})
 		Convey("err == nil when BusinessWorker exist job", func() {
 			ag.BusinessWorker["namespace/test"] = nil
 			err := model.EventUpdate(ag)

@@ -40,6 +40,8 @@ type RankTabler interface {
 	SetStatus(status string) error
 	// GetStatus: Get status of RankTableStatus
 	GetStatus() string
+	// GetPodNum get pod num
+	GetPodNum() int
 }
 
 // SetStatus Set status of RankTableStatus
@@ -149,4 +151,9 @@ func checkPodCache(group *Group, pod *apiCoreV1.Pod) error {
 		}
 	}
 	return nil
+}
+
+// GetPodNum get pod num
+func (r *RankTable) GetPodNum() int {
+	return 0
 }
