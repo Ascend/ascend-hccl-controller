@@ -56,7 +56,7 @@ func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forget
 	if !isReferenceJobSameWithBsnsWorker(pod, podInfo.jobName, b.JobUID) {
 		if pod.CreationTimestamp.Before(&b.JobCreationTimestamp) {
 			// old pod + new worker
-			klog.V(L3).Infof("syncing '%s' terminated: corresponding job worker is no "+
+			klog.V(L4).Infof("syncing '%s' terminated: corresponding job worker is no "+
 				"longer exist (basis: job uid + creationTimestamp)", podInfo)
 			return true, false
 		}
@@ -329,7 +329,6 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	if !exist || (exist && label910 != Val910) {
 		return fmt.Errorf("invalid configmap label" + label910)
 	}
-
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
