@@ -179,7 +179,12 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 			podKeyInfo.String())
 		return false
 	}
-	// if worker exist but pod not exist, try again
+	if podKeyInfo.eventType == EventDelete {
+		b.Workqueue.Forget(obj)
+		bsnsWorker.handleDeleteEvent(podKeyInfo)
+		return true
+	}
+	// if worker exist but pod not exist, try again except delete event
 	if !podExist {
 		return true
 	}
@@ -192,7 +197,7 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	// if worker exist && pod exist, need check some special scenarios
 	klog.V(L4).Infof("successfully synced '%s'", podKeyInfo)
 
-	forgetQueue, retry := bsnsWorker.doWorker(pod, podKeyInfo)
+	forgetQueue, retry := bsnsWorker.doWork(pod, podKeyInfo)
 	if forgetQueue {
 		b.Workqueue.Forget(obj)
 	}

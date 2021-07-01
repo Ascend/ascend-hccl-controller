@@ -109,10 +109,6 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 
 // EventUpdate : to handle vcjob update event
 func (job *VCJobModel) EventUpdate(agent *agent2.BusinessAgent) error {
-	if job.jobPhase == JobRestartPhase {
-		agent2.DeleteWorker(job.JobNamespace, job.JobName, agent)
-		return nil
-	}
 	agent.RwMutex.RLock()
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
 	agent.RwMutex.RUnlock()

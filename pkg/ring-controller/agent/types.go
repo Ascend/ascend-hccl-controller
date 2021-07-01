@@ -48,7 +48,8 @@ const (
 	PodJobVersion = "volcano.sh/job-version"
 	// PodDeviceKey Pod annoation Key
 	PodDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
-
+	// PodRankIndexKey pod rank index
+	PodRankIndexKey = "hccl/rankIndex"
 	// DeploymentNameKey pod label
 	DeploymentNameKey = "deploy-name"
 	// EventAdd event add
@@ -176,7 +177,6 @@ type WorkerInfo struct {
 
 	statisticStopped  bool
 	rankIndex         int
-	rankMap           map[string]int
 	cachedPodNum      int32
 	taskReplicasTotal int32
 }
