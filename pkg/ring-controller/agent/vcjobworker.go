@@ -207,13 +207,13 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	}
 	// Cache device info from the pod
 	err := b.configmapData.CachePodInfo(pod, deviceInfo, &b.rankIndex)
+	if rankExist {
+		b.rankIndex = tmpRankIndex
+	}
 	if err != nil {
 		return err
 	}
 
-	if rankExist {
-		b.rankIndex = tmpRankIndex
-	}
 	// Cache pod num plus one
 	b.modifyStatistics(1)
 	klog.V(L3).Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
