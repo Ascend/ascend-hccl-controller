@@ -79,7 +79,7 @@ spec:
       volumes:
         - name: device-hcclcontroller
           hostPath:
-            path: /var/log/mindx-dl
+            path: /var/log/mindx-dl/hccl-controller
         - name: localtime
           hostPath:
             path: /etc/localtime
