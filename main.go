@@ -78,6 +78,7 @@ func validate(masterIUrl *string) bool {
 func main() {
 	flag.Parse()
 	stopLogCh := make(chan struct{})
+	defer close(stopLogCh)
 	initHwLogger(stopLogCh)
 	if !validate(&masterIUrl) {
 		hwlog.Fatalf("file not in security directory")
