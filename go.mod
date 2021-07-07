@@ -4,15 +4,18 @@ go 1.14
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.0.1
-	github.com/smartystreets/goconvey v1.6.0
+	github.com/smartystreets/goconvey v1.6.4
+	huawei.com/npu-exporter v0.0.1
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
-	k8s.io/klog v1.0.0
 	volcano.sh/volcano v0.4.0
 )
 
 replace (
+	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
+	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
+	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.1
 	k8s.io/api v0.0.0 => k8s.io/api v0.17.8
 	k8s.io/apiextensions-apiserver v0.0.0 => k8s.io/apiextensions-apiserver v0.17.8
 	k8s.io/apimachinery v0.0.0 => k8s.io/apimachinery v0.17.8
@@ -34,5 +37,4 @@ replace (
 	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.17.8
 	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.17.8
 	k8s.io/sample-apiserver v0.0.0 => k8s.io/sample-apiserver v0.17.8
-	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
 )

@@ -45,9 +45,9 @@ JOB_PARAMS_1P = {
     # if use_nfs is False, 'nfs_server_ip' should be set to ''
     # if use_nfs is True, 'nfs_server_ip' should be set to NFS server address
     'nfs_server_ip': '127.0.0.1',
-    'host_code_path': '/data/atlas_dls/code',
-    'host_data_path': '/data/atlas_dls/public/',
-    'host_output_path': '/data/atlas_dls/output'
+    'host_code_path': '/data/mindx-dl/code',
+    'host_data_path': '/data/mindx-dl/public/',
+    'host_output_path': '/data/mindx-dl/output'
 }
 
 # Atlas 800-9000/Atlas 800-9010

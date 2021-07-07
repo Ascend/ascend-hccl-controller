@@ -117,7 +117,7 @@
 
     - name: Remove logs
       file:
-        path: /var/log/atlas_dls/{{item}}
+        path: /var/log/mindx-dl/{{item}}
         state: absent
       with_items:
         - hccl-controller

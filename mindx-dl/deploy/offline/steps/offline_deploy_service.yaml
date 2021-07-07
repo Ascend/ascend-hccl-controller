@@ -47,15 +47,15 @@
     deploy_yaml_dir: "{{ dls_root_dir }}/yamls"
 
   tasks:
-    - name: Remove /var/log/atlas_dls
+    - name: Remove /var/log/mindx-dl
       file:
-        path: /var/log/atlas_dls
+        path: /var/log/mindx-dl
         state: absent
       ignore_errors: True
 
     - name: Create dls_core log directory
       file:
-        path: /var/log/atlas_dls/{{ item }}
+        path: /var/log/mindx-dl/{{ item }}
         state: directory
         mode: "0750"
         owner: 'hwMindX'
@@ -70,8 +70,8 @@
       blockinfile:
         path: /etc/logrotate.d/mindx_dl_scheduler
         block: |
-          /var/log/atlas_dls/volcano-*/*.log
-          /var/log/atlas_dls/hccl-*/*.log{
+          /var/log/mindx-dl/volcano-*/*.log
+          /var/log/mindx-dl/hccl-*/*.log{
               daily
               rotate 8
               size 20M
@@ -83,10 +83,10 @@
               create 0640 hwMindX hwMindX
               sharedscripts
               postrotate
-                  chmod 640 /var/log/atlas_dls/volcano-*/*.log
-                  chmod 640 /var/log/atlas_dls/hccl-*/*.log
-                  chmod 440 /var/log/atlas_dls/volcano-*/*.log-*
-                  chmod 440 /var/log/atlas_dls/hccl-*/*.log-*
+                  chmod 640 /var/log/mindx-dl/volcano-*/*.log
+                  chmod 640 /var/log/mindx-dl/hccl-*/*.log
+                  chmod 440 /var/log/mindx-dl/volcano-*/*.log-*
+                  chmod 440 /var/log/mindx-dl/hccl-*/*.log-*
               endscript
           }
         state: present

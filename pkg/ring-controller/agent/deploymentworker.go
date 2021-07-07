@@ -19,8 +19,8 @@ package agent
 import (
 	"fmt"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
-	"k8s.io/klog"
 	"time"
 )
 
@@ -39,7 +39,7 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 	// check basis: job uid + creationTimestamp
 	if pod.CreationTimestamp.Before(&w.DeployCreationTimestamp) {
 		// old pod + new worker
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding job worker is no "+
+		hwlog.Infof("syncing '%s' terminated: corresponding job worker is no "+
 			"longer exist (basis: job uid + creationTimestamp)", podInfo)
 		return true, false
 	}
@@ -51,14 +51,14 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 	}
 	if configmapComplete :=
 		w.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
+		hwlog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true
 	}
 
 	// start to sync current pod
 	if err := w.syncHandler(pod, podInfo); err != nil {
-		klog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		hwlog.Errorf("error syncing '%s': %s", podInfo, err.Error())
 		return true, true
 	}
 	return true, true
@@ -70,17 +70,17 @@ func (w *DeployWorker) Statistic(stopTime time.Duration) {
 		select {
 		case c, ok := <-w.statisticSwitch:
 			if !ok {
-				klog.Error(c)
+				hwlog.Error(c)
 			}
 			return
 		default:
 			if w.taskReplicasTotal == w.cachedPodNum {
-				klog.V(L1).Infof("rank table build progress for %s/%s is completed",
+				hwlog.Infof("rank table build progress for %s/%s is completed",
 					w.DeployNamespace, w.DeployName)
 				w.CloseStatistic()
 				return
 			}
-			klog.V(L1).Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
+			hwlog.Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
 				"pods already cached = %d", w.DeployNamespace, w.DeployName, w.taskReplicasTotal, w.cachedPodNum)
 			time.Sleep(stopTime)
 		}

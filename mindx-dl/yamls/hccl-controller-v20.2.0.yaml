@@ -46,17 +46,17 @@ spec:
               cpu: 500m
           imagePullPolicy: Never
           command: [ "/bin/bash", "-c", "--"]
-          args: ["umask 027;hccl-controller --logtostderr=false --log_dir=/var/log/atlas_dls/hccl-controller
-         --log_file=/var/log/atlas_dls/hccl-controller/hccl-controller.log  --stderrthreshold=1 -v=3" ]
+          args: ["umask 027;hccl-controller --logtostderr=false --log_dir=/var/log/mindx-dl/hccl-controller
+         --log_file=/var/log/mindx-dl/hccl-controller/hccl-controller.log  --stderrthreshold=1 -v=3" ]
           volumeMounts:
             - name: device-hcclcontroller
-              mountPath: /var/log/atlas_dls/hccl-controller
+              mountPath: /var/log/mindx-dl/hccl-controller
             - name: localtime
               mountPath: /etc/localtime
       volumes:
         - name: device-hcclcontroller
           hostPath:
-            path: /var/log/atlas_dls/hccl-controller
+            path: /var/log/mindx-dl/hccl-controller
         - name: localtime
           hostPath:
             path: /etc/localtime

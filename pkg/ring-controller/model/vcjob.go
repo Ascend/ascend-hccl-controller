@@ -22,6 +22,7 @@ import (
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
+	"huawei.com/npu-exporter/hwlog"
 	appsV1 "k8s.io/api/apps/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
 	"strconv"
 	"time"
 	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
@@ -65,11 +65,11 @@ func (job *VCJobModel) GetReplicas() string {
 func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 
 	agent.RwMutex.RLock()
-	klog.V(L2).Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
+	hwlog.Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
 	agent.RwMutex.RUnlock()
 	if exist {
-		klog.V(L2).Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
+		hwlog.Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
 		return nil
 	}
 
@@ -85,7 +85,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
 
-	klog.V(L3).Info("jobstarting==>", jobStartString)
+	hwlog.Info("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
 	if err != nil {

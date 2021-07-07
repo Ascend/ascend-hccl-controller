@@ -164,23 +164,23 @@ def get_log_path_src_and_dst(base):
     """
     dst_src_paths = \
         [(os.path.join(base, "volcano-scheduler"),
-          "/var/log/atlas_dls/volcano-scheduler"),
+          "/var/log/mindx-dl/volcano-scheduler"),
          (os.path.join(base, "volcano-admission"),
-          "/var/log/atlas_dls/volcano-admission"),
+          "/var/log/mindx-dl/volcano-admission"),
          (os.path.join(base, "volcano-controller"),
-          "/var/log/atlas_dls/volcano-controller"),
+          "/var/log/mindx-dl/volcano-controller"),
          (os.path.join(base, "hccl-controller"),
-          "/var/log/atlas_dls/hccl-controller"),
+          "/var/log/mindx-dl/hccl-controller"),
          (os.path.join(base, "devicePlugin"), "/var/log/devicePlugin"),
          (os.path.join(base, "cadvisor"), "/var/log/cadvisor"),
          (os.path.join(base, "npuSlog"), "/var/log/npu/slog/host-0/"),
-         (os.path.join(base, "apigw"), "/var/log/atlas_dls/apigw"),
-         (os.path.join(base, "cec"), "/var/log/atlas_dls/cec"),
-         (os.path.join(base, "dms"), "/var/log/atlas_dls/dms"),
-         (os.path.join(base, "mms"), "/var/log/atlas_dls/mms"),
-         (os.path.join(base, "mysql"), "/var/log/atlas_dls/mysql"),
-         (os.path.join(base, "nginx"), "/var/log/atlas_dls/nginx"),
-         (os.path.join(base, "tjm"), "/var/log/atlas_dls/tjm")]
+         (os.path.join(base, "apigw"), "/var/log/mindx-dl/apigw"),
+         (os.path.join(base, "cec"), "/var/log/mindx-dl/cec"),
+         (os.path.join(base, "dms"), "/var/log/mindx-dl/dms"),
+         (os.path.join(base, "mms"), "/var/log/mindx-dl/mms"),
+         (os.path.join(base, "mysql"), "/var/log/mindx-dl/mysql"),
+         (os.path.join(base, "nginx"), "/var/log/mindx-dl/nginx"),
+         (os.path.join(base, "tjm"), "/var/log/mindx-dl/tjm")]
 
     return dst_src_paths
 
