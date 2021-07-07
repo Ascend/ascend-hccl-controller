@@ -77,7 +77,8 @@ func validate(masterIUrl *string) bool {
 
 func main() {
 	flag.Parse()
-	initHwLogger()
+	stopLogCh := make(chan struct{})
+	initHwLogger(stopLogCh)
 	if !validate(&masterIUrl) {
 		hwlog.Fatalf("file not in security directory")
 	}
@@ -202,8 +203,7 @@ func init() {
 
 }
 
-func initHwLogger() {
-	stopCh := make(chan struct{})
+func initHwLogger(stopCh chan struct{}) {
 	if err := hwlog.Init(hwLogConfig, stopCh); err != nil {
 		fmt.Printf("hwlog init failed, error is %v", err)
 		os.Exit(-1)
