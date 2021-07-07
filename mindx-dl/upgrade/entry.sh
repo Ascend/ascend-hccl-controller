@@ -45,7 +45,7 @@ function rollbackVolcanoComponent() {
       bash -x gen-admission-secret-exec.sh --service volcano-admission-service --namespace volcano-system --secret volcano-admission-secret || true
   fi
 
-  chown -R hwMindX:hwMindX /var/log/atlas_dls/volcano-*
+  chown -R hwMindX:hwMindX /var/log/mindx-dl/volcano-*
   kubectl apply -f volcano-v*.yaml
   cd ..
 }

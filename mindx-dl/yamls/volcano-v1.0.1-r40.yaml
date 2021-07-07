@@ -151,7 +151,7 @@ spec:
       volumes:
         - name: scheduler-config-log
           hostPath:
-            path: /var/log/atlas_dls/volcano-scheduler
+            path: /var/log/mindx-dl/volcano-scheduler
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -271,7 +271,7 @@ spec:
             secretName: volcano-admission-secret
         - name: admission-log
           hostPath:
-            path: /var/log/atlas_dls/volcano-admission
+            path: /var/log/mindx-dl/volcano-admission
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -427,7 +427,7 @@ spec:
       volumes:
           - name: device-volcanocontroller
             hostPath:
-              path: /var/log/atlas_dls/volcano-controller
+              path: /var/log/mindx-dl/volcano-controller
           - name: localtime
             hostPath:
               path: /etc/localtime

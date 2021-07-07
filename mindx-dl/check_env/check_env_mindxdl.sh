@@ -35,8 +35,8 @@ VOLCANO_CONTROLLERS_SERVICE="volcano-controllers"
 VOLCANO_ADMISSION_SERVICE="volcano-admission"
 VOLCANO_ADMISSION_INIT_SERVICE="volcano-admission-init"
 # 日志目录
-HCCL_LOG_DIR="/var/log/atlas_dls/hccl-controller"
-VOLCANO_LOG_DIR="/var/log/atlas_dls/volcano*"
+HCCL_LOG_DIR="/var/log/mindx-dl/hccl-controller"
+VOLCANO_LOG_DIR="/var/log/mindx-dl/volcano*"
 DEVICEPLUGIN_LOG_DIR="/var/log/devicePlugin"
 CADVISOR_LOG_DIR="/var/log/cadvisor"
 

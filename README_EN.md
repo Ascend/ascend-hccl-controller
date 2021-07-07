@@ -61,7 +61,7 @@ HCCL-Controller is a component used to generate the  **hccl.json**  file of all 
     ```
 2.  Run the following commands to start the HCCL-Controller:
     ```
-        mkdir -p /var/log/atlas_dls/hccl-controller
+        mkdir -p /var/log/mindx-dl/hccl-controller
     
         kubectl apply -f rbac.yaml
     

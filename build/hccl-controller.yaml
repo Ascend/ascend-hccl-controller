@@ -70,16 +70,16 @@ spec:
         imagePullPolicy: Never
         command: [ "/bin/bash", "-c", "--"]
         args: ["umask 027;hccl-controller
-         --log_file=/var/log/mindx-dl/hccl-controller/hccl-controller.log  -logLevel=0   " ]
+         -log_file=/var/log/mindx-dl/hccl-controller/hccl-controller.log  -logLevel=0   " ]
         volumeMounts:
           - name: device-hcclcontroller
-            mountPath: /var/log/atlas_dls/hccl-controller
+            mountPath: /var/log/mindx-dl/hccl-controller
           - name: localtime
             mountPath: /etc/localtime
       volumes:
         - name: device-hcclcontroller
           hostPath:
-            path: /var/log/atlas_dls
+            path: /var/log/mindx-dl
         - name: localtime
           hostPath:
             path: /etc/localtime
