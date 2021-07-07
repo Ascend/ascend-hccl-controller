@@ -54,12 +54,18 @@ function mv_file() {
   cp "${TOP_DIR}"/build/${DOCKER_FILE_NAME} "${TOP_DIR}"/output
 }
 
+function change_mod() {
+  chmod 400 "${TOP_DIR}"/output/*
+  chmod 500 "${TOP_DIR}/output/${OUTPUT_NAME}"
+}
+
 
 
 function main() {
   clear_env
   build
   mv_file
+  change_mod
 }
 
 main
