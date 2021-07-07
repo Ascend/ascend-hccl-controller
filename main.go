@@ -42,7 +42,7 @@ import (
 const (
 	cmCheckIntervalConst = 2
 	cmCheckTimeoutConst  = 10
-	defaultLogFileName   = "/var/log/atlas_dls/hccl-controller/hccl-controller.log"
+	defaultLogFileName   = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
 )
 
 var (
