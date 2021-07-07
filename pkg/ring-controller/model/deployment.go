@@ -21,7 +21,7 @@ import (
 	"errors"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	"k8s.io/klog"
+	"huawei.com/npu-exporter/hwlog"
 	"strconv"
 )
 
@@ -43,7 +43,7 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if !ok {
 		return errors.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
-	klog.V(L4).Info("jobstarting==>", jobStartString)
+	hwlog.Debug("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, jobStartString, agent2.JSONVersion)
 	if err != nil {
@@ -55,10 +55,10 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()
 
-	klog.V(L2).Infof("create business worker for %s/%s", deploy.DeployNamespace, deploy.DeployName)
+	hwlog.Infof("create business worker for %s/%s", deploy.DeployNamespace, deploy.DeployName)
 	_, exist := agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
 	if exist {
-		klog.V(L2).Infof("business worker for %s/%s is already existed", deploy.DeployNamespace, deploy.DeployName)
+		hwlog.Infof("business worker for %s/%s is already existed", deploy.DeployNamespace, deploy.DeployName)
 		return nil
 	}
 

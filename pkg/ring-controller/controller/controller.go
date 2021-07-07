@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/model"
+	"huawei.com/npu-exporter/hwlog"
 	corev1 "k8s.io/api/core/v1"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -30,7 +31,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -49,14 +49,14 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
 	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
-	klog.V(L1).Info("Creating event broadcaster")
+	hwlog.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(hwlog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
 	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
-		klog.Fatalf("Error creating business agent: %s", err.Error())
+		hwlog.Fatalf("Error creating business agent: %s", err.Error())
 	}
 	c := &Controller{
 		kubeclientset: kubeclientset,
@@ -86,23 +86,23 @@ func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan
 	}
 
 	// Wait for the caches to be synced before starting workers
-	klog.V(L4).Info("Waiting for informer caches to sync")
+	hwlog.Debug("Waiting for informer caches to sync")
 	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced)
 	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(L4).Info("Starting workers")
+	hwlog.Debug("Starting workers")
 
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runMasterWorker, time.Second, stopCh)
 	}
 
-	klog.V(L4).Info("Started workers")
+	hwlog.Debug("Started workers")
 	if stopCh != nil {
 		<-stopCh
 	}
-	klog.V(L4).Info("Shutting down workers")
+	hwlog.Debug("Shutting down workers")
 
 	return nil
 }
@@ -118,7 +118,7 @@ func (c *Controller) runMasterWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the SyncHandler.
 func (c *Controller) processNextWorkItem() bool {
-	klog.V(L4).Info("start to get workqueue", c.workqueue.Len())
+	hwlog.Debug("start to get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
@@ -156,12 +156,12 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(L4).Infof("Successfully synced %+v ", mo)
+		hwlog.Debugf("Successfully synced %+v ", mo)
 		return nil
 	}(obj)
 
 	if err != nil {
-		klog.Errorf("controller processNextWorkItem is failed, err %v", err)
+		hwlog.Errorf("controller processNextWorkItem is failed, err %v", err)
 		pkgutilruntime.HandleError(err)
 		return true
 	}
@@ -184,7 +184,7 @@ func (c *Controller) enqueueJob(obj interface{}, eventType string) {
 // SyncHandler : to do things from model
 func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
-	klog.V(L2).Infof("SyncHandler start, current key is %v", key)
+	hwlog.Infof("SyncHandler start, current key is %v", key)
 	namespace, name, eventType, err := splitKeyFunc(key)
 	if err != nil {
 		return fmt.Errorf("failed to split key: %v", err)
@@ -203,7 +203,7 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 
 	switch eventType {
 	case agent.EventAdd:
-		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
+		hwlog.Infof("exist + add, current job is %s/%s", namespace, name)
 		err := model.EventAdd(c.agent)
 		if err != nil {
 			return err
@@ -268,6 +268,6 @@ func startPerformanceMonitorServer() {
 	}
 	err := server.ListenAndServe()
 	if err != nil {
-		klog.Error(err)
+		hwlog.Error(err)
 	}
 }
