@@ -59,14 +59,6 @@ const (
 	// EventDelete event to delete
 	EventDelete = "delete"
 
-	// L1 log level 1
-	L1 = 1
-	// L2 log level 2
-	L2 = 2
-	// L3 log level 3
-	L3 = 3
-	// L4 log level 4
-	L4               = 4
 	retryMilliSecond = 5
 	threeMinutes     = 180
 	splitNum         = 4
