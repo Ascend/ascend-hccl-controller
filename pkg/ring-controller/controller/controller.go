@@ -31,9 +31,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"net"
-	"net/http"
-	"net/http/pprof"
 	"reflect"
 	"strings"
 	"time"
@@ -76,14 +73,10 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the WorkQueue and wait for
 // workers to finish processing their current work items.
-func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan struct{}) error {
+func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	defer c.agent.Workqueue.ShuttingDown()
-	// monitor performance
-	if monitorPerformance {
-		go startPerformanceMonitorServer()
-	}
 
 	// Wait for the caches to be synced before starting workers
 	hwlog.Debug("Waiting for informer caches to sync")
@@ -251,23 +244,5 @@ func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
 		return parts[0], parts[1], parts[2], nil
 	default:
 		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
-	}
-}
-
-func startPerformanceMonitorServer() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	server := &http.Server{
-		Addr:    net.JoinHostPort("localhost", "6060"),
-		Handler: mux,
-	}
-	err := server.ListenAndServe()
-	if err != nil {
-		hwlog.Error(err)
 	}
 }

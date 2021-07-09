@@ -24,22 +24,6 @@ const (
 	// ConfigmapInitializing status
 	ConfigmapInitializing = "initializing"
 
-	// EventAdd event add
-	EventAdd = "add"
-	// EventUpdate event to update
-	EventUpdate = "update"
-	// EventDelete event to delete
-	EventDelete = "delete"
-
-	// L1 log level 1
-	L1 = 1
-	// L2 log level 2
-	L2 = 2
-	// L3 log level 3
-	L3 = 3
-	// L4 log level 4
-	L4 = 4
-
 	// MaximumMemory Memory limit unit B
 	maximumMemory = 50 * 1024 * 1024
 )

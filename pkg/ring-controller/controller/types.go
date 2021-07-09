@@ -30,19 +30,6 @@ import (
 
 const (
 	controllerName = "ring-controller"
-	// L1 log level 1
-	L1 = 1
-	// L2 log level 2
-	L2 = 2
-
-	// L4 log level 4
-	L4         = 4
-	decimal    = 10
-	two        = 2
-	three      = 3
-	four       = 4
-	status     = 200
-	oneMinitue = 60
 )
 
 // Controller initialize business agent

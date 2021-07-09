@@ -25,21 +25,11 @@ import (
 )
 
 const (
-
-	// L2 log level 2
-	L2 = 2
-	// L3 log level 3
-	L3 = 3
-	// L4 log level 4
-	L4 = 4
-
 	decimal = 10
 	// VCJobType To determine the type of listening：vcjob.
 	VCJobType = "vcjob"
 	// DeploymentType To determine the type of listening：deployment.
 	DeploymentType = "deployment"
-	// JobRestartPhase restart flage
-	JobRestartPhase = "Restarting"
 
 	// BuildStatInterval 1 * time.Minute
 	BuildStatInterval = 30 * time.Second
