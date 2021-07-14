@@ -8,9 +8,11 @@ function execute_test() {
   if ! (go test -v -race -coverprofile cov.out "${TOP_DIR}"/pkg/ring-controller/... >./"$file_input"); then
     echo '****** go test cases error! ******'
     echo 'Failed' >"$file_input"
+    exit 1
   else
     gocov convert cov.out | gocov-html >"$file_detail_output"
     gotestsum --junitfile unit-tests.xml "${TOP_DIR}"/pkg/ring-controller/...
+    exit 0
   fi
 }
 
@@ -18,7 +20,7 @@ function main() {
     os_type=$(arch)
     if [ "${os_type}" = "aarch64" ]; then
         echo "arm not support. Thanks"
-        return
+        exit 1
     fi
 
     echo "************************************* Start LLT Test *************************************"
