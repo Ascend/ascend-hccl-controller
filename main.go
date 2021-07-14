@@ -58,6 +58,11 @@ const (
 
 func main() {
 	flag.Parse()
+	if version {
+		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
+		os.Exit(0)
+	}
+
 	stopLogCh := make(chan struct{})
 	defer close(stopLogCh)
 	initHwLogger(stopLogCh)
@@ -66,11 +71,6 @@ func main() {
 		hwlog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	agent.JSONVersion = hcclVersion
-
-	if version {
-		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
-		os.Exit(0)
-	}
 
 	// check the validity of input parameters
 	if jobParallelism <= 0 {
