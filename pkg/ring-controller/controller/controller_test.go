@@ -45,7 +45,7 @@ func TestController_Run(t *testing.T) {
 				return false
 			})
 			defer patches.Reset()
-			err := ctr.Run(1, false, nil)
+			err := ctr.Run(1, nil)
 			So(err, ShouldNotEqual, nil)
 		})
 
@@ -54,7 +54,7 @@ func TestController_Run(t *testing.T) {
 				return true
 			})
 			defer patches.Reset()
-			err := ctr.Run(1, false, nil)
+			err := ctr.Run(1, nil)
 			So(err, ShouldEqual, nil)
 		})
 	})
