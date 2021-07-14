@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/agiledragon/gomonkey/v2 v2.0.1
 	github.com/smartystreets/goconvey v1.6.4
-	huawei.com/npu-exporter v0.0.1
+	huawei.com/npu-exporter v0.0.2
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
