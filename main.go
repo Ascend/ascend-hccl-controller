@@ -139,14 +139,14 @@ func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes
 
 func init() {
 	// hwlog configuration
-	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", hwLogConfig.LogLevel,
-		"log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
-	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwLogConfig.MaxAge,
-		"maximum number of days for backup log files")
-	flag.BoolVar(&hwLogConfig.IsCompress, "isCompress", hwLogConfig.IsCompress,
-		"whether backup files need to be compressed (default false)")
-	flag.StringVar(&hwLogConfig.LogFileName, "logFile", hwLogConfig.LogFileName, "log file path")
-	flag.IntVar(&hwLogConfig.MaxBackups, "maxBackups", hwLogConfig.MaxBackups, "maximum number of backup log files")
+	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", 0,
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwlog.DefaultMinSaveAge,
+		"Maximum number of days for backup log files")
+	flag.BoolVar(&hwLogConfig.IsCompress, "isCompress", false,
+		"Whether backup files need to be compressed (default false)")
+	flag.StringVar(&hwLogConfig.LogFileName, "logFile", defaultLogFileName, "Log file path")
+	flag.IntVar(&hwLogConfig.MaxBackups, "maxBackups", hwlog.DefaultMaxBackups, "Maximum number of backup log files")
 
 	flag.IntVar(&jobParallelism, "jobParallelism", 1,
 		"Parallelism of job events handling.")
