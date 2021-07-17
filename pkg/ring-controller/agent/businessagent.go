@@ -174,7 +174,7 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 				podKeyInfo.String())
 			return true
 		}
-		// llTODO: if someone create a single 910 pod without a job, how to handle?
+		// if someone create a single 910 pod without a job, how to handle?
 		hwlog.Debugf("syncing '%s' delayed: corresponding job worker may be uninitialized",
 			podKeyInfo.String())
 		return false
