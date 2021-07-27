@@ -1,9 +1,0 @@
----
-version: 2.0
-
-tool_params:
-  # 各个微服务 pylint  检查运行参数配置：微服务根目录:[依赖模块1,依赖模块2..]
-  # micro_svc1_src/root:[dep_module1,dep_module2];
-  # micro_svc2_src/root:[dep_module3,dep_module4];
-  pylint:
-    check_path: mindx-dl/python_examples:[mindx-dl/python_examples]
