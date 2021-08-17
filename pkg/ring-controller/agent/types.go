@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,8 @@ const (
 	PodJobVersion = "volcano.sh/job-version"
 	// PodDeviceKey Pod annoation Key
 	PodDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
-
+	// PodRankIndexKey pod rank index
+	PodRankIndexKey = "hccl/rankIndex"
 	// DeploymentNameKey pod label
 	DeploymentNameKey = "deploy-name"
 	// EventAdd event add
@@ -58,14 +59,6 @@ const (
 	// EventDelete event to delete
 	EventDelete = "delete"
 
-	// L1 log level 1
-	L1 = 1
-	// L2 log level 2
-	L2 = 2
-	// L3 log level 3
-	L3 = 3
-	// L4 log level 4
-	L4               = 4
 	retryMilliSecond = 5
 	threeMinutes     = 180
 	splitNum         = 4
@@ -74,6 +67,9 @@ const (
 var (
 	// JSONVersion of hccl.json
 	JSONVersion = "v2"
+	// ResourceList pod annotation
+	ResourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
+		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
 )
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
@@ -97,7 +93,7 @@ type BusinessAgent struct {
 
 	// event recorder
 	recorder record.EventRecorder
-	// Workqueue : A queue with a limited rate.This queue is used to put pod event information
+	// Workqueue: A queue with a limited rate.This queue is used to put pod event information
 	Workqueue workqueue.RateLimitingInterface
 
 	// if print only, do not delete anything.
@@ -173,7 +169,6 @@ type WorkerInfo struct {
 
 	statisticStopped  bool
 	rankIndex         int
-	rankMap           map[string]int
 	cachedPodNum      int32
 	taskReplicasTotal int32
 }

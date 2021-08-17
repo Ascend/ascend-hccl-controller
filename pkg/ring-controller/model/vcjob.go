@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 package model
 
 import (
+	errors2 "errors"
 	"fmt"
+	"hccl-controller/pkg/hwlog"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
@@ -29,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
 	"strconv"
 	"time"
 	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
@@ -64,11 +65,11 @@ func (job *VCJobModel) GetReplicas() string {
 func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 
 	agent.RwMutex.RLock()
-	klog.V(L2).Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
+	hwlog.Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
 	agent.RwMutex.RUnlock()
 	if exist {
-		klog.V(L2).Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
+		hwlog.Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
 		return nil
 	}
 
@@ -79,8 +80,12 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	}
 
 	// retrieve configmap data
-	jobStartString := cm.Data[agent2.ConfigmapKey]
-	klog.V(L3).Info("jobstarting==>", jobStartString)
+	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
+	if !ok {
+		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
+	}
+
+	hwlog.Info("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
 	if err != nil {
@@ -104,10 +109,6 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 
 // EventUpdate : to handle vcjob update event
 func (job *VCJobModel) EventUpdate(agent *agent2.BusinessAgent) error {
-	if job.jobPhase == JobRestartPhase {
-		agent2.DeleteWorker(job.JobNamespace, job.JobName, agent)
-		return nil
-	}
 	agent.RwMutex.RLock()
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
 	agent.RwMutex.RUnlock()
@@ -129,11 +130,7 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 		var deviceTotal int32
 
 		for _, container := range taskSpec.Template.Spec.Containers {
-			quantity, exist := container.Resources.Limits[agent2.ResourceName]
-			quantityValue := int32(quantity.Value())
-			if exist && quantityValue > 0 {
-				deviceTotal += quantityValue
-			}
+			deviceTotal += agent2.GetNPUNum(container)
 		}
 		deviceTotal *= taskSpec.Replicas
 
@@ -150,10 +147,11 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface, config *agent2.Config) (
 	*apiCoreV1.ConfigMap, error) {
 	var cm *apiCoreV1.ConfigMap
-	err := wait.PollImmediate(time.Duration(config.CmCheckInterval)*time.Second,
+	err := wait.PollImmediate(time.Duration(config.CmCheckTimeout)*time.Second,
 		time.Duration(config.CmCheckTimeout)*time.Second,
 		func() (bool, error) {
 			var errTmp error
+
 			cm, errTmp = kubeClientSet.CoreV1().ConfigMaps(namespace).
 				Get(fmt.Sprintf("%s-%s",
 					agent2.ConfigmapPrefix, name), metav1.GetOptions{})
@@ -176,7 +174,7 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 	return cm, nil
 }
 
-// Factory to generate model
+// Factory : to generate model
 func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexer) (ResourceEventHandler, error) {
 	metaData, err := meta.Accessor(obj)
 	if err != nil {
@@ -187,6 +185,12 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 		key = metaData.GetNamespace() + "/" + metaData.GetName() + "/" + eventType
 	}
 	var model ResourceEventHandler
+	if _, ok := indexers[VCJobType]; !ok {
+		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+	}
+	if _, ok := indexers[DeploymentType]; !ok {
+		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+	}
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},
