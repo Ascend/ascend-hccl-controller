@@ -1,5 +1,5 @@
 /*
-* Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+* Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hccl-controller/pkg/hwlog"
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/model"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"os"
-	"path/filepath"
 	"time"
 
 	"hccl-controller/pkg/resource-controller/signals"
@@ -34,108 +34,93 @@ import (
 	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
 	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
 )
 
-const (
-	cmCheckIntervalConst = 2
-	cmCheckTimeoutConst  = 10
-)
-
 var (
-	masterIUrl         string
-	kubeconfig         string
-	dryRun             bool
-	displayStatistic   bool
-	monitorPerformance bool
-	jobParallelism     int
-	podParallelism     int
-	cmCheckInterval    int
-	cmCheckTimeout     int
-	version            bool
-	jsonVersion        string
+	jobParallelism int
+	podParallelism int
+	version        bool
+	hcclVersion    string
 	// BuildVersion  build version
 	BuildVersion string
+	hwLogConfig  = &hwlog.LogConfig{LogFileName: defaultLogFileName}
 )
 
-func validate(masterIUrl *string) bool {
-	if *masterIUrl == "" {
-		return true
-	}
-	realPath, err := filepath.Abs(*masterIUrl)
-	if err != nil {
-		klog.Fatalf("It's error when converted to an absolute path.")
-		return false
-	}
-	masterIUrl = &realPath
-	return true
-}
+const (
+	dryRun             = false
+	displayStatistic   = false
+	cmCheckInterval    = 2
+	cmCheckTimeout     = 10
+	defaultLogFileName = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
+)
 
 func main() {
 	flag.Parse()
-	if !validate(&masterIUrl) {
-		klog.Fatalf("file not in security directory")
-	}
-	if !validate(&kubeconfig) {
-		klog.Fatalf("file not in security directory")
-	}
-	if jsonVersion != "v1" && jsonVersion != "v2" {
-		klog.Fatalf("invalid json version value, should be v1/v2")
-	}
-	agent.JSONVersion = jsonVersion
-
 	if version {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
 		os.Exit(0)
 	}
 
+	stopLogCh := make(chan struct{})
+	defer close(stopLogCh)
+	initHwLogger(stopLogCh)
+
+	if hcclVersion != "v1" && hcclVersion != "v2" {
+		hwlog.Fatalf("invalid json version value, should be v1/v2")
+	}
+	agent.JSONVersion = hcclVersion
+
 	// check the validity of input parameters
 	if jobParallelism <= 0 {
-		klog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
+		hwlog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterIUrl, kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
+		hwlog.Fatalf("Error building kubeconfig")
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		klog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		hwlog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 	jobClient, err := vkClientset.NewForConfig(cfg)
 	if err != nil {
-		klog.Fatalf("Error building job clientset: %s", err.Error())
+		hwlog.Fatalf("Error building job clientset: %s", err.Error())
 	}
+
 	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
-	config := newConfig()
+	config := newConifg()
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
+
 	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
 		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
+
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
-	if err = control.Run(jobParallelism, monitorPerformance, stopCh); err != nil {
-		klog.Fatalf("Error running controller: %s", err.Error())
+	if err = control.Run(jobParallelism, stopCh); err != nil {
+		hwlog.Fatalf("Error running controller: %s", err.Error())
 	}
 }
 
-func newConfig() *agent.Config {
-	return &agent.Config{
+func newConifg() *agent.Config {
+	config := &agent.Config{
 		DryRun:           dryRun,
 		DisplayStatistic: displayStatistic,
 		PodParallelism:   podParallelism,
 		CmCheckInterval:  cmCheckInterval,
 		CmCheckTimeout:   cmCheckTimeout,
 	}
+	return config
 }
 
 func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
@@ -153,34 +138,30 @@ func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes
 }
 
 func init() {
-	// * buildStatInterval
-	// * bdefaultResync of two informers
-	// * bperiod of two runMasterWorker method
-	klog.InitFlags(nil)
-
-	flag.StringVar(&kubeconfig, "kubeconfig", "",
-		"Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterIUrl, "master", "",
-		"The address of the Kubernetes API server. "+
-			"Overrides any value in kubeconfig. Only required if out-of-cluster.")
-
-	flag.BoolVar(&dryRun, "dryRun", false,
-		"Print only, do not delete anything.")
-	flag.BoolVar(&displayStatistic, "displayStatistic", false,
-		"Display progress of configmap updating.")
-	flag.BoolVar(&monitorPerformance, "monitorPerformance", false,
-		"Monitor performance of ring-controller.")
+	// hwlog configuration
+	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", 0,
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwlog.DefaultMinSaveAge,
+		"Maximum number of days for backup log files")
+	flag.BoolVar(&hwLogConfig.IsCompress, "isCompress", false,
+		"Whether backup files need to be compressed (default false)")
+	flag.StringVar(&hwLogConfig.LogFileName, "logFile", defaultLogFileName, "Log file path")
+	flag.IntVar(&hwLogConfig.MaxBackups, "maxBackups", hwlog.DefaultMaxBackups, "Maximum number of backup log files")
 
 	flag.IntVar(&jobParallelism, "jobParallelism", 1,
 		"Parallelism of job events handling.")
 	flag.IntVar(&podParallelism, "podParallelism", 1,
 		"Parallelism of pod events handling.")
-	flag.IntVar(&cmCheckInterval, "cmCheckInterval", cmCheckIntervalConst,
-		"Interval (seconds) to check job's configmap before building rank table.")
-	flag.IntVar(&cmCheckTimeout, "cmCheckTimeout", cmCheckTimeoutConst,
-		"Maximum time (seconds) to check creation of job's configmap.")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")
-	flag.StringVar(&jsonVersion, "json", "v2",
+	flag.StringVar(&hcclVersion, "json", "v2",
 		"Select version of hccl json file (v1/v2).")
+
+}
+
+func initHwLogger(stopCh chan struct{}) {
+	if err := hwlog.Init(hwLogConfig, stopCh); err != nil {
+		fmt.Printf("hwlog init failed, error is %v", err)
+		os.Exit(-1)
+	}
 }

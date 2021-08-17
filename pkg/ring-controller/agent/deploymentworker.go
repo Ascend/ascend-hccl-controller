@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2021. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,28 @@ package agent
 
 import (
 	"fmt"
+	"hccl-controller/pkg/hwlog"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
-	"k8s.io/klog"
 	"time"
 )
 
-// NewDeploymentWorker : to create Deployment Worker
+// NewDeploymentWorker ： to create Deployment Worker
 func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler,
 	replicasTotal int32) *DeployWorker {
 	return &DeployWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
 		configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, deploy.DeployName),
-		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal,
-		rankMap: make(map[string]int, 1)}, DeployInfo: deploy}
+		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal},
+		DeployInfo: deploy}
 }
 
-func (w *DeployWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if pod.CreationTimestamp.Before(&w.DeployCreationTimestamp) {
 		// old pod + new worker
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding job worker is no "+
+		hwlog.Infof("syncing '%s' terminated: corresponding job worker is no "+
 			"longer exist (basis: job uid + creationTimestamp)", podInfo)
 		return true, false
 	}
@@ -51,14 +51,14 @@ func (w *DeployWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (for
 	}
 	if configmapComplete :=
 		w.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
+		hwlog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true
 	}
 
 	// start to sync current pod
 	if err := w.syncHandler(pod, podInfo); err != nil {
-		klog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		hwlog.Errorf("error syncing '%s': %s", podInfo, err.Error())
 		return true, true
 	}
 	return true, true
@@ -70,45 +70,19 @@ func (w *DeployWorker) Statistic(stopTime time.Duration) {
 		select {
 		case c, ok := <-w.statisticSwitch:
 			if !ok {
-				klog.Error(c)
+				hwlog.Error(c)
 			}
 			return
 		default:
 			if w.taskReplicasTotal == w.cachedPodNum {
-				klog.V(L1).Infof("rank table build progress for %s/%s is completed",
+				hwlog.Infof("rank table build progress for %s/%s is completed",
 					w.DeployNamespace, w.DeployName)
 				w.CloseStatistic()
 				return
 			}
-			klog.V(L1).Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
+			hwlog.Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
 				"pods already cached = %d", w.DeployNamespace, w.DeployName, w.taskReplicasTotal, w.cachedPodNum)
 			time.Sleep(stopTime)
 		}
 	}
-}
-
-func (w *DeployWorker) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
-
-	w.cmMu.Lock()
-	defer w.cmMu.Unlock()
-	_, ok := w.rankMap[podInfo.namespace+"/"+podInfo.name]
-	if !ok {
-		return fmt.Errorf("rank map not exist, key is %s/%s", podInfo.namespace, podInfo.name)
-	}
-
-	err := w.configmapData.RemovePodInfo(podInfo.namespace, podInfo.name)
-	if err != nil {
-		return err
-	}
-
-	klog.V(L3).Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
-	err = updateConfigMap(&w.WorkerInfo, podInfo.namespace)
-	if err != nil {
-		return err
-	}
-	w.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
-
-	return nil
 }

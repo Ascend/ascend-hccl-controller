@@ -4,11 +4,13 @@ go 1.14
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.0.1
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/smartystreets/goconvey v1.6.4
+	go.uber.org/zap v1.16.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.17.8
 	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v0.17.8
-	k8s.io/klog v1.0.0
 	volcano.sh/volcano v0.4.0
 )
 

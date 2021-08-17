@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package controller
 
 import (
 	"fmt"
+	"hccl-controller/pkg/hwlog"
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/model"
 	corev1 "k8s.io/api/core/v1"
@@ -30,10 +31,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
-	"net"
-	"net/http"
-	"net/http/pprof"
 	"reflect"
 	"strings"
 	"time"
@@ -43,19 +40,20 @@ import (
 
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
-	informerInfo InformerInfo, stopCh <-chan struct{}) *Controller {
+	informerInfo InformerInfo,
+	stopCh <-chan struct{}) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
 	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
-	klog.V(L1).Info("Creating event broadcaster")
+	hwlog.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(hwlog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
 	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
-		klog.Fatalf("Error creating business agent: %s", err.Error())
+		hwlog.Fatalf("Error creating business agent: %s", err.Error())
 	}
 	c := &Controller{
 		kubeclientset: kubeclientset,
@@ -75,40 +73,36 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 // as syncing informer caches and starting workers. It will block until stopCh
 // is closed, at which point it will shutdown the WorkQueue and wait for
 // workers to finish processing their current work items.
-func (c *Controller) Run(threadiness int, monitorPerformance bool, stopCh <-chan struct{}) error {
+func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	defer c.agent.Workqueue.ShuttingDown()
-	// monitor performance
-	if monitorPerformance {
-		go startPerformanceMonitorServer()
-	}
 
 	// Wait for the caches to be synced before starting workers
-	klog.V(L4).Info("Waiting for informer caches to sync")
+	hwlog.Debug("Waiting for informer caches to sync")
 	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced)
 	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(L4).Info("Starting workers")
+	hwlog.Debug("Starting workers")
 
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runMasterWorker, time.Second, stopCh)
 	}
 
-	klog.V(L4).Info("Started workers")
+	hwlog.Debug("Started workers")
 	if stopCh != nil {
 		<-stopCh
 	}
-	klog.V(L4).Info("Shutting down workers")
+	hwlog.Debug("Shutting down workers")
 
 	return nil
 }
 
 // runMasterWorker is a long-running function that will continually call the
 // processNextWorkItem function in order to read and process a message on the
-// WorkQueue.
+// workqueue.
 func (c *Controller) runMasterWorker() {
 	for c.processNextWorkItem() {
 	}
@@ -117,7 +111,7 @@ func (c *Controller) runMasterWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the SyncHandler.
 func (c *Controller) processNextWorkItem() bool {
-	klog.V(L4).Info("start to get workqueue", c.workqueue.Len())
+	hwlog.Debug("start to get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
@@ -155,12 +149,12 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(L4).Infof("Successfully synced %+v ", mo)
+		hwlog.Debugf("Successfully synced %+v ", mo)
 		return nil
 	}(obj)
 
 	if err != nil {
-		klog.Errorf("controller processNextWorkItem is failed, err %v", err)
+		hwlog.Errorf("controller processNextWorkItem is failed, err %v", err)
 		pkgutilruntime.HandleError(err)
 		return true
 	}
@@ -183,7 +177,7 @@ func (c *Controller) enqueueJob(obj interface{}, eventType string) {
 // SyncHandler : to do things from model
 func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
-	klog.V(L2).Infof("SyncHandler start, current key is %v", key)
+	hwlog.Infof("SyncHandler start, current key is %v", key)
 	namespace, name, eventType, err := splitKeyFunc(key)
 	if err != nil {
 		return fmt.Errorf("failed to split key: %v", err)
@@ -202,7 +196,7 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 
 	switch eventType {
 	case agent.EventAdd:
-		klog.V(L2).Infof("exist + add, current job is %s/%s", namespace, name)
+		hwlog.Infof("exist + add, current job is %s/%s", namespace, name)
 		err := model.EventAdd(c.agent)
 		if err != nil {
 			return err
@@ -250,23 +244,5 @@ func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
 		return parts[0], parts[1], parts[2], nil
 	default:
 		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
-	}
-}
-
-func startPerformanceMonitorServer() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	server := &http.Server{
-		Addr:    net.JoinHostPort("localhost", "6060"),
-		Handler: mux,
-	}
-	err := server.ListenAndServe()
-	if err != nil {
-		klog.Error(err)
 	}
 }

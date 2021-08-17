@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,19 +30,6 @@ import (
 
 const (
 	controllerName = "ring-controller"
-	// L1 log level 1
-	L1 = 1
-	// L2 log level 2
-	L2 = 2
-
-	// L4 log level 4
-	L4         = 4
-	decimal    = 10
-	two        = 2
-	three      = 3
-	four       = 4
-	status     = 200
-	oneMinitue = 60
 )
 
 // Controller initialize business agent
@@ -77,6 +64,6 @@ type InformerInfo struct {
 	CacheIndexers map[string]cache.Indexer
 	// JobInformer : vcjob type informer
 	JobInformer v1alpha1informers.JobInformer
-	// DeployInformer : deployment type informer
+	// DeployInformer: deployment type informer
 	DeployInformer v1.DeploymentInformer
 }

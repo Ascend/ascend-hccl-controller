@@ -48,6 +48,42 @@ func TestUnmarshalToRankTable(t *testing.T) {
 
 }
 
+//
+func TestCheckDeviceInfo(t *testing.T) {
+	Convey("TestRankTableV1 TestCheckDeviceInfo", t, func() {
+		instance := Instance{
+			Devices:  []Device{{DeviceID: "2", DeviceIP: "0.0.0.0"}, {DeviceID: "3", DeviceIP: "0.0.0.0"}},
+			PodName:  "podname",
+			ServerID: "0.0.0.0",
+		}
+		Convey("CheckDeviceInfo() should return true when Normal", func() {
+			isOk := CheckDeviceInfo(&instance)
+			So(isOk, ShouldEqual, true)
+		})
+		Convey("CheckDeviceInfo() should return false when ServerID  is not an IP address", func() {
+			instance.ServerID = "51.38.67.98s"
+			isOk := CheckDeviceInfo(&instance)
+			So(isOk, ShouldEqual, false)
+		})
+		Convey("CheckDeviceInfo() should return false when DeviceID  is less than zero", func() {
+			instance.Devices[0].DeviceIP = "-1"
+			isOk := CheckDeviceInfo(&instance)
+			So(isOk, ShouldEqual, false)
+		})
+		Convey("CheckDeviceInfo() should return false when Devices  is empty", func() {
+			instance.Devices = []Device{}
+			isOk := CheckDeviceInfo(&instance)
+			So(isOk, ShouldEqual, false)
+		})
+		Convey("CheckDeviceInfo() should return false when DeviceIP  is not an IP address", func() {
+			instance.Devices[0].DeviceIP = "51w.38.67.98s"
+			isOk := CheckDeviceInfo(&instance)
+			So(isOk, ShouldEqual, false)
+		})
+
+	})
+}
+
 // TestCachePodInfo test CachePodInfo
 func TestCachePodInfo(t *testing.T) {
 	Convey("TestRankTableV1 TestCachePodInfo", t, func() {
@@ -59,7 +95,7 @@ func TestCachePodInfo(t *testing.T) {
 		rank := 1
 		const (
 			podString = "{\"pod_name\":\"0\",\"server_id\":\"0.0.0.0\"," +
-				"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"x.x.x.x\"}]}"
+				"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
 			RankNumExpect = 2
 		)
 
@@ -68,7 +104,7 @@ func TestCachePodInfo(t *testing.T) {
 			So(err, ShouldEqual, nil)
 			So(rank, ShouldEqual, RankNumExpect)
 			deviceIP := fake.GroupList[0].InstanceList[0].Devices[0].DeviceIP
-			So(deviceIP, ShouldEqual, "x.x.x.x")
+			So(deviceIP, ShouldEqual, "0.0.0.0")
 		})
 
 		Convey("CachePodInfo() should return err != nil when podName == group.Instance.PodName", func() {

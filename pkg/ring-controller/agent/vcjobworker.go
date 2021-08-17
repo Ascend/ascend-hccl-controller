@@ -1,5 +1,5 @@
 /*
- * Copyright(C) 2020. Huawei Technologies Co.,Ltd. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,23 @@ package agent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"hccl-controller/pkg/hwlog"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog"
+	"k8s.io/client-go/util/retry"
 	"strconv"
 	"time"
 )
 
+const maxRankIndex = 10000
+
 // Worker :The main function of Worker is to get the information of NPU from the generated POD,
 // and then assemble it into a complete HCCL.JSON file.
 type Worker interface {
-	doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool)
+	doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool)
 	Statistic(stopTime time.Duration)
 	WorkerCommon
 }
@@ -41,23 +45,23 @@ func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable v1.RankTabler, 
 	jobWorker := &VCJobWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
 		configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, job.JobName),
-		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal,
-		rankMap: make(map[string]int, 1)}, JobInfo: job}
+		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal},
+		JobInfo: job}
 	return jobWorker
 }
 
-func (b *VCJobWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if !isReferenceJobSameWithBsnsWorker(pod, podInfo.jobName, b.JobUID) {
 		if pod.CreationTimestamp.Before(&b.JobCreationTimestamp) {
 			// old pod + new worker
-			klog.V(L3).Infof("syncing '%s' terminated: corresponding job worker is no "+
+			hwlog.Debugf("syncing '%s' terminated: corresponding job worker is no "+
 				"longer exist (basis: job uid + creationTimestamp)", podInfo)
 			return true, false
 		}
 		// new pod + old worker
-		klog.V(L3).Infof("syncing '%s' delayed: corresponding job worker is "+
+		hwlog.Infof("syncing '%s' delayed: corresponding job worker is "+
 			"uninitialized (basis: job uid + creationTimestamp)", podInfo)
 		return false, false
 
@@ -66,21 +70,15 @@ func (b *VCJobWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forg
 	// check basis: job version
 	version64, err := strconv.ParseInt(pod.Annotations[PodJobVersion], 10, 32)
 	if err != nil {
-		klog.Errorf("syncing '%s' failed, parse pod annotation error: %v", podInfo, err)
+		hwlog.Errorf("syncing '%s' failed, parse pod annotation error: %v", podInfo, err)
 		return true, false
 	}
 	version32 := int32(version64)
 	// job restart action will increase job version number
 	if version32 < b.JobVersion {
-
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding job worker "+
+		hwlog.Infof("syncing '%s' terminated: corresponding job worker "+
 			"is no longer exist (basis: job version number)", podInfo)
 		return true, false
-	}
-	if version32 > b.JobVersion {
-		klog.V(L3).Infof("syncing '%s' delayed: corresponding job worker "+
-			"is uninitialized (basis: job version number)", podInfo)
-		return false, false
 	}
 	// scenario check C: if current pod use chip, its' device info may not be ready
 	// check basis: limits + annotations
@@ -88,16 +86,15 @@ func (b *VCJobWorker) doWorker(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forg
 		podInfo.String()) {
 		return false, false
 	}
-	if configmapComplete :=
-		b.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
-		klog.V(L3).Infof("syncing '%s' terminated: corresponding rank table is completed",
+	if b.configmapData.GetStatus() == ConfigmapCompleted {
+		hwlog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true
 	}
 
 	// start to sync current pod
 	if err := b.syncHandler(pod, podInfo); err != nil {
-		klog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		hwlog.Errorf("error syncing '%s': %s", podInfo, err.Error())
 		return true, true
 	}
 	return true, true
@@ -110,17 +107,17 @@ func (b *VCJobWorker) Statistic(stopTime time.Duration) {
 		select {
 		case c, ok := <-b.statisticSwitch:
 			if !ok {
-				klog.Error(c)
+				hwlog.Error(c)
 			}
 			return
 		default:
 			if b.taskReplicasTotal == b.cachedPodNum {
-				klog.V(L1).Infof("rank table build progress for %s/%s is completed",
+				hwlog.Infof("rank table build progress for %s/%s is completed",
 					b.JobNamespace, b.JobName)
 				b.CloseStatistic()
 				return
 			}
-			klog.V(L2).Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
+			hwlog.Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
 				"pods already cached = %d", b.JobNamespace, b.JobName, b.taskReplicasTotal, b.cachedPodNum)
 			time.Sleep(stopTime)
 		}
@@ -141,34 +138,29 @@ type WorkerCommon interface {
 }
 
 func (b *WorkerInfo) syncHandler(pod *apiCoreV1.Pod, podInfo *podIdentifier) error {
-	klog.V(L3).Infof("syncHandler start, current pod is %s", podInfo)
+	hwlog.Infof("syncHandler start, current pod is %s", podInfo)
 
 	// if use 0 chip, end pod sync
 	if b.taskReplicasTotal == 0 && b.tableConstructionFinished() {
-		klog.V(L2).Infof("job %s/%s doesn't use d chip, rank table construction is finished",
+		hwlog.Infof("job %s/%s doesn't use d chip, rank table construction is finished",
 			podInfo.namespace, podInfo.jobName)
 		if err := b.endRankTableConstruction(pod.Namespace); err != nil {
 			return err
 		}
-		klog.V(L2).Infof("rank table for job %s/%s has finished construction", podInfo.namespace, podInfo.jobName)
+		hwlog.Infof("rank table for job %s/%s has finished construction", podInfo.namespace, podInfo.jobName)
 		return nil //  need return directly
 	}
 
 	// dryRun is for test
 	if b.dryRun {
-		klog.V(L3).Infof("I'am handling %s", podInfo)
+		hwlog.Infof("I'am handling %s", podInfo)
 		return nil
 	}
 
-	if podInfo.eventType == EventAdd {
+	if podInfo.eventType == EventAdd || podInfo.eventType == EventUpdate {
 		return b.handleAddUpdateEvent(podInfo, pod)
-
 	}
-	if podInfo.eventType == EventDelete {
-		return b.handleDeleteEvent(podInfo)
-
-	}
-	klog.V(L3).Infof("undefined condition, pod: %s", podInfo)
+	hwlog.Infof("undefined condition, pod: %s", podInfo)
 	return nil
 }
 
@@ -178,24 +170,53 @@ func (b *WorkerInfo) tableConstructionFinished() bool {
 
 	return b.cachedPodNum == b.taskReplicasTotal
 }
+
 func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
-	klog.V(L4).Infof("current addUpdate pod is %s", podInfo)
+	hwlog.Debugf("current addUpdate pod is %s", podInfo)
 	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
-	klog.V(L3).Infof("deviceId => %s", deviceInfo)
-	klog.V(L4).Infof("isExist ==> %t", exist)
-
+	if !exist {
+		return errors.New("The key of" + PodDeviceKey + "does not exist ")
+	}
+	hwlog.Infof("deviceId => %s", deviceInfo)
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
-	b.rankMap[podInfo.namespace+"/"+podInfo.name] = b.rankIndex
+	tmpRankIndex := b.rankIndex
+	// Get rankIndex from pod, use rankIndex if rankIndex exists in pod, use memory if it doesn't.
+	rankIndexStr, rankExist := pod.Annotations[PodRankIndexKey]
+	if rankExist {
+		rank, err := strconv.ParseInt(rankIndexStr, 10, 32)
+		if err != nil {
+			return err
+		}
+		err = validate(rank)
+		if err != nil {
+			return err
+		}
+		b.rankIndex = int(rank)
+	} else {
+		err := b.updatePod(podInfo, func(newPod *apiCoreV1.Pod) {
+			rank := b.rankIndex
+			rankIndex := strconv.Itoa(rank)
+			newPod.Annotations[PodRankIndexKey] = rankIndex
+		})
+		if err != nil {
+			return err
+		}
+	}
+	// Cache device info from the pod
 	err := b.configmapData.CachePodInfo(pod, deviceInfo, &b.rankIndex)
+	if rankExist {
+		b.rankIndex = tmpRankIndex
+	}
 	if err != nil {
 		return err
 	}
 
+	// Cache pod num plus one
 	b.modifyStatistics(1)
-	klog.V(L3).Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
+	hwlog.Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
 		"pods already cached = %d", podInfo.namespace, podInfo.jobName, b.taskReplicasTotal, b.cachedPodNum)
 	// update configmap if finishing caching all pods' info
 	errs := updateWithFinish(b, podInfo.namespace)
@@ -206,23 +227,44 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	return nil
 }
 
+func validate(rank int64) error {
+	if rank < 0 || rank > maxRankIndex {
+		return fmt.Errorf("rank index from pod is error")
+	}
+	return nil
+}
+
+func (b *WorkerInfo) updatePod(po *podIdentifier, updateFunc func(*apiCoreV1.Pod)) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		newPod, err := b.kubeclientset.CoreV1().Pods(po.namespace).Get(po.name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		updateFunc(newPod)
+		_, err = b.kubeclientset.CoreV1().Pods(po.namespace).Update(newPod)
+		return err
+	})
+}
+
 func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
-	klog.V(L3).Infof("current handleDeleteEvent pod is %s", podInfo)
+	hwlog.Infof("current handleDeleteEvent pod is %s", podInfo)
 
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
+	b.configmapData.SetStatus(ConfigmapInitializing)
+
 	err := b.configmapData.RemovePodInfo(podInfo.namespace, podInfo.name)
 	if err != nil {
 		return err
 	}
 
-	klog.V(L3).Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
+	hwlog.Infof("start to remove data of pod %s/%s", podInfo.namespace, podInfo.name)
 	err = updateConfigMap(b, podInfo.namespace)
 	if err != nil {
 		return err
 	}
 	b.modifyStatistics(-1)
-	klog.V(L3).Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
+	hwlog.Infof("data of pod %s/%s is removed", podInfo.namespace, podInfo.name)
 
 	return nil
 }
@@ -230,12 +272,12 @@ func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
 func (b *WorkerInfo) endRankTableConstruction(namespace string) error {
 	err := b.configmapData.SetStatus(ConfigmapCompleted)
 	if err != nil {
-		klog.Errorf("fail to set configmap status: %s", err)
+		hwlog.Errorf("fail to set configmap status: %s", err)
 		return err
 	}
 	err = updateConfigMap(b, namespace)
 	if err != nil {
-		klog.Error("update configmap failed")
+		hwlog.Error("update configmap failed")
 		return err
 	}
 	return nil
@@ -270,7 +312,10 @@ func getWorkName(labels map[string]string) string {
 	if label, ok := labels[VolcanoJobNameKey]; ok {
 		return label
 	}
-	return labels[DeploymentNameKey]
+	if label, ok := labels[DeploymentNameKey]; ok {
+		return label
+	}
+	return ""
 }
 
 func updateConfigMap(w *WorkerInfo, namespace string) error {
@@ -279,11 +324,11 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 		return fmt.Errorf("get configmap error: %v", err)
 	}
 
+	hwlog.Debugf("old cm ranktable %s", cm.Data[ConfigmapKey])
 	label910, exist := (*cm).Labels[Key910]
 	if !exist || (exist && label910 != Val910) {
 		return fmt.Errorf("invalid configmap label" + label910)
 	}
-
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
 		return fmt.Errorf("marshal configmap data error: %v", err)
@@ -293,5 +338,7 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	if _, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(cm); err != nil {
 		return fmt.Errorf("failed to update ConfigMap for Job %v", err)
 	}
+	w.rankIndex = w.configmapData.GetPodNum()
+	hwlog.Debugf("new cm ranktable %s", cm.Data[ConfigmapKey])
 	return nil
 }
