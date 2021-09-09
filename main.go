@@ -62,11 +62,10 @@ func main() {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
 		os.Exit(0)
 	}
-
 	stopLogCh := make(chan struct{})
 	defer close(stopLogCh)
 	initHwLogger(stopLogCh)
-
+	hwlog.Infof("hccl controller starting and the version is %s", BuildVersion)
 	if hcclVersion != "v1" && hcclVersion != "v2" {
 		hwlog.Fatalf("invalid json version value, should be v1/v2")
 	}

@@ -16,11 +16,7 @@ fi
 
 arch=$(arch 2>&1)
 echo "Build Architecture is" "${arch}"
-if [ "${arch:0:5}" = 'aarch' ]; then
-  arch=arm64
-else
-  arch=amd64
-fi
+
 
 sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" "${TOP_DIR}"/build/hccl-controller.yaml
 
@@ -39,7 +35,7 @@ function build() {
   CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
   CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
   CGO_ENABLED=0 go build -mod=mod -buildmode=pie   -ldflags "-s -linkmode=external -extldflags=-Wl,-z,now  -X main.BuildName=${OUTPUT_NAME} \
-            -X main.BuildVersion=${build_version}" \
+            -X main.BuildVersion=${build_version}_linux-${arch}" \
             -o ${OUTPUT_NAME}
   ls ${OUTPUT_NAME}
   if [ $? -ne 0 ]; then
