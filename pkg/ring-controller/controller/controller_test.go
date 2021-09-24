@@ -31,9 +31,9 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
-	vofake "volcano.sh/volcano/pkg/client/clientset/versioned/fake"
-	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
+	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	vofake "volcano.sh/apis/pkg/client/clientset/versioned/fake"
+	informers "volcano.sh/apis/pkg/client/informers/externalversions"
 )
 
 // TestController_Run test Controller_Run

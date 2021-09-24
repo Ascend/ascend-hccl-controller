@@ -21,7 +21,7 @@ import (
 	apiCorev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"time"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 )
 
 const (

@@ -17,6 +17,7 @@
 package model
 
 import (
+	"context"
 	errors2 "errors"
 	"fmt"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
@@ -33,7 +34,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"strconv"
 	"time"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 )
 
 // ResourceEventHandler to define same func, controller to use this function to finish some thing.
@@ -153,7 +154,7 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 			var errTmp error
 
 			cm, errTmp = kubeClientSet.CoreV1().ConfigMaps(namespace).
-				Get(fmt.Sprintf("%s-%s",
+				Get(context.TODO(), fmt.Sprintf("%s-%s",
 					agent2.ConfigmapPrefix, name), metav1.GetOptions{})
 			if errTmp != nil {
 				if errors.IsNotFound(errTmp) {
