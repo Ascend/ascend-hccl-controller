@@ -17,6 +17,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	. "github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
@@ -33,7 +34,6 @@ import (
 
 const (
 	NameSpace = "namespace"
-	Name      = "test1"
 	DataKey   = "hccl.json"
 	DataValue = "{\"status\":\"initializing\"}"
 	CMName    = "rings-config-test1"
@@ -110,7 +110,7 @@ func TestUpdateConfigMap(t *testing.T) {
 			data := make(map[string]string, 1)
 			putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 				Namespace: NameSpace}, Data: data}
-			kube.CoreV1().ConfigMaps(NameSpace).Create(putCM)
+			kube.CoreV1().ConfigMaps(NameSpace).Create(context.TODO(), putCM, metav1.CreateOptions{})
 			err := updateConfigMap(work, NameSpace)
 			So(err, ShouldNotEqual, nil)
 		})
@@ -131,14 +131,14 @@ func updateWhenCMNormal(kube *fake.Clientset, work *WorkerInfo) {
 	label[Key910] = Val910
 	putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 		Namespace: NameSpace, Labels: label}, Data: data}
-	kube.CoreV1().ConfigMaps(NameSpace).Create(putCM)
+	kube.CoreV1().ConfigMaps(NameSpace).Create(context.TODO(), putCM, metav1.CreateOptions{})
 	work.configmapData = &v1.RankTable{RankTableStatus: v1.RankTableStatus{
 		Status: "initializing",
 	}}
 	work.configmapData.SetStatus(ConfigmapCompleted)
 	err := updateConfigMap(work, NameSpace)
 	So(err, ShouldEqual, nil)
-	cm, _ := kube.CoreV1().ConfigMaps(NameSpace).Get(CMName,
+	cm, _ := kube.CoreV1().ConfigMaps(NameSpace).Get(context.TODO(), CMName,
 		metav1.GetOptions{})
 	So(cm.Data[DataKey], ShouldEqual, "{\"status\":\"completed\","+
 		"\"group_list\":null,\"group_count\":\"\"}")
@@ -151,19 +151,20 @@ func updateWhenUpdateCmErr(kube *fake.Clientset, work *WorkerInfo) {
 	data[DataKey] = DataValue
 	putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 		Namespace: NameSpace, Labels: label}, Data: data}
-	kube.CoreV1().ConfigMaps("namespace").Create(putCM)
+	kube.CoreV1().ConfigMaps("namespace").Create(context.TODO(), putCM, metav1.CreateOptions{})
 	work.configmapData = &v1.RankTable{RankTableStatus: v1.RankTableStatus{
 		Status: "initializing",
 	}}
 	work.configmapData.SetStatus(ConfigmapCompleted)
 	patch := ApplyMethod(reflect.TypeOf(kube.CoreV1().ConfigMaps(NameSpace)),
-		"Update", func(_ *fakecm.FakeConfigMaps, _ *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+		"Update", func(_ *fakecm.FakeConfigMaps, _ context.Context, _ *corev1.ConfigMap,
+			_ metav1.UpdateOptions) (*corev1.ConfigMap, error) {
 			return nil, fmt.Errorf("update config error")
 		})
 	defer patch.Reset()
 	err := updateConfigMap(work, NameSpace)
 	So(err, ShouldNotEqual, nil)
-	cm, _ := kube.CoreV1().ConfigMaps(NameSpace).Get(CMName,
+	cm, _ := kube.CoreV1().ConfigMaps(NameSpace).Get(context.TODO(), CMName,
 		metav1.GetOptions{})
 	So(cm.Data[DataKey], ShouldEqual, DataValue)
 }

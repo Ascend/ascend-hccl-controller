@@ -17,6 +17,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	. "github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
@@ -34,7 +35,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 )
 
 const (
@@ -166,7 +167,7 @@ func TestCheckCMCreation(t *testing.T) {
 			data[DataKey] = DataValue
 			putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 				Namespace: "namespace", Labels: label}, Data: data}
-			cms.Create(putCM)
+			cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 			getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
 			So(err, ShouldNotEqual, nil)
 			So(getCM, ShouldEqual, nil)
@@ -177,7 +178,7 @@ func TestCheckCMCreation(t *testing.T) {
 			data[DataKey] = DataValue
 			putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "rings-config-test12",
 				Namespace: "namespace", Labels: label}, Data: data}
-			cms.Create(putCM)
+			cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 			getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
 			So(err, ShouldNotEqual, nil)
 			So(getCM, ShouldEqual, nil)
@@ -192,7 +193,7 @@ func checkCmWhenNormal(cms typedcorev1.ConfigMapInterface, fakeClient *fake.Clie
 	label[agent.Key910] = agent.Val910
 	putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 		Namespace: "namespace", Labels: label}, Data: data}
-	cms.Create(putCM)
+	cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 	getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
 	So(err, ShouldEqual, nil)
 	So(getCM.String(), ShouldEqual, putCM.String())

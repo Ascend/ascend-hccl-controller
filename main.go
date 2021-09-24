@@ -34,8 +34,8 @@ import (
 	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
+	vkClientset "volcano.sh/apis/pkg/client/clientset/versioned"
+	informers "volcano.sh/apis/pkg/client/informers/externalversions"
 )
 
 var (

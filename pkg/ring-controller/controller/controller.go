@@ -34,8 +34,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
+	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
+	samplescheme "volcano.sh/apis/pkg/client/clientset/versioned/scheme"
 )
 
 // NewController returns a new sample controller

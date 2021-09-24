@@ -24,8 +24,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	v1alpha1informers "volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1"
+	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
+	v1alpha1informers "volcano.sh/apis/pkg/client/informers/externalversions/batch/v1alpha1"
 )
 
 const (

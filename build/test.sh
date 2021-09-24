@@ -17,6 +17,7 @@ function execute_test() {
 }
 
 function main() {
+    go get k8s.io/client-go/testing@v0.22.1
     os_type=$(arch)
     if [ "${os_type}" = "aarch64" ]; then
         echo "arm not support. Thanks"

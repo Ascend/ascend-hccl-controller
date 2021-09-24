@@ -18,6 +18,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -236,12 +237,12 @@ func validate(rank int64) error {
 
 func (b *WorkerInfo) updatePod(po *podIdentifier, updateFunc func(*apiCoreV1.Pod)) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		newPod, err := b.kubeclientset.CoreV1().Pods(po.namespace).Get(po.name, metav1.GetOptions{})
+		newPod, err := b.kubeclientset.CoreV1().Pods(po.namespace).Get(context.TODO(), po.name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 		updateFunc(newPod)
-		_, err = b.kubeclientset.CoreV1().Pods(po.namespace).Update(newPod)
+		_, err = b.kubeclientset.CoreV1().Pods(po.namespace).Update(context.TODO(), newPod, metav1.UpdateOptions{})
 		return err
 	})
 }
@@ -319,7 +320,8 @@ func getWorkName(labels map[string]string) string {
 }
 
 func updateConfigMap(w *WorkerInfo, namespace string) error {
-	cm, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Get(w.configmapName, metav1.GetOptions{})
+	cm, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(),
+		w.configmapName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get configmap error: %v", err)
 	}
@@ -335,7 +337,8 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	}
 	cm.Data[ConfigmapKey] = string(dataByteArray[:])
 
-	if _, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(cm); err != nil {
+	if _, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm,
+		metav1.UpdateOptions{}); err != nil {
 		return fmt.Errorf("failed to update ConfigMap for Job %v", err)
 	}
 	w.rankIndex = w.configmapData.GetPodNum()
