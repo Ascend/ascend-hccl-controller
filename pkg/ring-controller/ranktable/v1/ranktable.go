@@ -102,9 +102,9 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	var instance Instance
 
 	// if pod use D chip, cache its info
-	hwlog.Infof("devicedInfo  from pod => %v", deviceInfo)
+	hwlog.RunLog.Infof("devicedInfo  from pod => %v", deviceInfo)
 	err := json.Unmarshal([]byte(deviceInfo), &instance)
-	hwlog.Infof("instace  from pod => %v", instance)
+	hwlog.RunLog.Infof("instace  from pod => %v", instance)
 	if err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}
@@ -144,7 +144,7 @@ func (r *RankTable) RemovePodInfo(namespace string, podID string) error {
 func checkPodCache(group *Group, pod *apiCoreV1.Pod) error {
 	for _, instance := range group.InstanceList {
 		if instance.PodName == pod.Name {
-			hwlog.Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
+			hwlog.RunLog.Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,
 				pod.Name)
 			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
 				pod.Name)

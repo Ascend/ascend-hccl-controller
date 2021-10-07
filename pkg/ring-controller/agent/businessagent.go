@@ -92,11 +92,11 @@ var NewBusinessAgent = func(
 		},
 	})
 
-	hwlog.Info("start informer factory")
+	hwlog.RunLog.Info("start informer factory")
 	go podInformerFactory.Start(stopCh)
-	hwlog.Info("waiting for informer caches to sync")
+	hwlog.RunLog.Info("waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, businessAgent.podInformer.HasSynced); !ok {
-		hwlog.Errorf("caches sync failed")
+		hwlog.RunLog.Errorf("caches sync failed")
 		return businessAgent, fmt.Errorf("caches sync failed")
 	}
 
@@ -109,18 +109,18 @@ func (b *BusinessAgent) enqueuePod(obj interface{}, eventType string) {
 	var name string
 	var err error
 	if name, err = nameGenerationFunc(obj, eventType); err != nil {
-		hwlog.Errorf("pod key generation error: %v", err)
+		hwlog.RunLog.Errorf("pod key generation error: %v", err)
 		return
 	}
 	b.Workqueue.AddRateLimited(name)
 }
 
 func (b *BusinessAgent) run(threadiness int) error {
-	hwlog.Info("Starting workers")
+	hwlog.RunLog.Info("Starting workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(b.runMasterWorker, time.Second, b.agentSwitch)
 	}
-	hwlog.Info("Started workers")
+	hwlog.RunLog.Info("Started workers")
 
 	return nil
 }
@@ -159,23 +159,23 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	tmpObj, podExist, err := b.PodsIndexer.GetByKey(podKeyInfo.namespace + "/" + podKeyInfo.name)
 	if err != nil {
 		b.Workqueue.Forget(obj)
-		hwlog.Errorf("syncing '%s' failed: failed to get obj from indexer", podKeyInfo)
+		hwlog.RunLog.Errorf("syncing '%s' failed: failed to get obj from indexer", podKeyInfo)
 		return true
 	}
 	// Lock to safely obtain worker data in the Map
 	b.RwMutex.RLock()
 	defer b.RwMutex.RUnlock()
 	bsnsWorker, workerExist := b.BusinessWorker[podKeyInfo.namespace+"/"+podKeyInfo.jobName]
-	hwlog.Debugf(" worker : \n %+v", b.BusinessWorker)
+	hwlog.RunLog.Debugf(" worker : \n %+v", b.BusinessWorker)
 	if !workerExist {
 		if !podExist {
 			b.Workqueue.Forget(obj)
-			hwlog.Infof("syncing '%s' terminated: current obj is no longer exist",
+			hwlog.RunLog.Infof("syncing '%s' terminated: current obj is no longer exist",
 				podKeyInfo.String())
 			return true
 		}
 		// if someone create a single 910 pod without a job, how to handle?
-		hwlog.Debugf("syncing '%s' delayed: corresponding job worker may be uninitialized",
+		hwlog.RunLog.Debugf("syncing '%s' delayed: corresponding job worker may be uninitialized",
 			podKeyInfo.String())
 		return false
 	}
@@ -190,12 +190,12 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	}
 	pod, ok := tmpObj.(*apiCoreV1.Pod)
 	if !ok {
-		hwlog.Error("pod transform failed")
+		hwlog.RunLog.Error("pod transform failed")
 		return true
 	}
 
 	// if worker exist && pod exist, need check some special scenarios
-	hwlog.Debugf("successfully synced '%s'", podKeyInfo)
+	hwlog.RunLog.Debugf("successfully synced '%s'", podKeyInfo)
 
 	forgetQueue, retry := bsnsWorker.doWork(pod, podKeyInfo)
 	if forgetQueue {
@@ -232,12 +232,12 @@ func preCheck(obj interface{}) (*podIdentifier, bool) {
 	var key string
 	var ok bool
 	if key, ok = obj.(string); !ok {
-		hwlog.Errorf("expected string in WorkerQueue but got %#v", obj)
+		hwlog.RunLog.Errorf("expected string in WorkerQueue but got %#v", obj)
 		return nil, true
 	}
 	podPathInfo, err := splitWorkerKey(key)
 	if err != nil || podPathInfo == nil {
-		hwlog.Errorf("failed to split key: %v", err)
+		hwlog.RunLog.Errorf("failed to split key: %v", err)
 		return nil, true
 	}
 	return podPathInfo, false
@@ -265,7 +265,7 @@ func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
 	if useChip {
 		_, exist := pod.Annotations[PodDeviceKey]
 		if !exist {
-			hwlog.Infof("syncing '%s' delayed: device info is not ready", identifier)
+			hwlog.RunLog.Infof("syncing '%s' delayed: device info is not ready", identifier)
 			return false
 		}
 	}
@@ -295,11 +295,11 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()
-	hwlog.Infof("not exist + delete, current job is %s/%s", namespace, name)
+	hwlog.RunLog.Infof("not exist + delete, current job is %s/%s", namespace, name)
 	identifier := namespace + "/" + name
 	_, exist := agent.BusinessWorker[identifier]
 	if !exist {
-		hwlog.Infof("failed to delete business worker for %s/%s, it's not exist", namespace,
+		hwlog.RunLog.Infof("failed to delete business worker for %s/%s, it's not exist", namespace,
 			name)
 		return
 	}
@@ -308,6 +308,6 @@ func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 		agent.BusinessWorker[identifier].CloseStatistic()
 	}
 	delete(agent.BusinessWorker, identifier)
-	hwlog.Infof("business worker for %s is deleted", identifier)
+	hwlog.RunLog.Infof("business worker for %s is deleted", identifier)
 	return
 }

@@ -66,11 +66,11 @@ func (job *VCJobModel) GetReplicas() string {
 func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 
 	agent.RwMutex.RLock()
-	hwlog.Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
+	hwlog.RunLog.Infof("create business worker for %s/%s", job.JobNamespace, job.JobName)
 	_, exist := agent.BusinessWorker[job.JobNamespace+"/"+job.JobName]
 	agent.RwMutex.RUnlock()
 	if exist {
-		hwlog.Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
+		hwlog.RunLog.Infof("business worker for %s/%s is already existed", job.JobNamespace, job.JobName)
 		return nil
 	}
 
@@ -86,7 +86,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
 
-	hwlog.Info("jobstarting==>", jobStartString)
+	hwlog.RunLog.Info("jobstarting==>", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
 	if err != nil {

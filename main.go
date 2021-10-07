@@ -65,15 +65,15 @@ func main() {
 	stopLogCh := make(chan struct{})
 	defer close(stopLogCh)
 	initHwLogger(stopLogCh)
-	hwlog.Infof("hccl controller starting and the version is %s", BuildVersion)
+	hwlog.RunLog.Infof("hccl controller starting and the version is %s", BuildVersion)
 	if hcclVersion != "v1" && hcclVersion != "v2" {
-		hwlog.Fatalf("invalid json version value, should be v1/v2")
+		hwlog.RunLog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	agent.JSONVersion = hcclVersion
 
 	// check the validity of input parameters
 	if jobParallelism <= 0 {
-		hwlog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
+		hwlog.RunLog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -81,16 +81,16 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		hwlog.Fatalf("Error building kubeconfig")
+		hwlog.RunLog.Fatalf("Error building kubeconfig")
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		hwlog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		hwlog.RunLog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 	jobClient, err := vkClientset.NewForConfig(cfg)
 	if err != nil {
-		hwlog.Fatalf("Error building job clientset: %s", err.Error())
+		hwlog.RunLog.Fatalf("Error building job clientset: %s", err.Error())
 	}
 
 	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
@@ -107,7 +107,7 @@ func main() {
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
 	if err = control.Run(jobParallelism, stopCh); err != nil {
-		hwlog.Fatalf("Error running controller: %s", err.Error())
+		hwlog.RunLog.Fatalf("Error running controller: %s", err.Error())
 	}
 }
 
@@ -159,7 +159,7 @@ func init() {
 }
 
 func initHwLogger(stopCh chan struct{}) {
-	if err := hwlog.Init(hwLogConfig, stopCh); err != nil {
+	if err := hwlog.InitRunLogger(hwLogConfig, stopCh); err != nil {
 		fmt.Printf("hwlog init failed, error is %v", err)
 		os.Exit(-1)
 	}
