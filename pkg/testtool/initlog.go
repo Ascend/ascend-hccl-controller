@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// Package test_util for init logger for llt
-package test_util
+// Package testtool for init logger for llt
+package testtool
 
 import "huawei.com/npu-exporter/hwlog"
 
