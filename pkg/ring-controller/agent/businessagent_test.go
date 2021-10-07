@@ -18,6 +18,7 @@ package agent
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
+	_ "hccl-controller/pkg/test-util"
 	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 )
