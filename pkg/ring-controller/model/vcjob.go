@@ -86,7 +86,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
 
-	hwlog.RunLog.Info("jobstarting==>", jobStartString)
+	hwlog.RunLog.Info("jobstarting: ", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
 	if err != nil {

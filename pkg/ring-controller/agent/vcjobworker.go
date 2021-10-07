@@ -180,7 +180,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if !exist {
 		return errors.New("The key of" + PodDeviceKey + "does not exist ")
 	}
-	hwlog.RunLog.Infof("deviceId => %s", deviceInfo)
+	hwlog.RunLog.Infof("deviceId: %s", deviceInfo)
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	tmpRankIndex := b.rankIndex

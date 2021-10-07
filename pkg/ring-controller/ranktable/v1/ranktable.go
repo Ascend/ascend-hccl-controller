@@ -102,9 +102,9 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	var instance Instance
 
 	// if pod use D chip, cache its info
-	hwlog.RunLog.Infof("devicedInfo  from pod => %v", deviceInfo)
+	hwlog.RunLog.Infof("devicedInfo from pod: %v", deviceInfo)
 	err := json.Unmarshal([]byte(deviceInfo), &instance)
-	hwlog.RunLog.Infof("instace  from pod => %v", instance)
+	hwlog.RunLog.Infof("instace from pod: %v", instance)
 	if err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}

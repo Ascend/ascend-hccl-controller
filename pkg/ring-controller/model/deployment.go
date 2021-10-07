@@ -43,7 +43,7 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if !ok {
 		return errors.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
-	hwlog.RunLog.Debug("jobstarting==>", jobStartString)
+	hwlog.RunLog.Debug("jobstarting: ", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, jobStartString, agent2.JSONVersion)
 	if err != nil {
