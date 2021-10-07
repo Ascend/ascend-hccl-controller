@@ -39,7 +39,7 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 	// check basis: job uid + creationTimestamp
 	if pod.CreationTimestamp.Before(&w.DeployCreationTimestamp) {
 		// old pod + new worker
-		hwlog.Infof("syncing '%s' terminated: corresponding job worker is no "+
+		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding job worker is no "+
 			"longer exist (basis: job uid + creationTimestamp)", podInfo)
 		return true, false
 	}
@@ -51,14 +51,14 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 	}
 	if configmapComplete :=
 		w.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
-		hwlog.Infof("syncing '%s' terminated: corresponding rank table is completed",
+		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true
 	}
 
 	// start to sync current pod
 	if err := w.syncHandler(pod, podInfo); err != nil {
-		hwlog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		hwlog.RunLog.Errorf("error syncing '%s': %s", podInfo, err.Error())
 		return true, true
 	}
 	return true, true
@@ -70,17 +70,17 @@ func (w *DeployWorker) Statistic(stopTime time.Duration) {
 		select {
 		case c, ok := <-w.statisticSwitch:
 			if !ok {
-				hwlog.Error(c)
+				hwlog.RunLog.Error(c)
 			}
 			return
 		default:
 			if w.taskReplicasTotal == w.cachedPodNum {
-				hwlog.Infof("rank table build progress for %s/%s is completed",
+				hwlog.RunLog.Infof("rank table build progress for %s/%s is completed",
 					w.DeployNamespace, w.DeployName)
 				w.CloseStatistic()
 				return
 			}
-			hwlog.Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
+			hwlog.RunLog.Infof("rank table build progress for %s/%s: pods need to be cached = %d,"+
 				"pods already cached = %d", w.DeployNamespace, w.DeployName, w.taskReplicasTotal, w.cachedPodNum)
 			time.Sleep(stopTime)
 		}

@@ -32,6 +32,7 @@ codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.6 h1
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.6/go.mod h1:XOdQxqLNir6WcyapPyYn/ztQb/kral7K/8CzVCKTT7E=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.8 h1:KlJL3zEqVWxFiosiPdFXNGDiomBIONZ+HahN6wQ05b0=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.0.8/go.mod h1:XOdQxqLNir6WcyapPyYn/ztQb/kral7K/8CzVCKTT7E=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.1.2/go.mod h1:WhEMtOptc61jKzb5tcKbB/8cSo6OTBP9aWPmNMZIIR8=
 codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6/go.mod h1:mbUvvh/0ox+lNtLoraCsf+NMpTCL2h4L/NtfboraaH4=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/Azure/azure-sdk-for-go v32.5.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=

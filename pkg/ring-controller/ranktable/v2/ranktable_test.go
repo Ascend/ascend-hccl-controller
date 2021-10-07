@@ -19,6 +19,7 @@ package v2
 import (
 	. "github.com/smartystreets/goconvey/convey"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	_ "hccl-controller/pkg/testtool"
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"

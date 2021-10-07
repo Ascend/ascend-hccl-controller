@@ -43,7 +43,7 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if !ok {
 		return errors.New("The key of " + agent2.ConfigmapKey + "does not exist")
 	}
-	hwlog.Debug("jobstarting==>", jobStartString)
+	hwlog.RunLog.Debug("jobstarting: ", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, jobStartString, agent2.JSONVersion)
 	if err != nil {
@@ -55,10 +55,10 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()
 
-	hwlog.Infof("create business worker for %s/%s", deploy.DeployNamespace, deploy.DeployName)
+	hwlog.RunLog.Infof("create business worker for %s/%s", deploy.DeployNamespace, deploy.DeployName)
 	_, exist := agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
 	if exist {
-		hwlog.Infof("business worker for %s/%s is already existed", deploy.DeployNamespace, deploy.DeployName)
+		hwlog.RunLog.Infof("business worker for %s/%s is already existed", deploy.DeployNamespace, deploy.DeployName)
 		return nil
 	}
 

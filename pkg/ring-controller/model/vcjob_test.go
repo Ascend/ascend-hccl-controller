@@ -23,6 +23,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"hccl-controller/pkg/ring-controller/agent"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	_ "hccl-controller/pkg/testtool"
 	appsV1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
