@@ -139,13 +139,13 @@ func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes
 func init() {
 	// hwlog configuration
 	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", 0,
-		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal")
+		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
 	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwlog.DefaultMinSaveAge,
-		"Maximum number of days for backup log files ")
+		"Maximum number of days for backup operation log files, must be greater than or equal to 7 days")
 	flag.StringVar(&hwLogConfig.LogFileName, "logFile", defaultLogFileName,
 		"Log file path. if the file size exceeds 20MB, will be rotated")
 	flag.IntVar(&hwLogConfig.MaxBackups, "maxBackups", hwlog.DefaultMaxBackups,
-		"Maximum number of backup log files, range [0, 30]. if it's 0, will be reset to default value")
+		"Maximum number of backup log files, range (0, 30].")
 
 	flag.IntVar(&jobParallelism, "jobParallelism", 1,
 		"Parallelism of job events handling.")
