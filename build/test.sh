@@ -16,6 +16,7 @@ function execute_test() {
 }
 
 function main() {
+    go get k8s.io/client-go/testing@v0.19.6
     go get volcano.sh/apis@v0.0.0-20210603070204-70005b2d502a
     os_type=$(arch)
     if [ "${os_type}" = "aarch64" ]; then
