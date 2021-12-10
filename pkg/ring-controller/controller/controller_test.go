@@ -65,7 +65,7 @@ func TestProcessNextWorkItem(t *testing.T) {
 				return fmt.Errorf("undefined condition, things is %s", m.GetModelKey())
 			})
 			defer patches.Reset()
-			res := ctr.processNextWorkItem()
+			res := ctr.processNextWork()
 			So(res, ShouldEqual, true)
 			So(ctr.workqueue.Len(), ShouldEqual, 0)
 		})
@@ -82,7 +82,7 @@ func TestProcessNextWorkItem(t *testing.T) {
 				return nil
 			})
 			defer patches.Reset()
-			res := ctr.processNextWorkItem()
+			res := ctr.processNextWork()
 			So(res, ShouldEqual, true)
 			So(ctr.workqueue.Len(), ShouldEqual, 0)
 		})

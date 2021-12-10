@@ -60,8 +60,6 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
-// is closed, at which point it will shutdown the WorkQueue and wait for
-// workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
@@ -77,73 +75,52 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	hwlog.RunLog.Debug("Starting workers")
 
 	for i := 0; i < threadiness; i++ {
-		go wait.Until(c.runMasterWorker, time.Second, stopCh)
+		go wait.Until(c.runMaster, time.Second, stopCh)
 	}
 
-	hwlog.RunLog.Debug("Started workers")
+	hwlog.RunLog.Debug("Started")
 	if stopCh != nil {
 		<-stopCh
 	}
-	hwlog.RunLog.Debug("Shutting down workers")
-
+	hwlog.RunLog.Debug("Shutting down")
 	return nil
 }
 
-// runMasterWorker is a long-running function that will continually call the
-// processNextWorkItem function in order to read and process a message on the
-// workqueue.
-func (c *Controller) runMasterWorker() {
-	for c.processNextWorkItem() {
+func (c *Controller) runMaster() {
+	for c.processNextWork() {
 	}
 }
 
-// processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling the SyncHandler.
-func (c *Controller) processNextWorkItem() bool {
-	hwlog.RunLog.Debug("start to get workqueue", c.workqueue.Len())
+func (c *Controller) processNextWork() bool {
+	hwlog.RunLog.Debug("get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
 	}
 
-	// We wrap this block in a func so we can defer c.workqueue.Done.
 	err := func(obj interface{}) error {
-		// We call Done here so the workqueue knows we have finished
-		// processing this item. We also must remember to call Forget if we
-		// do not want this work item being re-queued. For example, we do
-		// not call Forget if a transient error occurs, instead the item is
-		// put back on the workqueue and attempted again after a back-off
-		// period.
+
 		defer c.workqueue.Done(obj)
 		var mo model.ResourceEventHandler
 		var ok bool
-		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
-		// workqueue means the items in the informer cache may actually be
-		// more up to date that when the item was initially put onto the
-		// workqueue.
 		if mo, ok = obj.(model.ResourceEventHandler); !ok {
-			// As the item in the workqueue is actually invalid, we call
-			// Forget here else we'd go into a loop of attempting to
-			// process a work item that is invalid.
+
 			c.workqueue.Forget(obj)
-			return fmt.Errorf("expected string in workqueue but got %#v", obj)
+			return fmt.Errorf("expected ResourceEventHandler in workqueue but got %#v", obj)
 		}
-		// Run the SyncHandler, passing it the namespace/name string of the
-		// Job/Deployment resource to be synced.
+
 		if err := c.SyncHandler(mo); err != nil {
 			c.workqueue.Forget(obj)
-			return fmt.Errorf("error syncing '%s': %s", mo.GetModelKey(), err.Error())
+			return fmt.Errorf("error to syncing '%s': %s", mo.GetModelKey(), err.Error())
 		}
-		// Finally, if no error occurs we Forget this item so it does not
-		// get queued again until another change happens.
+
 		c.workqueue.Forget(obj)
-		hwlog.RunLog.Debugf("Successfully synced %+v ", mo)
+		hwlog.RunLog.Debugf("Synced Successfully %+v ", mo)
 		return nil
 	}(obj)
 
 	if err != nil {
-		hwlog.RunLog.Errorf("controller processNextWorkItem is failed, err %v", err)
+		hwlog.RunLog.Errorf("processNextWork controller, err %v", err)
 		pkgutilruntime.HandleError(err)
 		return true
 	}
