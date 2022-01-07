@@ -51,6 +51,6 @@ compile:
             mode: "500"
         - makeArchive:
             - src: "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller"
-              des: "{{ systemEnv.workspace }}/{{ component}}/output/Ascend-mindxdl-hccl-controller_${pkgversion}_linux"
+              des: "{{ systemEnv.workspace }}/{{ component}}/output/Ascend-mindxdl-hccl-controller_${pkgversion}_linux-{{ systemEnv.processor }}"
               prefix: zip
               arch: "{{ systemEnv.processor }}"
