@@ -54,3 +54,13 @@ compile:
               des: "{{ systemEnv.workspace }}/{{ component}}/output/Ascend-mindxdl-hccl-controller_${pkgversion}_linux-{{ systemEnv.processor }}"
               prefix: zip
               arch: "{{ systemEnv.processor }}"
+
+test:
+  input:
+  process:
+    type: ut
+    testTool: shell
+    execdir: "{{systemEnv.workspace}}/{{component}}/build"
+    parameters: ""
+    script: "test.sh"
+  output:
