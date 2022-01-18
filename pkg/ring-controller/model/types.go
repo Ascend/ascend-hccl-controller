@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	decimal = 10
 	// VCJobType To determine the type of listening：vcjob.
 	VCJobType = "vcjob"
 	// DeploymentType To determine the type of listening：deployment.

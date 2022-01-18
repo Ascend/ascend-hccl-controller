@@ -19,15 +19,15 @@ import (
 
 // RankTabler interface to maintain properties
 type RankTabler interface {
-	// UnmarshalToRankTable：Unmarshal json string to RankTable
+	// UnmarshalToRankTable Unmarshal json string to RankTable
 	UnmarshalToRankTable(jsonString string) error
-	// CachePodInfo: cache pod info to RankTableV1
-	CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankIndex *int) error
-	// RemovePodInfo : Remove pod info from RankTable
+	// CachePodInfo cache pod info to RankTableV1
+	CachePodInfo(pod *apiCoreV1.Pod, instance Instance, rankIndex *int) error
+	// RemovePodInfo Remove pod info from RankTable
 	RemovePodInfo(namespace string, name string) error
 	// SetStatus Set status of RankTableStatus
 	SetStatus(status string) error
-	// GetStatus: Get status of RankTableStatus
+	// GetStatus Get status of RankTableStatus
 	GetStatus() string
 	// GetPodNum get pod num
 	GetPodNum() int
@@ -80,7 +80,7 @@ func CheckDeviceInfo(instance *Instance) bool {
 }
 
 // CachePodInfo : cache pod info to RankTableV1
-func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankIndex *int) error {
+func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance Instance, rankIndex *int) error {
 	if len(r.GroupList) < 1 {
 		return fmt.Errorf("grouplist of ranktable is empty")
 	}
@@ -88,15 +88,7 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 	if err := checkPodCache(group, pod); err != nil {
 		return err
 	}
-	var instance Instance
-
-	// if pod use D chip, cache its info
-	hwlog.RunLog.Infof("devicedInfo from pod: %v", deviceInfo)
-	err := json.Unmarshal([]byte(deviceInfo), &instance)
-	hwlog.RunLog.Infof("instace from pod: %v", instance)
-	if err != nil {
-		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-	}
+	hwlog.RunLog.Infof("instance from pod: %v", instance)
 	if !CheckDeviceInfo(&instance) {
 		return errors.New("deviceInfo failed the validation")
 	}

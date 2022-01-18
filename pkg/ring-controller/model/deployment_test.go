@@ -72,7 +72,7 @@ func eventAddWhenWorkerExist(ag *agent.BusinessAgent, model *DeployModel) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	patch := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _, _ string) (
+	patch := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (
 		v1.RankTabler, int32, error) {
 		return nil, int32(1), nil
 	})
@@ -93,7 +93,7 @@ func eventAddWhenV2(model *DeployModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	model = &DeployModel{}
-	patch := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _, _ string) (v1.RankTabler,
+	patch := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (v1.RankTabler,
 		int32, error) {
 		return nil, int32(1), nil
 	})
@@ -114,7 +114,7 @@ func eventAddWhenFacNil(model *DeployModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	patches2 := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler,
-		_, _ string) (v1.RankTabler, int32, error) {
+		_ v1.RankTableStatus, _ string) (v1.RankTabler, int32, error) {
 		return nil, int32(0), errors.New("generated group list from job error")
 	})
 	defer patches2.Reset()
