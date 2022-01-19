@@ -267,13 +267,16 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 	var exist bool
 	for _, res := range ResourceList {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
+		if !exist {
+			continue
+		}
 		if math.MaxInt32 < qtt.Value() {
 			return math.MaxInt32
 		}
 		if math.MinInt32 > qtt.Value() {
 			return math.MinInt32
 		}
-		if exist && int32(qtt.Value()) > 0 {
+		if int32(qtt.Value()) > 0 {
 			return int32(qtt.Value())
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -58,7 +59,12 @@ func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forget
 	}
 	// scenario check B: job set restart policy, delete pod
 	// check basis: job version
-	version64, err := strconv.ParseInt(pod.Annotations[PodJobVersion], 10, 32)
+	val, exists := pod.Annotations[PodJobVersion]
+	if !exists {
+		hwlog.RunLog.Error("the key of " + PodJobVersion + " does not exist")
+		return true, false
+	}
+	version64, err := strconv.ParseInt(val, common.Decimal, common.BitSize32)
 	if err != nil {
 		hwlog.RunLog.Errorf("syncing '%s' failed, parse pod annotation error: %v", podInfo, err)
 		return true, false
@@ -167,16 +173,21 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	if !exist {
-		return errors.New("The key of" + PodDeviceKey + "does not exist ")
+		return errors.New("the key of " + PodDeviceKey + " does not exist ")
 	}
-	hwlog.RunLog.Infof("deviceId: %s", deviceInfo)
+	var instance v1.Instance
+	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
+		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+	}
+	hwlog.RunLog.Infof("deviceId: (%s)", deviceInfo)
+
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	tmpRankIndex := b.rankIndex
 	// Get rankIndex from pod, use rankIndex if rankIndex exists in pod, use memory if it doesn't.
 	rankIndexStr, rankExist := pod.Annotations[PodRankIndexKey]
 	if rankExist {
-		rank, err := strconv.ParseInt(rankIndexStr, 10, 32)
+		rank, err := strconv.ParseInt(rankIndexStr, common.Decimal, common.BitSize32)
 		if err != nil {
 			return err
 		}
@@ -196,7 +207,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 		}
 	}
 	// Cache device info from the pod
-	err := b.configmapData.CachePodInfo(pod, deviceInfo, &b.rankIndex)
+	err := b.configmapData.CachePodInfo(pod, instance, &b.rankIndex)
 	if rankExist {
 		b.rankIndex = tmpRankIndex
 	}

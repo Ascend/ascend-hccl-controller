@@ -9,6 +9,7 @@ package model
 import (
 	"errors"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	"huawei.com/npu-exporter/hwlog"
 	"strconv"
@@ -30,11 +31,15 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	// retrieve configmap data
 	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
 	if !ok {
-		return errors.New("The key of " + agent2.ConfigmapKey + "does not exist")
+		return errors.New("the key of " + agent2.ConfigmapKey + " does not exist")
+	}
+	var rst v1.RankTableStatus
+	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
+		return err
 	}
 	hwlog.RunLog.Debug("jobstarting: ", jobStartString)
 
-	ranktable, replicasTotal, err := RanktableFactory(deploy, jobStartString, agent2.JSONVersion)
+	ranktable, replicasTotal, err := RanktableFactory(deploy, rst, agent2.JSONVersion)
 	if err != nil {
 		return err
 	}
@@ -87,8 +92,9 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 	deviceTotal *= deploy.replicas
 
 	var instanceList []*v1.Instance
-	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
-		InstanceCount: strconv.FormatInt(int64(deploy.replicas), decimal), InstanceList: instanceList}
+	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
+		common.Decimal),
+		InstanceCount: strconv.FormatInt(int64(deploy.replicas), common.Decimal), InstanceList: instanceList}
 	groupList = append(groupList, &group)
 
 	return groupList, deploy.replicas, nil
