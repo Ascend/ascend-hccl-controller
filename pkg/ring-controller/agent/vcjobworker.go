@@ -179,7 +179,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
 	}
-	hwlog.RunLog.Infof("deviceId: (%s)", deviceInfo)
+	hwlog.RunLog.Infof("deviceId: (%#v)", deviceInfo)
 
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
