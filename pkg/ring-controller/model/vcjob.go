@@ -10,6 +10,7 @@ import (
 	errors2 "errors"
 	"fmt"
 	agent2 "hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
 	"huawei.com/npu-exporter/hwlog"
@@ -36,12 +37,12 @@ type ResourceEventHandler interface {
 	GetModelKey() string
 }
 
-// GetModelKey: return model key.
+// GetModelKey return model key.
 func (model *modelCommon) GetModelKey() string {
 	return model.key
 }
 
-// GetCacheIndex: return CacheIndex
+// GetCacheIndex return CacheIndex
 func (model *modelCommon) GetCacheIndex() cache.Indexer {
 	return model.cacheIndexer
 }
@@ -72,12 +73,15 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	// retrieve configmap data
 	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
 	if !ok {
-		return errors2.New("The key of " + agent2.ConfigmapKey + "does not exist")
+		return errors2.New("the key of " + agent2.ConfigmapKey + " does not exist")
 	}
-
+	var rst v1.RankTableStatus
+	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
+		return err
+	}
 	hwlog.RunLog.Info("jobstarting: ", jobStartString)
 
-	ranktable, replicasTotal, err := RanktableFactory(job, jobStartString, agent2.JSONVersion)
+	ranktable, replicasTotal, err := RanktableFactory(job, rst, agent2.JSONVersion)
 	if err != nil {
 		return err
 	}
@@ -125,8 +129,9 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 		deviceTotal *= taskSpec.Replicas
 
 		var instanceList []*v1.Instance
-		group := v1.Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal), decimal),
-			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), decimal), InstanceList: instanceList}
+		group := v1.Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal),
+			common.Decimal),
+			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), common.Decimal), InstanceList: instanceList}
 		groupList = append(groupList, &group)
 		replicasTotal += taskSpec.Replicas
 	}
@@ -200,16 +205,12 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 }
 
 // RanktableFactory : return the version type of ranktable according to your input parameters
-func RanktableFactory(model ResourceEventHandler, jobStartString, JSONVersion string) (v1.RankTabler, int32, error) {
+func RanktableFactory(model ResourceEventHandler, rst v1.RankTableStatus, JSONVersion string) (v1.RankTabler,
+	int32, error) {
 	var ranktable v1.RankTabler
 	groupList, replicasTotal, err := model.GenerateGrouplist()
 	if err != nil {
 		return nil, 0, fmt.Errorf("generate group list from job error: %v", err)
-	}
-	var rst v1.RankTableStatus
-	err = rst.UnmarshalToRankTable(jobStartString)
-	if err != nil {
-		return nil, 0, err
 	}
 	if JSONVersion == "v1" {
 		ranktable = &v1.RankTable{RankTableStatus: v1.RankTableStatus{Status: rst.Status},

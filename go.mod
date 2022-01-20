@@ -3,6 +3,7 @@ module hccl-controller
 go 1.14
 
 require (
+	github.com/stretchr/testify v1.7.0
 	github.com/agiledragon/gomonkey/v2 v2.1.0
 	github.com/smartystreets/goconvey v1.6.4
 	huawei.com/npu-exporter v0.1.7
