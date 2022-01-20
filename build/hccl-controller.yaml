@@ -75,7 +75,9 @@ spec:
           - name: device-hcclcontroller
             mountPath: /var/log/mindx-dl/hccl-controller
           - name: localtime
-            mountPath: /etc/localtime
+            mountPath: /etc/localtim
+          - name: kmckeystore
+            mountPath: /etc/mindx-dl
       volumes:
         - name: device-hcclcontroller
           hostPath:
@@ -84,3 +86,6 @@ spec:
         - name: localtime
           hostPath:
             path: /etc/localtime
+        - name: kmckeystore
+          hostPath:
+            path: /etc/mindx-dl
