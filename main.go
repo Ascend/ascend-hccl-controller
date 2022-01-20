@@ -92,14 +92,13 @@ func main() {
 	}
 
 	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
-	config := newConifg()
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
 
-	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
+	control := controller.NewController(kubeClient, jobClient, newConifg(), controller.InformerInfo{JobInformer: jobInformer,
 		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
 
 	go jobInformerFactory.Start(stopCh)
