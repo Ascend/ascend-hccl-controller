@@ -12,6 +12,7 @@ import (
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/model"
 	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/npu-exporter/utils"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"os"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	vkClientset "volcano.sh/apis/pkg/client/clientset/versioned"
 	informers "volcano.sh/apis/pkg/client/informers/externalversions"
 )
@@ -35,6 +35,8 @@ var (
 	// BuildVersion  build version
 	BuildVersion string
 	hwLogConfig  = &hwlog.LogConfig{LogFileName: defaultLogFileName}
+	// KubeConfig kubernetes config file
+	KubeConfig string
 )
 
 const (
@@ -43,6 +45,7 @@ const (
 	cmCheckInterval    = 2
 	cmCheckTimeout     = 10
 	defaultLogFileName = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
+	defaultKubeConfig  = "/etc/mindx-dl/hccl-controller/.config/config6"
 )
 
 func main() {
@@ -67,8 +70,14 @@ func main() {
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	if KubeConfig == "" && utils.IsExists(defaultKubeConfig) {
+		KubeConfig = defaultKubeConfig
+	}
+	path, err := utils.CheckPath(KubeConfig)
+	if err != nil {
+		hwlog.RunLog.Fatal(err)
+	}
+	cfg, err := utils.BuildConfigFromFlags("", path)
 	if err != nil {
 		hwlog.RunLog.Fatalf("Error building kubeconfig")
 	}
@@ -83,14 +92,13 @@ func main() {
 	}
 
 	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
-	config := newConifg()
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
 
-	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
+	control := controller.NewController(kubeClient, jobClient, newConifg(), controller.InformerInfo{JobInformer: jobInformer,
 		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
 
 	go jobInformerFactory.Start(stopCh)
@@ -144,6 +152,8 @@ func init() {
 		"Query the verison of the program")
 	flag.StringVar(&hcclVersion, "json", "v2",
 		"Select version of hccl json file (v1/v2).")
+	flag.StringVar(&KubeConfig, "kubeConfig", "", "Path to a kubeconfig. "+
+		"Only required if out-of-cluster.")
 
 }
 

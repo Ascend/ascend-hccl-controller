@@ -12,4 +12,3 @@ const (
 	// Decimal Decimal
 	Decimal = 10
 )
-
