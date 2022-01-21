@@ -9,6 +9,7 @@ RUN chown -R hwMindX:hwMindX /usr/local/bin  &&\
     chown -R hwMindX:hwMindX /usr/local/lib &&\
     chmod 750 /home/hwMindX &&\
     chmod 550 /usr/local/bin/ &&\
+    chmod 550 /usr/local/lib/ &&\
     chmod 500 /usr/local/lib/* &&\
     chmod 500 /usr/local/bin/hccl-controller &&\
     echo 'umask 027' >> /etc/profile && \
