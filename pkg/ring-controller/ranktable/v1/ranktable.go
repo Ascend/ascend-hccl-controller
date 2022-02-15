@@ -26,7 +26,7 @@ type RankTabler interface {
 	// RemovePodInfo Remove pod info from RankTable
 	RemovePodInfo(namespace string, name string) error
 	// SetStatus Set status of RankTableStatus
-	SetStatus(status string) error
+	SetStatus(status string)
 	// GetStatus Get status of RankTableStatus
 	GetStatus() string
 	// GetPodNum get pod num
@@ -34,9 +34,8 @@ type RankTabler interface {
 }
 
 // SetStatus Set status of RankTableStatus
-func (r *RankTableStatus) SetStatus(status string) error {
+func (r *RankTableStatus) SetStatus(status string) {
 	r.Status = status
-	return nil
 }
 
 // GetStatus : Get status of RankTableStatus
@@ -51,10 +50,10 @@ func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
 	}
 	err := json.Unmarshal([]byte(jsonString), &r)
 	if err != nil {
-		return fmt.Errorf("parse configmap data error: %v", err)
+		return fmt.Errorf("parse configmap data error: %#v", err)
 	}
 	if r.Status != ConfigmapCompleted && r.Status != ConfigmapInitializing {
-		return fmt.Errorf("configmap status abnormal: %v", err)
+		return fmt.Errorf("configmap status abnormal: %#v", err)
 	}
 	return nil
 }

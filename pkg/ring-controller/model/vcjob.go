@@ -154,7 +154,7 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 				if errors.IsNotFound(errTmp) {
 					return false, nil
 				}
-				return true, fmt.Errorf("get configmap error: %v", errTmp)
+				return true, fmt.Errorf("get configmap error: %#v", errTmp)
 			}
 			return true, nil
 		})
