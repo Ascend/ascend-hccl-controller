@@ -38,8 +38,7 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 		podInfo.String()) {
 		return false, false
 	}
-	if configmapComplete :=
-		w.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
+	if w.configmapData.GetStatus() == ConfigmapCompleted {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true

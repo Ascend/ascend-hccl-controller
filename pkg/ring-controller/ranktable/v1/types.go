@@ -8,7 +8,7 @@ package v1
 const (
 	// ResourceName NPU resource Name
 	ResourceName = "huawei.com/Ascend910"
-	// ConfigmapCompleted Staus
+	// ConfigmapCompleted Status
 	ConfigmapCompleted = "completed"
 	// ConfigmapInitializing status
 	ConfigmapInitializing = "initializing"

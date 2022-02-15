@@ -147,7 +147,7 @@ func (b *WorkerInfo) syncHandler(pod *apiCoreV1.Pod, podInfo *podIdentifier) err
 		return nil //  need return directly
 	}
 
-	// dryRun is for test
+	// dryRun is for empty running and will not be committed
 	if b.dryRun {
 		hwlog.RunLog.Infof("I'am handling %s", podInfo)
 		return nil
@@ -271,16 +271,12 @@ func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
 }
 
 func (b *WorkerInfo) endRankTableConstruction(namespace string) error {
-	err := b.configmapData.SetStatus(ConfigmapCompleted)
-	if err != nil {
-		hwlog.RunLog.Errorf("fail to set configmap status: %s", err)
-		return err
-	}
-	err = updateConfigMap(b, namespace)
-	if err != nil {
+	b.configmapData.SetStatus(ConfigmapCompleted)
+	if err := updateConfigMap(b, namespace); err != nil {
 		hwlog.RunLog.Error("update configmap failed")
 		return err
 	}
+
 	return nil
 }
 
@@ -289,7 +285,6 @@ func (b *WorkerInfo) modifyStatistics(diff int32) {
 	b.statisticMu.Lock()
 	defer b.statisticMu.Unlock()
 	b.cachedPodNum += diff
-
 }
 
 // CloseStatistic : to close statisticSwitch chan
@@ -325,11 +320,16 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("get configmap error: %v", err)
 	}
-
-	hwlog.RunLog.Debugf("old cm ranktable %s", cm.Data[ConfigmapKey])
+	oldCM, ok := cm.Data[ConfigmapKey]
+	if !ok {
+		err = fmt.Errorf("old cm ranktable not exists")
+		hwlog.RunLog.Debug(err)
+		return err
+	}
+	hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
 	label910, exist := (*cm).Labels[Key910]
-	if !exist || (exist && label910 != Val910) {
-		return fmt.Errorf("invalid configmap label" + label910)
+	if !exist || label910 != Val910 {
+		return fmt.Errorf("invalid configmap label: " + label910)
 	}
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
@@ -337,7 +337,7 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	}
 	cm.Data[ConfigmapKey] = string(dataByteArray[:])
 
-	if _, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm,
+	if _, err = w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm,
 		metav1.UpdateOptions{}); err != nil {
 		return fmt.Errorf("failed to update ConfigMap for Job %v", err)
 	}
