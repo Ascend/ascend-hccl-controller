@@ -322,13 +322,14 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	}
 	oldCM, ok := cm.Data[ConfigmapKey]
 	if !ok {
-		hwlog.RunLog.Debugf("old cm ranktable not exists")
-	} else {
-		hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
+		err = fmt.Errorf("old cm ranktable not exists")
+		hwlog.RunLog.Debug(err)
+		return err
 	}
+	hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
 	label910, exist := (*cm).Labels[Key910]
 	if !exist || label910 != Val910 {
-		return fmt.Errorf("invalid configmap label" + label910)
+		return fmt.Errorf("invalid configmap label: " + label910)
 	}
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
