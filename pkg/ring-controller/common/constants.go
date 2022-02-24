@@ -11,4 +11,8 @@ const (
 	BitSize32 = 32
 	// Decimal Decimal
 	Decimal = 10
+	// MaxJobParallelism max job Parallelism
+	MaxJobParallelism = 32
+	// MaxPodParallelism max pod Parallelism
+	MaxPodParallelism = 32
 )

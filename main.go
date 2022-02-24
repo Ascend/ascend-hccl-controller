@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	"hccl-controller/pkg/ring-controller/model"
 	"huawei.com/npu-exporter/hwlog"
 	"huawei.com/npu-exporter/utils"
@@ -62,12 +63,7 @@ func main() {
 		hwlog.RunLog.Fatalf("invalid json version value, should be v1/v2")
 	}
 	agent.JSONVersion = hcclVersion
-
-	// check the validity of input parameters
-	if jobParallelism <= 0 {
-		hwlog.RunLog.Fatalf("Error parsing parameters: parallelism should be a positive integer.")
-	}
-
+	validateParallelism()
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 	if KubeConfig == "" && utils.IsExists(defaultKubeConfig) {
@@ -145,9 +141,9 @@ func init() {
 		"Maximum number of backup log files, range (0, 30].")
 
 	flag.IntVar(&jobParallelism, "jobParallelism", 1,
-		"Parallelism of job events handling.")
+		"Parallelism of job events handling, it should be range [1, 32].")
 	flag.IntVar(&podParallelism, "podParallelism", 1,
-		"Parallelism of pod events handling.")
+		"Parallelism of pod events handling, it should be range [1, 32].")
 	flag.BoolVar(&version, "version", false,
 		"Query the verison of the program")
 	flag.StringVar(&hcclVersion, "json", "v2",
@@ -161,5 +157,16 @@ func initHwLogger(stopCh chan struct{}) {
 	if err := hwlog.InitRunLogger(hwLogConfig, stopCh); err != nil {
 		fmt.Printf("hwlog init failed, error is %v", err)
 		os.Exit(-1)
+	}
+}
+
+func validateParallelism() {
+	// check the validity of input parameters jobParallelism
+	if jobParallelism <= 0 || jobParallelism > common.MaxJobParallelism {
+		hwlog.RunLog.Fatalf("Error parsing parameters: job parallelism should be range [1, 32].")
+	}
+	// check the validity of input parameters podParallelism
+	if podParallelism <= 0 || podParallelism > common.MaxPodParallelism {
+		hwlog.RunLog.Fatalf("Error parsing parameters: pod parallelism should be range [1, 32].")
 	}
 }

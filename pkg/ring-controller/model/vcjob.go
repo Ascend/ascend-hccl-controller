@@ -79,7 +79,7 @@ func (job *VCJobModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
-	hwlog.RunLog.Info("jobstarting: ", jobStartString)
+	hwlog.RunLog.Info("jobStarting: ", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, rst, agent2.JSONVersion)
 	if err != nil {
@@ -130,8 +130,8 @@ func (job *VCJobModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 
 		var instanceList []*v1.Instance
 		group := v1.Group{GroupName: taskSpec.Name, DeviceCount: strconv.FormatInt(int64(deviceTotal),
-			common.Decimal),
-			InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), common.Decimal), InstanceList: instanceList}
+			common.Decimal), InstanceCount: strconv.FormatInt(int64(taskSpec.Replicas), common.Decimal),
+			InstanceList: instanceList}
 		groupList = append(groupList, &group)
 		replicasTotal += taskSpec.Replicas
 	}
@@ -146,10 +146,8 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 		time.Duration(config.CmCheckTimeout)*time.Second,
 		func() (bool, error) {
 			var errTmp error
-
 			cm, errTmp = kubeClientSet.CoreV1().ConfigMaps(namespace).
-				Get(context.TODO(), fmt.Sprintf("%s-%s",
-					agent2.ConfigmapPrefix, name), metav1.GetOptions{})
+				Get(context.TODO(), fmt.Sprintf("%s-%s", agent2.ConfigmapPrefix, name), metav1.GetOptions{})
 			if errTmp != nil {
 				if errors.IsNotFound(errTmp) {
 					return false, nil
@@ -162,8 +160,8 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 		return nil, fmt.Errorf("failed to get configmap for job %s/%s: %v", namespace, name, err)
 	}
 	label910, exist := (*cm).Labels[agent2.Key910]
-	if !exist || (exist && label910 != agent2.Val910) {
-		return nil, fmt.Errorf("invalid configmap label" + label910)
+	if !exist || label910 != agent2.Val910 {
+		return nil, fmt.Errorf("invalid configmap label %#v", label910)
 	}
 
 	return cm, nil
