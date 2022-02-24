@@ -37,7 +37,7 @@ func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
-	hwlog.RunLog.Debug("jobstarting: ", jobStartString)
+	hwlog.RunLog.Debug("jobStarting: ", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, rst, agent2.JSONVersion)
 	if err != nil {
@@ -93,8 +93,8 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 
 	var instanceList []*v1.Instance
 	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
-		common.Decimal),
-		InstanceCount: strconv.FormatInt(int64(deploy.replicas), common.Decimal), InstanceList: instanceList}
+		common.Decimal), InstanceCount: strconv.FormatInt(int64(deploy.replicas), common.Decimal),
+		InstanceList: instanceList}
 	groupList = append(groupList, &group)
 
 	return groupList, deploy.replicas, nil

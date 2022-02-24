@@ -67,7 +67,6 @@ func CheckDeviceInfo(instance *Instance) bool {
 		return false
 	}
 	for _, item := range instance.Devices {
-
 		if value, err := strconv.Atoi(item.DeviceID); err != nil || value < 0 {
 			return false
 		}

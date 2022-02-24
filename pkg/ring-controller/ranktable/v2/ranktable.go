@@ -24,17 +24,14 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance v1.Instance, rankI
 	}
 	for _, server := range r.ServerList {
 		if server.PodID == instance.PodName {
-			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-				pod.Name)
+			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace, pod.Name)
 		}
 	}
-
-	rankFactor := len(instance.Devices)
 
 	// Build new server-level struct from device info
 	server.ServerID = instance.ServerID
 	server.PodID = instance.PodName
-
+	rankFactor := len(instance.Devices)
 	for _, device := range instance.Devices {
 		var serverDevice Device
 		serverDevice.DeviceID = device.DeviceID

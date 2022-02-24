@@ -26,7 +26,7 @@ const maxRankIndex = 10000
 // Worker :The main function of Worker is to get the information of NPU from the generated POD,
 // and then assemble it into a complete HCCL.JSON file.
 type Worker interface {
-	doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool)
+	doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool)
 	Statistic(stopTime time.Duration)
 	WorkerCommon
 }
@@ -41,7 +41,20 @@ func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable v1.RankTabler, 
 	return jobWorker
 }
 
-func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool) {
+	forgetQueue, doRetry, err := b.doPreCheck(pod, podInfo)
+	if err != nil {
+		return forgetQueue, doRetry
+	}
+	// start to sync current pod
+	if err = b.syncHandler(pod, podInfo); err != nil {
+		hwlog.RunLog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		return true, true
+	}
+	return true, true
+}
+
+func (b *VCJobWorker) doPreCheck(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool, error) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if !isReferenceJobSameWithBsnsWorker(pod, podInfo.jobName, b.JobUID) {
@@ -49,51 +62,49 @@ func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forget
 			// old pod + new worker
 			hwlog.RunLog.Debugf("syncing '%s' terminated: corresponding job worker is no "+
 				"longer exist (basis: job uid + creationTimestamp)", podInfo)
-			return true, false
+			return true, false, errors.New("")
 		}
 		// new pod + old worker
 		hwlog.RunLog.Infof("syncing '%s' delayed: corresponding job worker is "+
 			"uninitialized (basis: job uid + creationTimestamp)", podInfo)
-		return false, false
-
+		return false, false, errors.New("")
 	}
 	// scenario check B: job set restart policy, delete pod
 	// check basis: job version
 	val, exists := pod.Annotations[PodJobVersion]
 	if !exists {
 		hwlog.RunLog.Error("the key of " + PodJobVersion + " does not exist")
-		return true, false
+		return true, false, errors.New("")
 	}
 	version64, err := strconv.ParseInt(val, common.Decimal, common.BitSize32)
 	if err != nil {
 		hwlog.RunLog.Errorf("syncing '%s' failed, parse pod annotation error: %v", podInfo, err)
-		return true, false
+		return true, false, errors.New("")
 	}
-	version32 := int32(version64)
 	// job restart action will increase job version number
-	if version32 < b.JobVersion {
+	if version64 < int64(b.JobVersion) {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding job worker "+
 			"is no longer exist (basis: job version number)", podInfo)
-		return true, false
+		return true, false, errors.New("")
+	}
+	// check whether pod has used npu
+	if used := containerUsedChip(pod); !used {
+		hwlog.RunLog.Errorf("pod %s doesn't use npu, so no longer dealing with it", podInfo)
+		return true, true, errors.New("")
 	}
 	// scenario check C: if current pod use chip, its' device info may not be ready
 	// check basis: limits + annotations
 	if (podInfo.eventType == EventAdd || podInfo.eventType == EventUpdate) && !isPodAnnotationsReady(pod,
 		podInfo.String()) {
-		return false, false
+		return false, false, errors.New("")
 	}
 	if b.configmapData.GetStatus() == ConfigmapCompleted {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
-		return true, true
+		return true, true, errors.New("")
 	}
-
-	// start to sync current pod
-	if err := b.syncHandler(pod, podInfo); err != nil {
-		hwlog.RunLog.Errorf("error syncing '%s': %s", podInfo, err.Error())
-		return true, true
-	}
-	return true, true
+	// The values of forgetQueue and retry are not important. It's important that no errors are returned.
+	return true, true, nil
 }
 
 // Statistic : Determine whether CM has been built, process the build completion or change the goroutine exit signal.
@@ -177,7 +188,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	}
 	var instance v1.Instance
 	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
-		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
+		return fmt.Errorf("parse annotation of pod %s/%s error: %#v", pod.Namespace, pod.Name, err)
 	}
 	hwlog.RunLog.Infof("deviceId: (%#v)", deviceInfo)
 
