@@ -23,7 +23,7 @@ func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.R
 		DeployInfo: deploy}
 }
 
-func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if pod.CreationTimestamp.Before(&w.DeployCreationTimestamp) {
@@ -32,14 +32,19 @@ func (w *DeployWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forge
 			"longer exist (basis: job uid + creationTimestamp)", podInfo)
 		return true, false
 	}
+
+	// check whether pod has used npu
+	if used := containerUsedChip(pod); !used {
+		hwlog.RunLog.Errorf("pod %s doesn't use npu, so no longer dealing with it", podInfo)
+		return true, true
+	}
 	// scenario check C: if current pod use chip, its' device info may not be ready
 	// check basis: limits + annotations
 	if (podInfo.eventType == EventAdd || podInfo.eventType == EventUpdate) && !isPodAnnotationsReady(pod,
 		podInfo.String()) {
 		return false, false
 	}
-	if configmapComplete :=
-		w.configmapData.GetStatus() == ConfigmapCompleted; configmapComplete {
+	if w.configmapData.GetStatus() == ConfigmapCompleted {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
 		return true, true

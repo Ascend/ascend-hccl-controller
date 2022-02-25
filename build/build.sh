@@ -13,11 +13,9 @@ if [ -f "$ver_file" ]; then
   #cut the chars after ':'
   build_version=${line#*:}
 fi
-
+npu_exporter_folder="${top_dir}/npu-exporter"
 arch=$(arch 2>&1)
 echo "Build Architecture is" "${arch}"
-
-sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" "${top_dir}"/build/hccl-controller.yaml
 
 output_name="hccl-controller"
 
@@ -33,7 +31,7 @@ function build() {
 
   CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
   CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-  CGO_ENABLED=0 go build -mod=mod -buildmode=pie -ldflags "-s -linkmode=external -extldflags=-Wl,-z,now  -X main.BuildName=${output_name} \
+  go build -mod=mod -buildmode=pie -ldflags "-s  -extldflags=-Wl,-z,now  -X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version}_linux-${arch}" \
   -o ${output_name}
   ls ${output_name}
@@ -46,8 +44,23 @@ function build() {
 function mv_file() {
   mv "${top_dir}"/${output_name} "${top_dir}"/output
   cp "${top_dir}"/build/hccl-controller.yaml "${top_dir}"/output/hccl-controller-"${build_version}".yaml
+  sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" \
+  "${top_dir}"/output/hccl-controller-"${build_version}".yaml
+  cp "${top_dir}"/build/hccl-controller-without-token.yaml  "${top_dir}"/output/hccl-controller-without-token-"${build_version}".yaml
+  sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" \
+  "${top_dir}"/output/hccl-controller-without-token-"${build_version}".yaml
+
   cp "${top_dir}"/build/${docker_file_name} "${top_dir}"/output
 }
+
+function copy_kmc_files() {
+    cp -rf "${npu_exporter_folder}/lib" "${top_dir}"/output
+    cp -rf "${npu_exporter_folder}/cert-importer" "${top_dir}"/output
+    chmod 550 "${top_dir}"/output/lib
+    chmod 500 "${top_dir}"/output/lib/*
+    chmod 500 "${top_dir}/output/cert-importer"
+}
+
 
 function change_mod() {
   chmod 400 "${top_dir}"/output/*
@@ -59,6 +72,9 @@ function main() {
   build
   mv_file
   change_mod
+  if [ "$1" != nokmc ]; then
+   copy_kmc_files
+  fi
 }
 
 if [ "$1" = clean ]; then
@@ -66,4 +82,4 @@ if [ "$1" = clean ]; then
   exit 0
 fi
 
-main
+main $1

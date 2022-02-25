@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
@@ -25,7 +26,7 @@ const maxRankIndex = 10000
 // Worker :The main function of Worker is to get the information of NPU from the generated POD,
 // and then assemble it into a complete HCCL.JSON file.
 type Worker interface {
-	doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool)
+	doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool)
 	Statistic(stopTime time.Duration)
 	WorkerCommon
 }
@@ -40,7 +41,20 @@ func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable v1.RankTabler, 
 	return jobWorker
 }
 
-func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forgetQueue, retry bool) {
+func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool) {
+	forgetQueue, doRetry, err := b.doPreCheck(pod, podInfo)
+	if err != nil {
+		return forgetQueue, doRetry
+	}
+	// start to sync current pod
+	if err = b.syncHandler(pod, podInfo); err != nil {
+		hwlog.RunLog.Errorf("error syncing '%s': %s", podInfo, err.Error())
+		return true, true
+	}
+	return true, true
+}
+
+func (b *VCJobWorker) doPreCheck(pod *apiCoreV1.Pod, podInfo *podIdentifier) (bool, bool, error) {
 	// scenario check A: For an identical job, create it immediately after deletion
 	// check basis: job uid + creationTimestamp
 	if !isReferenceJobSameWithBsnsWorker(pod, podInfo.jobName, b.JobUID) {
@@ -48,46 +62,49 @@ func (b *VCJobWorker) doWork(pod *apiCoreV1.Pod, podInfo *podIdentifier) (forget
 			// old pod + new worker
 			hwlog.RunLog.Debugf("syncing '%s' terminated: corresponding job worker is no "+
 				"longer exist (basis: job uid + creationTimestamp)", podInfo)
-			return true, false
+			return true, false, errors.New("")
 		}
 		// new pod + old worker
 		hwlog.RunLog.Infof("syncing '%s' delayed: corresponding job worker is "+
 			"uninitialized (basis: job uid + creationTimestamp)", podInfo)
-		return false, false
-
+		return false, false, errors.New("")
 	}
 	// scenario check B: job set restart policy, delete pod
 	// check basis: job version
-	version64, err := strconv.ParseInt(pod.Annotations[PodJobVersion], 10, 32)
+	val, exists := pod.Annotations[PodJobVersion]
+	if !exists {
+		hwlog.RunLog.Error("the key of " + PodJobVersion + " does not exist")
+		return true, false, errors.New("")
+	}
+	version64, err := strconv.ParseInt(val, common.Decimal, common.BitSize32)
 	if err != nil {
 		hwlog.RunLog.Errorf("syncing '%s' failed, parse pod annotation error: %v", podInfo, err)
-		return true, false
+		return true, false, errors.New("")
 	}
-	version32 := int32(version64)
 	// job restart action will increase job version number
-	if version32 < b.JobVersion {
+	if version64 < int64(b.JobVersion) {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding job worker "+
 			"is no longer exist (basis: job version number)", podInfo)
-		return true, false
+		return true, false, errors.New("")
+	}
+	// check whether pod has used npu
+	if used := containerUsedChip(pod); !used {
+		hwlog.RunLog.Errorf("pod %s doesn't use npu, so no longer dealing with it", podInfo)
+		return true, true, errors.New("")
 	}
 	// scenario check C: if current pod use chip, its' device info may not be ready
 	// check basis: limits + annotations
 	if (podInfo.eventType == EventAdd || podInfo.eventType == EventUpdate) && !isPodAnnotationsReady(pod,
 		podInfo.String()) {
-		return false, false
+		return false, false, errors.New("")
 	}
 	if b.configmapData.GetStatus() == ConfigmapCompleted {
 		hwlog.RunLog.Infof("syncing '%s' terminated: corresponding rank table is completed",
 			podInfo)
-		return true, true
+		return true, true, errors.New("")
 	}
-
-	// start to sync current pod
-	if err := b.syncHandler(pod, podInfo); err != nil {
-		hwlog.RunLog.Errorf("error syncing '%s': %s", podInfo, err.Error())
-		return true, true
-	}
-	return true, true
+	// The values of forgetQueue and retry are not important. It's important that no errors are returned.
+	return true, true, nil
 }
 
 // Statistic : Determine whether CM has been built, process the build completion or change the goroutine exit signal.
@@ -141,7 +158,7 @@ func (b *WorkerInfo) syncHandler(pod *apiCoreV1.Pod, podInfo *podIdentifier) err
 		return nil //  need return directly
 	}
 
-	// dryRun is for test
+	// dryRun is for empty running and will not be committed
 	if b.dryRun {
 		hwlog.RunLog.Infof("I'am handling %s", podInfo)
 		return nil
@@ -167,16 +184,21 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	if !exist {
-		return errors.New("The key of" + PodDeviceKey + "does not exist ")
+		return errors.New("the key of " + PodDeviceKey + " does not exist ")
 	}
-	hwlog.RunLog.Infof("deviceId: %s", deviceInfo)
+	var instance v1.Instance
+	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
+		return fmt.Errorf("parse annotation of pod %s/%s error: %#v", pod.Namespace, pod.Name, err)
+	}
+	hwlog.RunLog.Infof("deviceId: (%#v)", deviceInfo)
+
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	tmpRankIndex := b.rankIndex
 	// Get rankIndex from pod, use rankIndex if rankIndex exists in pod, use memory if it doesn't.
 	rankIndexStr, rankExist := pod.Annotations[PodRankIndexKey]
 	if rankExist {
-		rank, err := strconv.ParseInt(rankIndexStr, 10, 32)
+		rank, err := strconv.ParseInt(rankIndexStr, common.Decimal, common.BitSize32)
 		if err != nil {
 			return err
 		}
@@ -196,7 +218,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 		}
 	}
 	// Cache device info from the pod
-	err := b.configmapData.CachePodInfo(pod, deviceInfo, &b.rankIndex)
+	err := b.configmapData.CachePodInfo(pod, instance, &b.rankIndex)
 	if rankExist {
 		b.rankIndex = tmpRankIndex
 	}
@@ -260,16 +282,12 @@ func (b *WorkerInfo) handleDeleteEvent(podInfo *podIdentifier) error {
 }
 
 func (b *WorkerInfo) endRankTableConstruction(namespace string) error {
-	err := b.configmapData.SetStatus(ConfigmapCompleted)
-	if err != nil {
-		hwlog.RunLog.Errorf("fail to set configmap status: %s", err)
-		return err
-	}
-	err = updateConfigMap(b, namespace)
-	if err != nil {
+	b.configmapData.SetStatus(ConfigmapCompleted)
+	if err := updateConfigMap(b, namespace); err != nil {
 		hwlog.RunLog.Error("update configmap failed")
 		return err
 	}
+
 	return nil
 }
 
@@ -278,7 +296,6 @@ func (b *WorkerInfo) modifyStatistics(diff int32) {
 	b.statisticMu.Lock()
 	defer b.statisticMu.Unlock()
 	b.cachedPodNum += diff
-
 }
 
 // CloseStatistic : to close statisticSwitch chan
@@ -314,11 +331,16 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("get configmap error: %v", err)
 	}
-
-	hwlog.RunLog.Debugf("old cm ranktable %s", cm.Data[ConfigmapKey])
+	oldCM, ok := cm.Data[ConfigmapKey]
+	if !ok {
+		err = fmt.Errorf("old cm ranktable not exists")
+		hwlog.RunLog.Debug(err)
+		return err
+	}
+	hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
 	label910, exist := (*cm).Labels[Key910]
-	if !exist || (exist && label910 != Val910) {
-		return fmt.Errorf("invalid configmap label" + label910)
+	if !exist || label910 != Val910 {
+		return fmt.Errorf("invalid configmap label: " + label910)
 	}
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
@@ -326,7 +348,7 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	}
 	cm.Data[ConfigmapKey] = string(dataByteArray[:])
 
-	if _, err := w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm,
+	if _, err = w.kubeclientset.CoreV1().ConfigMaps(namespace).Update(context.TODO(), cm,
 		metav1.UpdateOptions{}); err != nil {
 		return fmt.Errorf("failed to update ConfigMap for Job %v", err)
 	}

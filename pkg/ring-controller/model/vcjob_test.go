@@ -29,11 +29,12 @@ import (
 )
 
 const (
-	NameSpace = "namespace"
-	Name      = "test1"
-	DataKey   = "hccl.json"
-	DataValue = "{\"status\":\"initializing\"}"
-	CMName    = "rings-config-test1"
+	NameSpace    = "namespace"
+	Name         = "test1"
+	DataKey      = "hccl.json"
+	DataValue    = "{\"status\":\"initializing\"}"
+	CMName       = "rings-config-test1"
+	Initializing = "initializing"
 )
 
 // TestFactory test Factory
@@ -88,41 +89,32 @@ func TestRanktableFactory(t *testing.T) {
 				return nil, int32(0), fmt.Errorf("test")
 			})
 			defer patch.Reset()
-			_, _, err := RanktableFactory(model, "", "")
-			So(err, ShouldNotEqual, nil)
-		})
-		Convey("err !=nil&  when jobStartString is wrong ", func() {
-			patch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
-				return nil, int32(0), nil
-			})
-			defer patch.Reset()
-			_, _, err := RanktableFactory(model, "xxxxx", "")
+			_, _, err := RanktableFactory(model, v1.RankTableStatus{Status: ""}, "")
 			So(err, ShouldNotEqual, nil)
 		})
 
-		Convey("err ==nil& when jobStartString is ok and version is v1", func() {
+		Convey("err ==nil& when RankTableStatus is ok and version is v1", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
 			patch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
 				[]*v1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer patch.Reset()
-			rt, _, err := RanktableFactory(model, DataValue, "v1")
+			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v1")
 			So(err, ShouldEqual, nil)
 			So(rt.GetStatus(), ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
 			So(rv.FieldByName("GroupCount").String(), ShouldEqual, "1")
 		})
 
-		Convey("err ==nil& when jobStartString is ok and version is v2", func() {
+		Convey("err ==nil& when RankTableStatus is ok and version is v2", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
 			pathch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
 				[]*v1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer pathch.Reset()
-			rt, _, err := RanktableFactory(model, DataValue, "v2")
+			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v2")
 			So(err, ShouldEqual, nil)
 			So(rt.GetStatus(), ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
@@ -270,7 +262,7 @@ func eventAddWhenFactNil(model *VCJobModel, ag *agent.BusinessAgent) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	patches2 := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _, _ string) (
+	patches2 := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (
 		v1.RankTabler, int32, error) {
 		return nil, int32(0), fmt.Errorf("generate group list from job error")
 	})

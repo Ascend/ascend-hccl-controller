@@ -151,6 +151,11 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 		hwlog.RunLog.Errorf("syncing '%s' failed: failed to get obj from indexer", podKeyInfo)
 		return true
 	}
+
+	return b.doWorkByWorker(tmpObj, obj, podExist, podKeyInfo)
+}
+
+func (b *BusinessAgent) doWorkByWorker(tmpObj, obj interface{}, podExist bool, podKeyInfo *podIdentifier) bool {
 	// Lock to safely obtain worker data in the Map
 	b.RwMutex.RLock()
 	defer b.RwMutex.RUnlock()
@@ -170,7 +175,10 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	}
 	if podKeyInfo.eventType == EventDelete {
 		b.Workqueue.Forget(obj)
-		bsnsWorker.handleDeleteEvent(podKeyInfo)
+		if err := bsnsWorker.handleDeleteEvent(podKeyInfo); err != nil {
+			// only logs need to be recorded.
+			hwlog.RunLog.Errorf("handleDeleteEvent error, error is %s", err)
+		}
 		return true
 	}
 	// if worker exist but pod not exist, try again except delete event
@@ -244,21 +252,22 @@ func isReferenceJobSameWithBsnsWorker(pod *apiCoreV1.Pod, jobName, bsnsWorkerUID
 }
 
 func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
-	useChip := false
-	for _, container := range pod.Spec.Containers {
-		if GetNPUNum(container) > 0 {
-			useChip = true
-			break
-		}
-	}
-	if useChip {
-		_, exist := pod.Annotations[PodDeviceKey]
-		if !exist {
-			hwlog.RunLog.Infof("syncing '%s' delayed: device info is not ready", identifier)
-			return false
-		}
+	_, exist := pod.Annotations[PodDeviceKey]
+	if !exist {
+		hwlog.RunLog.Infof("syncing '%s' delayed: device info is not ready", identifier)
+		return false
 	}
 	return true
+}
+
+func containerUsedChip(pod *apiCoreV1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		if GetNPUNum(container) > 0 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetNPUNum get npu npuNum from container
@@ -267,13 +276,16 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 	var exist bool
 	for _, res := range ResourceList {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
+		if !exist {
+			continue
+		}
 		if math.MaxInt32 < qtt.Value() {
 			return math.MaxInt32
 		}
 		if math.MinInt32 > qtt.Value() {
 			return math.MinInt32
 		}
-		if exist && int32(qtt.Value()) > 0 {
+		if int32(qtt.Value()) > 0 {
 			return int32(qtt.Value())
 		}
 	}
@@ -286,7 +298,7 @@ func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 	defer agent.RwMutex.Unlock()
 	hwlog.RunLog.Infof("not exist + delete, current job is %s/%s", namespace, name)
 	identifier := namespace + "/" + name
-	_, exist := agent.BusinessWorker[identifier]
+	worker, exist := agent.BusinessWorker[identifier]
 	if !exist {
 		hwlog.RunLog.Infof("failed to delete business worker for %s/%s, it's not exist", namespace,
 			name)
@@ -294,7 +306,7 @@ func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 	}
 
 	if agent.Config.DisplayStatistic {
-		agent.BusinessWorker[identifier].CloseStatistic()
+		worker.CloseStatistic()
 	}
 	delete(agent.BusinessWorker, identifier)
 	hwlog.RunLog.Infof("business worker for %s is deleted", identifier)

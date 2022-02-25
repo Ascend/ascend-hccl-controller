@@ -7,9 +7,9 @@
 package v2
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"sort"
@@ -17,29 +17,21 @@ import (
 )
 
 // CachePodInfo :Cache pod info to RankTableV2
-func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankIndex *int) error {
-	var instance v1.Instance
+func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance v1.Instance, rankIndex *int) error {
 	var server Server
-
-	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
-		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-	}
 	if !v1.CheckDeviceInfo(&instance) {
 		return errors.New("deviceInfo failed the validation")
 	}
 	for _, server := range r.ServerList {
 		if server.PodID == instance.PodName {
-			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-				pod.Name)
+			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace, pod.Name)
 		}
 	}
-
-	rankFactor := len(instance.Devices)
 
 	// Build new server-level struct from device info
 	server.ServerID = instance.ServerID
 	server.PodID = instance.PodName
-
+	rankFactor := len(instance.Devices)
 	for _, device := range instance.Devices {
 		var serverDevice Device
 		serverDevice.DeviceID = device.DeviceID
@@ -54,8 +46,8 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 
 	r.ServerList = append(r.ServerList, &server)
 	sort.Slice(r.ServerList, func(i, j int) bool {
-		iRank, err := strconv.ParseInt(r.ServerList[i].DeviceList[0].RankID, 10, 32)
-		jRank, err2 := strconv.ParseInt(r.ServerList[j].DeviceList[0].RankID, 10, 32)
+		iRank, err := strconv.ParseInt(r.ServerList[i].DeviceList[0].RankID, common.Decimal, common.BitSize32)
+		jRank, err2 := strconv.ParseInt(r.ServerList[j].DeviceList[0].RankID, common.Decimal, common.BitSize32)
 		if err != nil || err2 != nil {
 			return false
 		}

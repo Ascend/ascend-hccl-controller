@@ -104,7 +104,6 @@ func (c *Controller) processNextWork() bool {
 		var mo model.ResourceEventHandler
 		var ok bool
 		if mo, ok = obj.(model.ResourceEventHandler); !ok {
-
 			c.workqueue.Forget(obj)
 			return fmt.Errorf("expected ResourceEventHandler in workqueue but got %#v", obj)
 		}
@@ -198,7 +197,7 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
 }
 
-// splitKeyFunc to splite key by format namespace,jobname,eventType
+// splitKeyFunc to split key by format namespace,jobname,eventType
 func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
 	parts := strings.Split(key, "/")
 	switch len(parts) {
