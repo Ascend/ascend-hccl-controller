@@ -15,43 +15,60 @@ compile:
       CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     files:
       include:
-        - sed:
-            option: "-i"
-            srcstr: "s/hccl-controller:.*/hccl-controller:${hccl_controller}/"
-            curfile: "{{ systemEnv.workspace }}/hccl-controller/build/hccl-controller.yaml"
-      exclude:
         - remove:
-            - "{{ systemEnv.workspace }}/output/hccl-controller"
+            - "{{ systemEnv.workspace }}/output"
   process:
     language: go
     compilePath: "{{ systemEnv.workspace }}/hccl-controller"
     parameters: [
     ["mod", "mod"],
     ["buildmode", "pie"],
-    ["ldflags", '-s -extldflags=-Wl,-z,now  -X "main.BuildName=hccl-controller"  -X "main.BuildVersion=${{verison}}_linux-${{systemEnv.processor}}"'],
-    ["o", "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/hccl-controller"],
-    ['trimpath',""],
+    ["ldflags", '-s -extldflags=-Wl,-z,now  -X "main.BuildName=hccl-controller"  -X "main.BuildVersion=${{version}}_linux-${{systemEnv.processor}}"'],
+    ["o", "{{component}}"],
     ]
 
   output:
     files:
       include:
+        - move:
+            src: ['{{ systemEnv.workspace }}/{{component}}/hccl-controller']
+            des: '{{ systemEnv.workspace }}/{{component}}/output'
         - copy:
-            src: ['{{ systemEnv.workspace }}/hccl-controller/build/hccl-controller.yaml']
-            des: "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/hccl-controller-${hccl_controller}.yaml"
+            src: ['{{ systemEnv.workspace }}/{{component}}/build/hccl-controller.yaml']
+            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-${{version}}.yaml"
             rename: True
+        - sed:
+            option: "-i"
+            srcstr: "s/hccl-controller:.*/hccl-controller:${{verison}}/"
+            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-${{version}}.yaml"
         - copy:
-            src: ['{{ systemEnv.workspace }}/hccl-controller/build/Dockerfile']
-            des: "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/"
+            src: ['{{ systemEnv.workspace }}/{{component}}/build/hccl-controller-without-token.yaml']
+            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-${{version}}.yaml"
+            rename: True
+        - sed:
+            option: "-i"
+            srcstr: "s/hccl-controller:.*/hccl-controller:${{verison}}/"
+            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-${{version}}.yaml"
+        - copy:
+            src: ['{{ systemEnv.workspace }}/{{component}}/build/Dockerfile']
+            des: "{{ systemEnv.workspace }}/{{component}}/output/"
         - mode:
-            src: ["{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/*"]
+            src: ["{{ systemEnv.workspace }}/{{component}}/output/hccl-controller/*"]
             mode: "400"
         - mode:
-            src: [ "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/hccl-controller" ]
+            src: [ "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller/hccl-controller" ]
             mode: "500"
+        - commands:
+            - command: "if [ -d '{{ systemEnv.workspace }}/{{component}}/npu-exporter' ];
+        then cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/lib {{ systemEnv.workspace }}/{{component}}/output;
+        cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/cert-importer {{ systemEnv.workspace }}/{{component}}/output;
+        chmod 550 {{ systemEnv.workspace }}/{{component}}/output/lib;
+        chmod 500 {{ systemEnv.workspace }}/{{component}}/output/lib/*;
+        chmod 500 {{ systemEnv.workspace }}/{{component}}/output/cert-importer;fi"
+            - command: "
         - makeArchive:
-            - src: "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller"
-              des: "{{ systemEnv.workspace }}/{{ component}}/output/Ascend-mindxdl-hccl-controller_${pkgversion}_linux-{{ systemEnv.processor }}"
+            - src: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller"
+              des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_${{version}}_linux-{{ systemEnv.processor }}"
               prefix: zip
               arch: "{{ systemEnv.processor }}"
 
