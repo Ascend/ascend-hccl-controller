@@ -28,7 +28,7 @@ compile:
     parameters: [
     ["mod", "mod"],
     ["buildmode", "pie"],
-    ["ldflags", "-s -extldflags=-Wl,-z,now  -X main.BuildName=hccl-controller  -X main.BuildVersion=${hccl_controller}"],
+    ["ldflags", '-s -extldflags=-Wl,-z,now  -X "main.BuildName=hccl-controller"  -X "main.BuildVersion=${{verison}}_linux-${{systemEnv.processor}}"'],
     ["o", "{{ systemEnv.workspace }}/{{ component}}/output/hccl-controller/hccl-controller"],
     ['trimpath',""],
     ]
