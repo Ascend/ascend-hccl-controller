@@ -1,0 +1,56 @@
+- name: message
+  debug:
+    msg: "**********start install MindX DL********************"
+
+- name: check namespace
+  shell: "kubectl get namespace | awk '$1 ~ /^{{ item }}$/ {print $1}'"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  register: namespace_result
+  changed_when: false
+  loop:
+    - volcano-system
+    - edge-app
+
+- name: create namespace
+  shell: "kubectl create namespace {{ item.item }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: item.stdout == ""
+  loop: "{{ namespace_result.results }}"
+
+- name: create image-pull-secret
+  shell: |
+    kubectl delete secret --namespace={{ item }} image-pull-secret
+    kubectl create secret docker-registry image-pull-secret \
+    --namespace={{ item }} \
+    --docker-server={{ HARBOR_IP }}:{{ HARBOR_HTTPS_PORT }} --docker-username=admin --docker-password={{ HARBOR_PASSWORD }}
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  loop:
+    - default
+    - kube-system
+    - mindx-dl
+    - volcano-system
+
+- name: copy dlinstall script
+  copy:
+    src: "{{role_path}}/files/dlinstall"
+    dest: /usr/bin/
+    mode: 0700
+
+- name: install MindX DL
+  shell: "/usr/bin/dlinstall --harbor {{ HARBOR_IP }} --harbor-port {{ HARBOR_HTTPS_PORT }} --nfs {{ NFS_IP }} {{ item }}"
+  ignore_errors: true
+  when: "ansible_architecture in item"
+  with_fileglob:
+    - "{{ resource_dir }}/mindxdl/*.zip"

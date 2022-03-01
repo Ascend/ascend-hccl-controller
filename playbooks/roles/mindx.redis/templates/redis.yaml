@@ -1,0 +1,82 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: redis-config
+  namespace: {{ REDIS_NAMESPACE }}
+data:
+  redis-config: |
+    maxmemory 4mb
+    maxmemory-policy allkeys-lru
+    daemonize no
+    protected-mode no
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: redis-deploy
+  namespace: {{ REDIS_NAMESPACE }}
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      name: redis
+      labels:
+        app: redis
+    spec:
+      nodeSelector:
+        masterselector: dls-master-node
+      containers:
+        - name: redis
+          image: {{ REPO_URL }}dockerhub/redis:5.0.14
+          imagePullPolicy: IfNotPresent
+          command: ["bash", "-c", "redis-server /redis-master/redis.conf"]
+          env:
+            - name: MASTER
+              value: "true"
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "100Mi"
+            limits:
+              cpu: "10000m"
+              memory: "50000Mi"
+          volumeMounts:
+            - name: data
+              mountPath: /redis-master-data
+            - name: config
+              mountPath: /redis-master
+            - name: localtime
+              mountPath: /etc/localtime
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: redis-config
+            items:
+            - key: redis-config
+              path: redis.conf
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: redis
+  namespace: {{ REDIS_NAMESPACE }}
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis

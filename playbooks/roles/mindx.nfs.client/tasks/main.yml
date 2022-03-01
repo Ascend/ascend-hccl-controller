@@ -1,0 +1,20 @@
+- name: message
+  debug:
+    msg: "******************************start install nfs client******************************"
+
+- name: set MASTER_IP
+  set_fact:
+    MASTER_IP: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4']['address'] }}"
+    cacheable: yes
+
+- name: set MASTER_WORKER_IP
+  set_fact:
+    MASTER_WORKER_IP: "{{ play_hosts }}"
+    cacheable: yes
+
+- name: install nfs client
+  shell: dpkg --force-all -i {{ client_deb }}/*.deb
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_PRIORITY: critical
+  when: OS_ID == 'ubuntu'

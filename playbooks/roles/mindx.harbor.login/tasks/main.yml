@@ -1,0 +1,29 @@
+- name: message
+  debug:
+    msg: "******************************docker login harbor******************************"
+
+- name: set HARBOR_IP
+  set_fact:
+    HARBOR_IP: "{{ hostvars[groups['harbor'][0]]['ansible_default_ipv4']['address'] if HARBOR_HOST_IP == '' else HARBOR_HOST_IP }}"
+    cacheable: yes
+  when: HARBOR_IP is not defined
+
+- name: create certificate directory
+  file:
+    path: "/etc/docker/certs.d/{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/"
+    state: directory
+    mode: 0700
+
+- name: copy harbor certs
+  copy:
+    src: "/etc/docker/certs.d/{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/rootCA.crt"
+    dest: "/etc/docker/certs.d/{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/"
+    mode: 0400
+
+- name: docker login harbor
+  shell: "docker login {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}} -u admin -p {{ HARBOR_PASSWORD }}"
+  register: login_result
+
+- name: message
+  debug:
+    msg: "{{ login_result.stdout }}"

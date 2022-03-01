@@ -1,0 +1,126 @@
+- name: message
+  debug:
+    msg: "******************************start deploy mysql******************************"
+
+- name: message
+  debug:
+    msg: "There can only be one mysql in inventory_file, please check"
+  failed_when: true
+  when: "'mysql' not in groups or groups['mysql'] | length != 1"
+
+- name: message
+  debug:
+    msg: "mysql must be the same with master in inventory_file, please check"
+  failed_when: true
+  when: groups['mysql'] != groups['master']
+
+- name: message
+  debug:
+    msg: "no mysql password is set, please check"
+  when: MYSQL_PASSWORD | length == 0
+  failed_when: MYSQL_PASSWORD | length == 0
+
+- name: create deploy directory on host
+  file:
+    path: "{{ MYSQL_YAML_DIR }}"
+    state: directory
+    mode: 0750
+
+- name: create Dockerfile
+  template:
+    src: "{{ item }}"
+    dest: "{{ MYSQL_YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - init.sql
+    - Dockerfile
+    - my.cnf
+
+- name: build new docker image
+  shell: docker build {{ MYSQL_YAML_DIR }} -t mysql-dl:8.0.26
+
+- name: create directory on host
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0750
+  with_items:
+    - "{{ data_path }}"
+    - /var/log/atlas_dls/mysql
+
+- name: check namespace
+  shell: "kubectl get namespace | awk '$1 ~ /^{{ k8s_namespace }}$/ {print $1}'"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  changed_when: false
+  register: get_namespace
+
+- name: create namespace
+  shell: "kubectl create namespace {{ k8s_namespace }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: get_namespace.stdout != k8s_namespace
+
+- name: create secret for mysql
+  shell: |
+    kubectl delete secret --namespace={{ k8s_namespace }} dbsecret --ignore-not-found=true
+    kubectl create secret --namespace={{ k8s_namespace }} generic dbsecret --from-literal="root_pwd={{pwd}}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: create secret for service
+  shell: |
+    kubectl delete secret --namespace={{ k8s_namespace }} mysql-secret-{{item.service}}
+    kubectl create secret \
+    --namespace={{ k8s_namespace }} \
+    generic mysql-secret-{{item.service}} \
+    --from-literal='connection-path={{item.user}}:{{pwd}}@tcp(mysql.{{ k8s_namespace }}.svc.cluster.local:3306)/{{item.dbname}}?charset=utf8&parseTime=True&loc=Local'
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  with_items:
+    - { "user":"user_user",    "dbname":"user_manager",    "service": "user-manager"}
+    - { "user":"edge_user",    "dbname":"edge_manager",    "service": "edge-manager"}
+    - { "user":"dataset_user", "dbname":"dataset_manager", "service": "dataset-manager"}
+    - { "user":"license_user", "dbname":"license_manager", "service": "license-manager"}
+    - { "user":"train_user",   "dbname":"train_manager",   "service": "train-manager"}
+    - { "user":"label_user",   "dbname":"label_manager",   "service": "label-manager"}
+    - { "user":"model_user",   "dbname":"model_manager",   "service": "model-manager"}
+    - { "user":"task_user",    "dbname":"task_manager",    "service": "task-manager"}
+    - { "user":"image_user",   "dbname":"image_manager",   "service": "image-manager"}
+    - { "user":"data_user",    "dbname":"data_manager",    "service": "data-manager"}
+    - { "user":"cluster_user", "dbname":"cluster_manager", "service": "cluster-manager"}
+    - { "user":"access_user",  "dbname":"access_manager",  "service": "access-manager"}
+
+- name: create yamls
+  template:
+    src: "{{ item }}"
+    dest: "{{ MYSQL_YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - mysql-pv.yaml
+    - mysql-pvc.yaml
+    - mysql-deployment.yaml
+
+- name: deploy mysql
+  shell: "kubectl apply -f {{ MYSQL_YAML_DIR }}/{{ item }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  with_items:
+    - mysql-pv.yaml
+    - mysql-pvc.yaml
+    - mysql-deployment.yaml

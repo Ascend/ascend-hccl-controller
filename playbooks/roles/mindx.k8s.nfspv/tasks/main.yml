@@ -1,0 +1,15 @@
+- name: create yamls
+  template:
+    src: "pv.yaml"
+    dest: "{{ resource_dir }}/roles/mindx.k8s.nfspv/pv_{{ pv_name }}.yaml"
+    mode: 0644
+
+- name: create pv {{pv_name}}
+  shell: "kubectl apply -f {{ resource_dir }}/roles/mindx.k8s.nfspv/pv_{{ pv_name }}.yaml"
+  delegate_to: "{{ groups['master'][0] }}"
+  run_once: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""

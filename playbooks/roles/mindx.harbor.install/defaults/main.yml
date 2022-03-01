@@ -1,0 +1,6 @@
+# defaults file for ascend.docker
+resource_dir: "~/resources"
+harbor_flag: "{{ ansible_architecture if ansible_architecture == 'aarch64' else 'v' }}"
+k8s_namespace: "mindx-dl"
+HARBOR_CERT: "/data/cert/harbor.crt"
+HARBOR_KEY: "/data/cert/harbor.key"

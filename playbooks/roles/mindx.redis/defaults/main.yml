@@ -1,0 +1,5 @@
+# defaults file for mindx.redis
+REDIS_YAML_DIR: "~/deploy_yamls/redis"
+HARBOR_URL: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/"
+REPO_URL: "{{ HARBOR_URL if HARBOR_IP != '' else '' }}"
+REDIS_NAMESPACE: "{{ K8S_NAMESPACE }}"

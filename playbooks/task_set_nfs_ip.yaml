@@ -1,0 +1,4 @@
+- name: set NFS_IP
+  set_fact:
+    NFS_IP: "{{ hostvars[groups['nfs_server'][0]]['ansible_default_ipv4']['address'] }}"
+    cacheable: yes

@@ -1,0 +1,7 @@
+# defaults file for ascend.docker
+resource_dir: "~/resources"
+OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
+OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
+
+deb_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/docker"
+cgroup_driver: systemd

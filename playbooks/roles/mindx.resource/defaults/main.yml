@@ -1,0 +1,7 @@
+---
+# defaults file for mindx.resource
+ansible_python_interpreter: /usr/bin/python3
+host_count: "{{ ansible_play_hosts_all | length }}"
+first_host: "{{ ansible_play_hosts_all[0] }}"
+resource_dir: "~/resources"
+no_copy_flag: "{{ resources_no_copy | default('false') }}"

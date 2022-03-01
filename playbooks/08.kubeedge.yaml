@@ -1,0 +1,5 @@
+---
+# master install kubeedge
+- hosts: master
+  roles:
+    - role: mindx.kubeedge

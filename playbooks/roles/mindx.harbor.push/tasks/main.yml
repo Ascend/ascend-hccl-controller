@@ -1,0 +1,10 @@
+- name: message
+  debug:
+    msg: "**********************start push images to harbor***********************"
+
+- include: create_project.yml PROJECT_NAME="{{item}}"
+  loop: "{{ project_list }}"
+
+- include: push.yml image="{{item}}"
+  with_fileglob:
+    - "{{ resource_dir }}/{{ images_dir }}/*.tar.gz"

@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: {{ k8s_namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      nodeSelector:
+        mysql: master
+      containers:
+        - image: mysql-dl:8.0.26
+          name: mysql-server
+          imagePullPolicy: Never
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: root_pwd
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: localtime
+              mountPath: /etc/localtime
+            - name: dls-log
+              mountPath: /var/log/
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "100Mi"
+            limits:
+              cpu: "5000m"
+              memory: "50000Mi"
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: pvc-mysql
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: dls-log
+          hostPath:
+            path: /var/log/atlas_dls/mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: {{ k8s_namespace }}
+spec:
+  ports:
+    - name: mysql
+      port: 3306
+  selector:
+    app: mysql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-nodeport
+  namespace: {{ k8s_namespace }}
+spec:
+  ports:
+    - name: mysql-nodeport
+      targetPort: 3306
+      port: 3306
+      nodePort: 30306
+  selector:
+    app: mysql
+  type: NodePort

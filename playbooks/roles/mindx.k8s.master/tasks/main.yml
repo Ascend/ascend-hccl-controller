@@ -1,0 +1,122 @@
+- name: message
+  debug:
+    msg: "******************************start init k8s on master******************************"
+
+- name: check k8s
+  shell: "kubectl cluster-info | grep 'is running at' | wc -l"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  register: cluster_info
+
+- name: message
+  debug:
+    msg: "k8s is running already, please check"
+  failed_when: true
+  when: cluster_info.stdout != "0"
+
+- name: not apiserver_advertise_address
+  set_fact:
+    addr_cmd: ""
+    repo_cmd: ""
+
+- name: set apiserver_advertise_address
+  set_fact:
+    addr_cmd: "--apiserver-advertise-address={{ apiserver_advertise_address }}"
+  when:
+    - apiserver_advertise_address != ""
+
+- name: set repository
+  set_fact:
+    repo_cmd: "--image-repository {{ K8S_REPO }}"
+  when:
+    - K8S_REPO != ""
+
+- name: init cluster by kubeadm init
+  shell: >
+    kubeadm init
+    --kubernetes-version={{ kubernetes_version }}
+    --node-name={{ ansible_hostname }}
+    --pod-network-cidr={{ pod_network_cidr }}
+    {{ addr_cmd }} {{ repo_cmd }}
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: create home kube directory
+  file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+    mode: 0750
+
+- name: set cluster config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    mode: "0640"
+    remote_src: yes
+
+- name: create deploy directory on host
+  file:
+    path: "{{ CALICO_YAML_DIR }}"
+    state: directory
+    mode: 0750
+
+- name: set calico yaml
+  template:
+    src: "calico_{{calico_version}}.yaml"
+    dest: "{{ CALICO_YAML_DIR }}/calico_{{calico_version}}.yaml"
+    mode: 0640
+
+- name: apply calico
+  shell: "kubectl apply -f {{ CALICO_YAML_DIR }}/calico_{{calico_version}}.yaml"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: taint nodes
+  shell: kubectl taint nodes --all node-role.kubernetes.io/master-
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: ceate namespace
+  shell: kubectl create namespace {{ k8s_namespace }}
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: create secret for harbor
+  shell: |
+    kubectl delete secret --namespace={{ k8s_namespace }} harbor-secret
+    kubectl create secret \
+    --namespace={{ k8s_namespace }} \
+    generic harbor-secret \
+    --from-literal='connection-path=admin:{{ HARBOR_PASSWORD }}@tcp({{ HARBOR_IP }}:{{HARBOR_HTTPS_PORT}})'
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: label dls master
+  shell: |
+    kubectl label --overwrite node {{ansible_hostname}} masterselector=dls-master-node
+    kubectl label --overwrite node {{ansible_hostname}} workerselector=dls-worker-node
+    kubectl label --overwrite node {{ansible_hostname}} node-role.kubernetes.io/worker=worker
+    kubectl label --overwrite node {{ansible_hostname}} access-selector=access-manager-worker-node
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""

@@ -1,0 +1,26 @@
+---
+# distribute resources
+- hosts:
+    - master
+    - worker
+    - harbor
+    - nfs_server
+  roles:
+    - role: mindx.resource
+      vars:
+        resource_list:
+          - pylibs
+          - linux_aarch64
+          - linux_x86_64
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy harbor install package to harbor host
+- hosts: harbor
+  gather_facts: False
+  roles:
+    - role: mindx.resource
+      vars:
+        resource_list:
+          - harbor-offline-installer-v2.3.3.tgz
+          - harbor-offline-installer-aarch64-v2.3.3.tgz

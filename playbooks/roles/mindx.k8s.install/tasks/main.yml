@@ -1,0 +1,25 @@
+- name: message
+  debug:
+    msg: "******************************start install k8s******************************"
+
+- name: disable swap
+  shell: swapoff -a
+
+- name: set swap in fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    state: absent
+    regexp: '.*?swap.*?'
+
+- include_tasks: ubuntu_18.04.yml
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- include_tasks: common.yml
+
+- name: "restart kubelet"
+  systemd:
+    name: "kubelet"
+    enabled: true
+    state: restarted
