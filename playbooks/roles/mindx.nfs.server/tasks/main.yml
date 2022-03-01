@@ -1,0 +1,34 @@
+---
+# tasks file for mindx.nfs.server
+#
+- name: install nfs server
+  shell: |
+      dpkg --force-all -i {{ client_deb }}/*.deb
+      dpkg --force-all -i {{ server_deb }}/*.deb
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_PRIORITY: critical
+  when: OS_ID == 'ubuntu'
+
+- name: create nfs path
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{DL_USR}}"
+    group: "{{DL_GRP}}"
+    mode: 0750
+  loop: "{{ NFS_PATH }}"
+
+- name: config nfs /etc/exports
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    regexp: "^{{item}} "
+    line: "{{item}} {{ MASTER_WORKER_IP | join('(rw,sync,no_root_squash) ') | replace('localhost', MASTER_IP) }}(rw,sync,no_root_squash)"
+    state: present
+  loop: "{{ NFS_PATH }}"
+
+- name: "restart nfs"
+  systemd:
+    name: "nfs-server"
+    enabled: true
+    state: restarted

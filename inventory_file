@@ -1,0 +1,13 @@
+[harbor]
+localhost ansible_connection=local
+
+[master]
+localhost ansible_connection=local
+
+[worker]
+
+[mysql]
+localhost ansible_connection=local
+
+[nfs_server]
+localhost ansible_connection=local

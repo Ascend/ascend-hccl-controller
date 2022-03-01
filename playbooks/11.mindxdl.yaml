@@ -1,0 +1,16 @@
+---
+- hosts:
+    - harbor
+    - master
+    - nfs_server
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+  - name: set NFS_IP
+    include_tasks: task_set_nfs_ip.yaml
+
+# install dl
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.dl.install

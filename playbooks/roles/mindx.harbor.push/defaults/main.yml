@@ -1,0 +1,4 @@
+# defaults file for ascend.docker
+resource_dir: "~/resources"
+PROJECT_NAME: "mindx"
+k8s_namespace: "{{K8S_NAMESPACE}}"

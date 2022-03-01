@@ -1,0 +1,4 @@
+---
+# defaults file for mindx.k8sworker
+cluster_ip: "127.0.0.1"
+cluster_port: 6443

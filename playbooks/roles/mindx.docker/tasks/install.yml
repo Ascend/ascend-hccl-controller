@@ -1,0 +1,16 @@
+- include_tasks: ubuntu_18.04.yml
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- name: config docker
+  template:
+    src: daemon.json.j2
+    dest: "/etc/docker/daemon.json"
+    mode: 0600
+
+- name: "restart docker"
+  systemd:
+    name: "docker"
+    enabled: true
+    state: restarted

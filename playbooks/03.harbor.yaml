@@ -1,0 +1,29 @@
+---
+# install harbor
+- hosts:
+    - harbor
+  roles:
+    - role: mindx.docker
+    - role: mindx.harbor.install
+
+- hosts:
+    - master
+    - worker
+  roles:
+    - role: mindx.harbor.login
+
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.harbor.push
+      vars:
+        project_list:
+          - k8s.gcr.io
+          - dockerhub
+          - prom
+          - grafana
+          - mysql
+          - openresty
+          - calico
+        project_public: "true"
+        images_dir: images

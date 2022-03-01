@@ -1,0 +1,304 @@
+#!/bin/bash
+
+APP_PATH=""
+DEPLOY_PATH=""
+APP=""
+TAG=""
+ARCH=""
+HARBOR_HOST=""
+HARBOR_PORT=""
+NFS_HOST=""
+YML_PATH=""
+YML_FILE=""
+YML_DIR=""
+IMAGE=""
+DEBUG="n"
+DRYRUN="n"
+PROJECT="mindx"
+LOCAL_ARCH=$(uname -m)
+
+function print_usage()
+{
+    echo "Usage:"
+    echo "$0 [options] file"
+    echo "$0 [options] directory"
+    echo "options:"
+    echo "    --help         print this message"
+    echo "    --debug        enable debug"
+    echo "    --dryrun       not running, just test process"
+    echo "    --harbor       set harbor ip or domain"
+    echo "    --harbor-port  set harbor port, default 443"
+    echo "    --nfs          set nfs ip"
+}
+
+function parse_args()
+{
+    if [ $# = 0 ];then
+        print_usage
+        exit 1
+    fi
+    while true; do
+        case "$1" in
+        --help | -h)
+            print_usage
+            exit 0
+            ;;
+        --debug)
+            DEBUG="y"
+            shift
+            ;;
+        --dryrun)
+            DRYRUN="y"
+            shift
+            ;;
+        --harbor)
+            HARBOR_HOST=$2
+            shift
+            shift
+            ;;
+        --harbor-port)
+            HARBOR_PORT=":$2"
+            shift
+            shift
+            ;;
+        --nfs)
+            NFS_HOST=$2
+            shift
+            shift
+            ;;
+        *)
+            if [ "x$1" != "x" ]; then
+                APP_PATH=$1
+                return 0
+            fi
+            break
+            ;;
+        esac
+    done
+    if [ $DEBUG == "y" ]; then
+        echo "DEBUG: DEBUG=$DEBUG"
+        echo "DEBUG: DRYRUN=$DRYRUN"
+        echo "DEBUG: APP_PATH=$APP_PATH"
+        echo "DEBUG: HARBOR_HOST=$HARBOR_HOST"
+        echo "DEBUG: HARBOR_PORT=$HARBOR_PORT"
+        echo "DEBUG: NFS_HOST=$NFS_HOST"
+    fi
+}
+
+function get_app_info()
+{
+    if [[ ${APP_PATH} =~ "device-plugin" ]];then
+        local accelerator=$(lspci | grep "Processing accelerators")
+        if [[ ${accelerator} =~ "Device d100" ]];then
+            local acc_flag="310"
+        elif [[ ${accelerator} =~ "Device d500" ]];then
+            local acc_flag="710"
+        elif [[ ${accelerator} =~ "Device d801" ]];then
+            local acc_flag="device-plugin"
+        else
+            echo "FATAL: can not find npu card, device-plugin install failed"
+            exit 1
+        fi
+        YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yaml' | grep "${acc_flag}-volcano")
+    else
+        YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yaml' | grep -v '\-without-token-')
+    fi
+    if [ -z ${YML_PATH} ];then
+        YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yml')
+    fi
+    if [ -z $YML_PATH ];then
+        echo "FATAL: no yaml file found!!!"
+        exit 1
+    fi
+    YML_DIR=$(dirname $YML_PATH)
+    YML_FILE=$(basename $YML_PATH)
+    APP=$(echo $YML_FILE | cut -d"-" -f1)
+    TAG=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f3)
+    local tmp=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f2)
+    IMAGE=$(echo ${tmp} | xargs echo -n)
+    ## get executable arch
+    local exe_file=$(find ${APP_PATH} -maxdepth 1 -type f -executable | head -n1)
+    if [ -z ${exe_file} ];then
+        exe_file=$(find ${APP_PATH}/lib/*.so -maxdepth 1 -type f | head -n1)
+    fi
+    local arch_flag=$(file ${exe_file} | grep x86 | wc -l)
+    if [ ${arch_flag} == "1" ];then
+        ARCH="amd64"
+    else
+        ARCH="arm64"
+    fi
+    echo "YML_FILE=${YML_FILE}"
+    echo "APP=${APP}"
+    echo "TAG=${TAG}"
+    echo "ARCH=${ARCH}"
+    local arch_check=$(file ${exe_file} | grep ${LOCAL_ARCH} | wc -l)
+    if [ ${arch_check} == "0" ];then
+        echo "FATAL: cpu arch is ${LOCAL_ARCH} but package is ${ARCH}"
+        exit 1
+    fi
+}
+
+function modify_dockerfile()
+{
+    local docker_file=$1
+    local from_line=$(grep "FROM " ${docker_file})
+    local base_img=$(echo ${from_line} | cut -d " " -f2)
+    local image=$(echo ${base_img} | cut -d ":" -f1)
+    local tag=$(echo ${base_img} | cut -d ":" -f2)
+    if [[ "${base_img}" == "${HARBOR_HOST}"* ]];then
+        return
+    fi
+    if [[ "${base_img}" == "alpine"* ]] || [[ "${base_img}" == "ubuntu"* ]];then
+        sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/dockerhub/${image}_${ARCH}:${tag}#g" ${docker_file}
+    else
+        sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/${image}_${ARCH}:${tag}#g" ${docker_file}
+    fi
+}
+
+function build_image()
+{
+    local docker_file=$1
+    local name=$2
+    local arch=$3
+    local tag=$4
+
+    if [ ${DEBUG} == "y" ];then
+        echo "DEBUG: docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}"
+        echo "DEBUG: docker push ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}"
+        echo "DEBUG: docker manifest create ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag} -a"
+        echo "DEBUG: docker manifest annotate ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag} --os linux --arch ${arch}"
+        echo "DEBUG: docker manifest push ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} -p"
+    fi
+
+    if [ ${DRYRUN} == "y" ];then
+        return
+    fi
+
+    cd ${DEPLOY_PATH}
+    docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    if [ $? != 0 ];then
+        echo "docker build failed"
+        exit 1
+    fi
+    docker push ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    if [ $? != 0 ];then
+        echo "push to harbor failed"
+        exit 1
+    fi
+    docker manifest create ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag} -a
+    if [ $? != 0 ];then
+        echo "create manifest failed"
+        exit 1
+    fi
+    docker manifest annotate ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag} --os linux --arch ${arch}
+    if [ $? != 0 ];then
+        echo "manifest annotate failed"
+        exit 1
+    fi
+    docker manifest push ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}:${tag} -p
+    if [ $? != 0 ];then
+        echo "push manifest failed"
+        exit 1
+    fi
+    cd -
+}
+
+function build_images()
+{
+    for docker_file in `find ${DEPLOY_PATH} -maxdepth 1 -type f -name "Docker*"`
+    do
+        modify_dockerfile ${docker_file}
+    done
+    for docker_file in `find ${DEPLOY_PATH} -maxdepth 1 -type f -name "Docker*"`
+    do
+        local file_name=$(basename $docker_file)
+        echo "build image for $file_name:"
+        if [ ${file_name} == "Dockerfile" ];then
+            build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
+        elif [ ${file_name} == "Dockerfile-controller" ];then
+            build_image ${docker_file} "volcanosh/vc-controller-manager" ${ARCH} ${TAG}
+        elif [ ${file_name} == "Dockerfile-scheduler" ];then
+            build_image ${docker_file} "volcanosh/vc-scheduler" ${ARCH} ${TAG}
+        fi
+    done
+}
+
+function do_install()
+{
+    export DOCKER_CLI_EXPERIMENTAL=enabled
+    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    [[ -d ${DEPLOY_PATH} ]] && rm -rf ${DEPLOY_PATH}.last && mv ${DEPLOY_PATH} ${DEPLOY_PATH}.last
+    mkdir -p -m 750 ${DEPLOY_PATH}
+    cp -rf ${APP_PATH}/* ${DEPLOY_PATH}/
+    sed -i "s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g" ${DEPLOY_PATH}/${YML_FILE}
+    sed -i "s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g" ${DEPLOY_PATH}/${YML_FILE}
+    sed -i "s#server: 127.0.0.1#server: ${NFS_HOST}#g" ${DEPLOY_PATH}/${YML_FILE}
+    build_images
+    if [ ${DEBUG} == "y" ];then
+        echo "sed -i \"s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g\" ${DEPLOY_PATH}/${YML_FILE}"
+        echo "kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}"
+        echo "kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}"
+    fi
+    if [ ${DRYRUN} == "y" ];then
+        return
+    fi
+
+    for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}')
+    do
+        docker pull ${image}
+        ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
+    done
+    [[ -d ${DEPLOY_PATH}.last ]] && kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}
+    kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}
+}
+
+function unarchive_app()
+{
+    local base_dir=$(dirname $APP_PATH)
+    local tmp=${APP_PATH%.zip}
+    local dir_name=${tmp##*/}
+    echo "unarchive to ${base_dir}/${dir_name}"
+    rm -rf ${base_dir}/${dir_name}
+    unzip ${APP_PATH} -d ${base_dir}/${dir_name}
+    APP_PATH=$base_dir/$dir_name
+}
+
+function pre_check()
+{
+    local have_docker=$(command -v docker | wc -l)
+    if [ ${have_docker} -eq 0 ]; then
+        echo "can not find docker"
+        exit 1
+    fi
+    local have_kubectl=$(command -v kubectl | wc -l)
+    if [ ${have_kubectl} -eq 0 ]; then
+        echo "can not find kubectl"
+        exit 1
+    fi
+    if [ -z ${APP_PATH} ];then
+        echo "no app apth set"
+        exit 1
+    fi
+    if [ -z ${HARBOR_HOST} ];then
+        echo "no harbor set, please set harbor by --harbor"
+        exit 1
+    fi
+    if [ -z ${NFS_HOST} ];then
+        echo "no nfs set, please set nfs by --nfs"
+        exit 1
+    fi
+}
+
+function main()
+{
+    parse_args $*
+    pre_check
+    if [ -f ${APP_PATH} ];then
+        unarchive_app
+    fi
+    get_app_info
+    DEPLOY_PATH=~/deploy_yamls/${APP}
+    do_install
+}
+
+main $*

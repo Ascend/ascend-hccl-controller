@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-core
+  namespace: {{ PROM_NAMESPACE }}
+  labels:
+    app: grafana
+    component: core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: core
+    spec:
+      nodeSelector:
+        masterselector: dls-master-node
+      containers:
+        - name: grafana
+          image: "{{ REPO_URL }}grafana/grafana:7.5.5"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http-grafana
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+          env:
+            - name: GF_AUTH_BASIC_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Viewer
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
+            - name: GF_SERVER_ROOT_URL
+              value: "http://localhost:%(http_port)s/grafana"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+          volumeMounts:
+            - name: grafana-persistent-storage
+              mountPath: /var
+            - name: grafana-var-lib
+              mountPath: /var/lib/grafana
+            - name: timezone
+              mountPath: /etc/timezone
+            - name: localtime
+              mountPath: /etc/localtime
+      volumes:
+        - name: grafana-persistent-storage
+          emptyDir: {}
+        - name: grafana-var-lib
+          emptyDir: {}
+        - name: timezone
+          hostPath:
+            path: /etc/timezone
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: {{ PROM_NAMESPACE }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: grafana
+    component: core

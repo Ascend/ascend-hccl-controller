@@ -1,0 +1,77 @@
+- name: label huawei-x86
+  shell: kubectl label --overwrite node {{ ansible_hostname }} host-arch=huawei-x86
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: ansible_architecture == "x86_64"
+
+- name: label huawei-arm
+  shell: kubectl label --overwrite node {{ ansible_hostname }} host-arch=huawei-arm
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: ansible_architecture == "aarch64"
+
+- name: check device
+  shell: lspci | grep "Processing accelerators"
+  register: processing_accelerator
+  ignore_errors: yes
+
+- name: message
+  debug:
+    msg: "can not find npu card, please check"
+  when: processing_accelerator.rc != 0
+
+- name: label ascend310
+  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator=huawei-Ascend310
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'Device d100' in processing_accelerator.stdout"
+
+- name: label ascend710
+  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator=huawei-Ascend710
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'Device d500' in processing_accelerator.stdout"
+
+- name: label ascend910
+  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator=huawei-Ascend910
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'Device d801' in processing_accelerator.stdout"
+
+- name: label 300T
+  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator-type=card
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when:
+    - "'Device d801' in processing_accelerator.stdout"
+    - "'Atlas' not in product_name"

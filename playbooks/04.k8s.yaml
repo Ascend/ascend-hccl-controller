@@ -1,0 +1,29 @@
+---
+- hosts:
+    - harbor
+    - master
+    - worker
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+
+# master init k8s
+- hosts:
+   - master
+   - worker
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.install
+
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.master
+    - role: mindx.k8s.autolabel
+
+# worker join k8s
+- hosts: worker
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.worker
+    - role: mindx.k8s.autolabel

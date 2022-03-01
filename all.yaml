@@ -1,0 +1,114 @@
+---
+# distribute resources
+- hosts:
+    - master
+    - worker
+    - harbor
+    - nfs_server
+  roles:
+    - role: mindx.resource
+      vars:
+        resource_list:
+          - pylibs
+          - linux_aarch64
+          - linux_x86_64
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy harbor install package to harbor host
+- hosts: harbor
+  gather_facts: False
+  roles:
+    - role: mindx.resource
+      vars:
+        resource_list:
+          - harbor-offline-installer-v2.3.3.tgz
+          - harbor-offline-installer-aarch64-v2.3.3.tgz
+
+# install softwares
+- hosts:
+    - master
+    - worker
+  gather_facts: False
+  roles:
+    - role: mindx.basic
+    - role: mindx.docker
+    - role: mindx.k8s.install
+    - role: mindx.nfs.client
+
+# install harbor
+- hosts:
+    - harbor
+  gather_facts: False
+  roles:
+    - role: mindx.docker
+    - role: mindx.harbor.install
+
+- hosts:
+    - master
+    - worker
+  gather_facts: False
+  roles:
+    - role: mindx.harbor.login
+
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.harbor.push
+      vars:
+        project_list:
+          - k8s.gcr.io
+          - dockerhub
+          - prom
+          - grafana
+          - mysql
+          - openresty
+          - calico
+        project_public: "true"
+        images_dir: images
+
+# master init k8s
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.master
+    - role: mindx.k8s.autolabel
+    - role: mindx.k8s.prom
+    - role: mindx.kubeedge
+    - role: mindx.redis
+
+# worker join k8s
+- hosts: worker
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.worker
+    - role: mindx.k8s.autolabel
+
+# config nfs server
+- hosts: nfs_server
+  gather_facts: False
+  roles:
+    - role: mindx.nfs.server
+
+# mysql
+- hosts: mysql
+  roles:
+    - role: mindx.k8s.label
+      vars:
+        label_key: mysql
+        label_value: master
+    - role: mindx.mysql
+      vars:
+        capacity: 20Gi
+        data_path: "{{ MYSQL_DATAPATH }}"
+
+# push pre-images to harbor
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.harbor.push
+      vars:
+        project_list:
+          - mindx
+        project_public: "false"
+        images_dir: mindx-images

@@ -1,0 +1,50 @@
+- name: check HARBOR_PASSWORD and MYSQL_PASSWORD
+  debug:
+    msg: "HARBOR_PASSWORD and MYSQL_PASSWORD can not be empty in group_vars/all.yaml, please check"
+  failed_when: true
+  when: HARBOR_PASSWORD == "" or MYSQL_PASSWORD == ""
+
+- name: create resource directory
+  file:
+    path: "{{resource_dir}}"
+    state: directory
+    mode: 0750
+  when:
+    - ansible_connection != "local"
+    - no_copy_flag != "true"
+
+- name: archive on localhost
+  local_action:
+    module: archive
+    path: "{{resource_dir}}/{{ item }}"
+    dest: "{{resource_dir}}/{{ item }}.tar.gz"
+    mode: 0640
+  loop: "{{resource_list}}"
+  when:
+    - not item.endswith("tgz")
+    - no_copy_flag != "true"
+    - not (host_count == "1" and first_host == "localhost")
+  run_once: true
+
+- name: unarchive on remote
+  ansible.builtin.unarchive:
+    src: "{{resource_dir}}/{{item}}.tar.gz"
+    dest: "{{resource_dir}}"
+    mode: 0750
+    copy: yes
+  loop: "{{resource_list}}"
+  when:
+    - not item.endswith("tgz")
+    - ansible_connection != "local"
+    - no_copy_flag != "true"
+
+- name: copy archive to remote
+  copy:
+    src: "{{resource_dir}}/{{ item }}"
+    dest: "{{resource_dir}}/{{ item }}"
+    mode: 0640
+  loop: "{{resource_list}}"
+  when:
+    - item.endswith("tgz")
+    - ansible_connection != "local"
+    - no_copy_flag != "true"

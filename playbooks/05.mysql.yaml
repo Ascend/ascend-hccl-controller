@@ -1,0 +1,20 @@
+---
+- hosts:
+    - harbor
+    - mysql
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+
+# mysql
+- hosts: mysql
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.label
+      vars:
+        label_key: mysql
+        label_value: master
+    - role: mindx.mysql
+      vars:
+        capacity: 20Gi
+        data_path: "{{MYSQL_DATAPATH}}"
