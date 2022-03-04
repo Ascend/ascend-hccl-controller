@@ -53,12 +53,13 @@ compile:
             src: ['{{ systemEnv.workspace }}/{{component}}/build/Dockerfile']
             des: "{{ systemEnv.workspace }}/{{component}}/output/"
         - mode:
-            src: ["{{ systemEnv.workspace }}/{{component}}/output/hccl-controller/*"]
+            src: ["{{ systemEnv.workspace }}/{{component}}/output/*"]
             mode: "400"
         - mode:
-            src: [ "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller/hccl-controller" ]
+            src: [ "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller" ]
             mode: "500"
         - commands:
+            - command: "unzip -n -d {{ systemEnv.workspace }}/{{component}}/npu-exporter/ {{ systemEnv.workspace }}/{{ component}}/npu-exporter/Ascend-mindxdl-npu-exporter_*_linux-{{systemEnv.processor}}.zip"
             - command: "if [ -d '{{ systemEnv.workspace }}/{{component}}/npu-exporter' ];
         then cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/lib {{ systemEnv.workspace }}/{{component}}/output;
         cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/cert-importer {{ systemEnv.workspace }}/{{component}}/output;
