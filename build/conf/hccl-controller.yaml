@@ -68,7 +68,7 @@ compile:
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/cert-importer;fi"
         - makeArchive:
             - src: "{{ systemEnv.workspace }}/{{component}}/output"
-              des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_{{version}}_linux-{{ systemEnv.processor }}"
+              des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_{{pkgversion}}_linux-{{ systemEnv.processor }}"
               prefix: zip
               arch: "{{ systemEnv.processor }}"
 
