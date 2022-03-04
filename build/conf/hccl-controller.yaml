@@ -23,7 +23,7 @@ compile:
     parameters: [
     ["mod", "mod"],
     ["buildmode", "pie"],
-    ["ldflags", '-s -extldflags=-Wl,-z,now  -X "main.BuildName=hccl-controller"  -X "main.BuildVersion=${{version}}_linux-${{systemEnv.processor}}"'],
+    ["ldflags", '-s -extldflags=-Wl,-z,now  -X "main.BuildName=hccl-controller"  -X "main.BuildVersion={{version}}_linux-{{systemEnv.processor}}"'],
     ["o", "{{component}}"],
     ]
 
