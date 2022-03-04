@@ -35,20 +35,20 @@ compile:
             des: '{{ systemEnv.workspace }}/{{component}}/output'
         - copy:
             src: ['{{ systemEnv.workspace }}/{{component}}/build/hccl-controller.yaml']
-            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-${{version}}.yaml"
+            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-{{version}}.yaml"
             rename: True
         - sed:
             option: "-i"
-            srcstr: "s/hccl-controller:.*/hccl-controller:${{verison}}/"
-            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-${{version}}.yaml"
+            srcstr: "s/hccl-controller:.*/hccl-controller:{{verison}}/"
+            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-{{version}}.yaml"
         - copy:
             src: ['{{ systemEnv.workspace }}/{{component}}/build/hccl-controller-without-token.yaml']
-            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-${{version}}.yaml"
+            des: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-{{version}}.yaml"
             rename: True
         - sed:
             option: "-i"
-            srcstr: "s/hccl-controller:.*/hccl-controller:${{verison}}/"
-            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-${{version}}.yaml"
+            srcstr: "s/hccl-controller:.*/hccl-controller:{{verison}}/"
+            curfile: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller-without-token-{{version}}.yaml"
         - copy:
             src: ['{{ systemEnv.workspace }}/{{component}}/build/Dockerfile']
             des: "{{ systemEnv.workspace }}/{{component}}/output/"
@@ -67,7 +67,7 @@ compile:
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/cert-importer;fi"
         - makeArchive:
             - src: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller"
-              des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_${{version}}_linux-{{ systemEnv.processor }}"
+              des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_{{version}}_linux-{{ systemEnv.processor }}"
               prefix: zip
               arch: "{{ systemEnv.processor }}"
 
