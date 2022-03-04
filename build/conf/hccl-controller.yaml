@@ -14,12 +14,12 @@ compile:
       CGO_CFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
       CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     files:
-      include:
+      exclude:
         - remove:
-            - "{{ systemEnv.workspace }}/output"
+            - "{{ systemEnv.workspace }}/{{ component}}/output"
   process:
     language: go
-    compilePath: "{{ systemEnv.workspace }}/hccl-controller"
+    compilePath: "{{ systemEnv.workspace }}/{{ component}}/"
     parameters: [
     ["mod", "mod"],
     ["buildmode", "pie"],
@@ -65,7 +65,6 @@ compile:
         chmod 550 {{ systemEnv.workspace }}/{{component}}/output/lib;
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/lib/*;
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/cert-importer;fi"
-            - command: "
         - makeArchive:
             - src: "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller"
               des: "{{ systemEnv.workspace }}/{{component}}/output/Ascend-mindxdl-hccl-controller_${{version}}_linux-{{ systemEnv.processor }}"
