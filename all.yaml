@@ -102,6 +102,17 @@
         capacity: 20Gi
         data_path: "{{ MYSQL_DATAPATH }}"
 
+# push inner-images to harbor
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.harbor.push
+      vars:
+        project_list:
+          - mindx
+        project_public: "false"
+        images_dir: mindx-inner-images
+
 # push pre-images to harbor
 - hosts: master
   gather_facts: False
@@ -111,4 +122,4 @@
         project_list:
           - mindx
         project_public: "false"
-        images_dir: mindx-images
+        images_dir: mindx-pre-images
