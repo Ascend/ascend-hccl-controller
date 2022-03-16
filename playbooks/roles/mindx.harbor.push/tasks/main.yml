@@ -5,6 +5,11 @@
 - include: create_project.yml PROJECT_NAME="{{item}}"
   loop: "{{ project_list }}"
 
+- name: absent manifests
+  file:
+    path: ~/.docker/manifests
+    state: absent
+
 - include: push.yml image="{{item}}"
   with_fileglob:
     - "{{ resource_dir }}/{{ images_dir }}/*.tar.gz"
