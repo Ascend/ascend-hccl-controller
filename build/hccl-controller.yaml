@@ -48,6 +48,8 @@ spec:
     metadata:
       labels:
         app: hccl-controller
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
     spec:
       nodeSelector:
         masterselector: dls-master-node
