@@ -6,23 +6,25 @@ package controller
 
 import (
 	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/model"
-	_ "hccl-controller/pkg/testtool"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
-	"testing"
-	"time"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	vofake "volcano.sh/apis/pkg/client/clientset/versioned/fake"
 	informers "volcano.sh/apis/pkg/client/informers/externalversions"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
+	_ "hccl-controller/pkg/testtool"
 )
 
 // TestController_Run test Controller_Run

@@ -9,11 +9,9 @@ import (
 	"context"
 	errors2 "errors"
 	"fmt"
-	agent2 "hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
-	"huawei.com/npu-exporter/hwlog"
+	"strconv"
+	"time"
+
 	appsV1 "k8s.io/api/apps/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,9 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"strconv"
-	"time"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+
+	agent2 "hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
+	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
+	"huawei.com/npu-exporter/hwlog"
 )
 
 // ResourceEventHandler to define same func, controller to use this function to finish some thing.

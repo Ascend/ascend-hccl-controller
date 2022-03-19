@@ -8,12 +8,14 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
-	_ "hccl-controller/pkg/testtool"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
+
+	_ "hccl-controller/pkg/testtool"
 )
 
 // TestUnmarshalToRankTable test UnmarshalToRankTable

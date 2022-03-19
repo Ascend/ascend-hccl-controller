@@ -8,11 +8,12 @@ package model
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
-	"hccl-controller/pkg/ring-controller/agent"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	_ "hccl-controller/pkg/testtool"
 	appsV1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,10 +23,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/workqueue"
-	"reflect"
-	"testing"
-	"time"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	_ "hccl-controller/pkg/testtool"
 )
 
 const (

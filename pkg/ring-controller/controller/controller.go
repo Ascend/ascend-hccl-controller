@@ -8,9 +8,10 @@ package controller
 
 import (
 	"fmt"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/model"
-	"huawei.com/npu-exporter/hwlog"
+	"reflect"
+	"strings"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,11 +21,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"reflect"
-	"strings"
-	"time"
 	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/apis/pkg/client/clientset/versioned/scheme"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
+
+	"huawei.com/npu-exporter/hwlog"
 )
 
 // NewController returns a new sample controller

@@ -8,6 +8,7 @@ package testtool
 
 import (
 	"fmt"
+	
 	"huawei.com/npu-exporter/hwlog"
 )
 
