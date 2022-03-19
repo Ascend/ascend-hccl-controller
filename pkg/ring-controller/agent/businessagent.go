@@ -8,7 +8,11 @@ package agent
 
 import (
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
+	"math"
+	"reflect"
+	"strings"
+	"time"
+
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -20,11 +24,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"math"
-	"strings"
-	"time"
 
-	"reflect"
+	"hccl-controller/pkg/ring-controller/common"
+
+	"huawei.com/npu-exporter/hwlog"
 )
 
 // String  to return podIdentifier string style :
@@ -47,8 +50,8 @@ var NewBusinessAgent = func(
 	labelSelector := labels.Set(map[string]string{
 		Key910: Val910,
 	}).AsSelector().String()
-	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*30,
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet,
+		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 
@@ -211,16 +214,16 @@ func nameGenerationFunc(obj interface{}, eventType string) (string, error) {
 	return metaData.GetNamespace() + "/" + metaData.GetName() + "/" + getWorkName(labelMaps) + "/" + eventType, nil
 }
 
-func splitWorkerKey(key string) (podInfo *podIdentifier, err error) {
+func splitWorkerKey(key string) (*podIdentifier, error) {
 	parts := strings.Split(key, "/")
 	if len(parts) != splitNum {
 		return nil, fmt.Errorf("unexpected key format: %q", key)
 	}
-	podInfo = &podIdentifier{
-		namespace: parts[0],
-		name:      parts[1],
-		jobName:   parts[2],
-		eventType: parts[3],
+	podInfo := &podIdentifier{
+		namespace: parts[common.Index0],
+		name:      parts[common.Index1],
+		jobName:   parts[common.Index2],
+		eventType: parts[common.Index3],
 	}
 	return podInfo, nil
 }

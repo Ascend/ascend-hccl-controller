@@ -6,7 +6,10 @@
 // Package testtool for init logger for llt
 package testtool
 
-import "huawei.com/npu-exporter/hwlog"
+import (
+	"fmt"
+	"huawei.com/npu-exporter/hwlog"
+)
 
 // this is for llt
 func init() {
@@ -14,5 +17,7 @@ func init() {
 		OnlyToStdout: true,
 	}
 	stopCh := make(chan struct{})
-	hwlog.InitRunLogger(&config, stopCh)
+	if err := hwlog.InitRunLogger(&config, stopCh); err != nil {
+		fmt.Printf("%v", err)
+	}
 }
