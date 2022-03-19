@@ -3,6 +3,7 @@
  *
  */
 
+// Package v1
 package v1
 
 import (
@@ -29,14 +30,14 @@ func TestUnmarshalToRankTable(t *testing.T) {
 			So(r.Status, ShouldEqual, ConfigmapInitializing)
 		})
 		Convey("UnmarshalToRankTable should return err != nil when "+
-			"jobString == \"status\":\"initializing\" ", func() {
-			err := r.UnmarshalToRankTable("\"status\":\"initializing\"")
+			"jobString == "+`"status": "initializing"`, func() {
+			err := r.UnmarshalToRankTable(`"status": "initializing"`)
 			So(err, ShouldNotEqual, nil)
 			So(r.Status, ShouldEqual, "")
 		})
 		Convey("UnmarshalToRankTable should return err != nil when jobString == "+
-			"{\"status\":\"xxxxx\"} ", func() {
-			err := r.UnmarshalToRankTable("{\"status\":\"xxxxx\"}")
+			`{"status":"xxxxx"} `, func() {
+			err := r.UnmarshalToRankTable(`{"status":"xxxxx"}`)
 			So(err, ShouldNotEqual, nil)
 		})
 	})
@@ -89,8 +90,7 @@ func TestCachePodInfo(t *testing.T) {
 	po := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test1"}}
 	rank := 1
 	const (
-		podString = "{\"pod_name\":\"0\",\"server_id\":\"0.0.0.0\"," +
-			"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
+		podString     = `{"pod_name":"0","server_id":"0.0.0.0","devices":[{"device_id":"0","device_ip":"0.0.0.0"}]}`
 		RankNumExpect = 2
 	)
 	var instance Instance
@@ -115,14 +115,14 @@ func TestCachePodInfo(t *testing.T) {
 
 	fmt.Println("CachePodInfo() should return err != nil when deviceInfo is wrong")
 	rank = 1
-	if err = json.Unmarshal([]byte("{\"pod_name\":\"0\",\"server_id\":}"), &instance); err != nil {
+	if err = json.Unmarshal([]byte(`{"pod_name":"0","server_id":}`), &instance); err != nil {
 		instance = Instance{}
 	}
 	err = fake.CachePodInfo(po, instance, &rank)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, 1, rank)
 
-	fmt.Println("CachePodInfo() should retrun err != nil when len(GroupCount) <1 ")
+	fmt.Println("CachePodInfo() should return err != nil when len(GroupCount) <1 ")
 	fake = &RankTable{RankTableStatus: RankTableStatus{Status: ConfigmapInitializing},
 		GroupCount: "1", GroupList: nil}
 	if err = json.Unmarshal([]byte(""), &instance); err != nil {
@@ -142,8 +142,8 @@ func TestRemovePodInfo(t *testing.T) {
 			GroupCount: "1", GroupList: groupList}
 		po := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test1"}}
 		rank := 1
-		const podString = "{\"pod_name\":\"test1\",\"server_id\":\"0.0.0.0\"," +
-			"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"127.0.0.1\"}]}"
+		const podString = `{"pod_name":"test1","server_id":"0.0.0.0","devices":[{"device_id":"0",
+"device_ip":"127.0.0.1"}]}`
 		var instance Instance
 		if err := json.Unmarshal([]byte(podString), &instance); err != nil {
 			instance = Instance{}

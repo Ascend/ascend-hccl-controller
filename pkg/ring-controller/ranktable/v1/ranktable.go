@@ -14,9 +14,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	apiCoreV1 "k8s.io/api/core/v1"
-
 	"huawei.com/npu-exporter/hwlog"
+	apiCoreV1 "k8s.io/api/core/v1"
 )
 
 // RankTabler interface to maintain properties

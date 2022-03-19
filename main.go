@@ -13,12 +13,13 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/client-go/rest"
-
+	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/npu-exporter/utils"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"volcano.sh/apis/pkg/client/clientset/versioned"
 	"volcano.sh/apis/pkg/client/informers/externalversions"
@@ -28,9 +29,6 @@ import (
 	"hccl-controller/pkg/ring-controller/common"
 	"hccl-controller/pkg/ring-controller/controller"
 	"hccl-controller/pkg/ring-controller/model"
-
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
 )
 
 var (

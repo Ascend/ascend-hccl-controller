@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"huawei.com/npu-exporter/hwlog"
 	corev1 "k8s.io/api/core/v1"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,9 +26,8 @@ import (
 	samplescheme "volcano.sh/apis/pkg/client/clientset/versioned/scheme"
 
 	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	"hccl-controller/pkg/ring-controller/model"
-
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // NewController returns a new sample controller
@@ -204,12 +204,12 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
 	parts := strings.Split(key, "/")
 	switch len(parts) {
-	case 2:
+	case common.Index2:
 		// name only, no namespace
-		return "", parts[0], parts[1], nil
-	case 3:
+		return "", parts[common.Index0], parts[common.Index1], nil
+	case common.Index3:
 		// namespace and name
-		return parts[0], parts[1], parts[2], nil
+		return parts[common.Index0], parts[common.Index1], parts[common.Index2], nil
 	default:
 		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
 	}

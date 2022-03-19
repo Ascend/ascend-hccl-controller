@@ -27,8 +27,8 @@ import (
 	_ "hccl-controller/pkg/testtool"
 )
 
-// TestController_Run test Controller_Run
-func TestController_Run(t *testing.T) {
+// TestControllerRun test Controller Run
+func TestControllerRun(t *testing.T) {
 	Convey("controller Controller_Run", t, func() {
 		ctr := newFakeController()
 		Convey("err != nil when cache not exist ", func() {
@@ -91,8 +91,8 @@ func TestProcessNextWorkItem(t *testing.T) {
 	})
 }
 
-// TestController_SyncHandler test Controller_SyncHandler
-func TestController_SyncHandler(t *testing.T) {
+// TestControllerSyncHandler test Controller SyncHandler
+func TestControllerSyncHandler(t *testing.T) {
 	Convey("controller Controller_SyncHandler", t, func() {
 		ctr := newFakeController()
 		Convey("err != nil when splitKeyFunc return err  ", func() {

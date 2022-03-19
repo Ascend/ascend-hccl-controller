@@ -131,8 +131,7 @@ func updateWhenCMNormal(kube *fake.Clientset, work *WorkerInfo) {
 	So(err, ShouldEqual, nil)
 	cm, _ := kube.CoreV1().ConfigMaps(NameSpace).Get(context.TODO(), CMName,
 		metav1.GetOptions{})
-	So(cm.Data[DataKey], ShouldEqual, "{\"status\":\"completed\","+
-		"\"group_list\":null,\"group_count\":\"\"}")
+	So(cm.Data[DataKey], ShouldEqual, `{"status":"completed","group_list":null,"group_count":""}`)
 }
 
 func updateWhenUpdateCmErr(kube *fake.Clientset, work *WorkerInfo) {
