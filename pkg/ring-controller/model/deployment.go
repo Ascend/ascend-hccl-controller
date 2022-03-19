@@ -8,11 +8,13 @@ package model
 
 import (
 	"errors"
+	"strconv"
+
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+
 	"huawei.com/npu-exporter/hwlog"
-	"strconv"
 )
 
 // GetReplicas : to return the replicas in deployment.

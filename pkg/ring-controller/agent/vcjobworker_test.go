@@ -8,17 +8,19 @@ package agent
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	fakecm "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	"reflect"
-	"testing"
-	"time"
+
+	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
 )
 
 const (

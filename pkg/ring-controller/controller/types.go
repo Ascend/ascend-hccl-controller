@@ -7,7 +7,6 @@
 package controller
 
 import (
-	"hccl-controller/pkg/ring-controller/agent"
 	v1 "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -15,6 +14,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
 	v1alpha1informers "volcano.sh/apis/pkg/client/informers/externalversions/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
 )
 
 const (

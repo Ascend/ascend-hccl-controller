@@ -7,13 +7,14 @@ package agent
 
 import (
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	"sync"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sync"
 )
 
 const (

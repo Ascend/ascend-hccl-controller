@@ -9,11 +9,13 @@ package v2
 import (
 	"errors"
 	"fmt"
-	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	apiCoreV1 "k8s.io/api/core/v1"
 	"sort"
 	"strconv"
+
+	apiCoreV1 "k8s.io/api/core/v1"
+
+	"hccl-controller/pkg/ring-controller/common"
+	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // CachePodInfo :Cache pod info to RankTableV2
