@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // NewDeploymentWorker ： to create Deployment Worker

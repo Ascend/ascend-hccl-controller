@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"huawei.com/npu-exporter/hwlog"
 	appsV1 "k8s.io/api/apps/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +27,6 @@ import (
 	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // ResourceEventHandler to define same func, controller to use this function to finish some thing.
@@ -181,10 +181,10 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	}
 	var model ResourceEventHandler
 	if _, ok := indexers[VCJobType]; !ok {
-		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+		return nil, fmt.Errorf("the key does not exist err %v ", ok)
 	}
 	if _, ok := indexers[DeploymentType]; !ok {
-		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+		return nil, fmt.Errorf("the key does not exist err %v ", ok)
 	}
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:

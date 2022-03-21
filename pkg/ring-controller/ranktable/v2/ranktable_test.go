@@ -3,6 +3,7 @@
  *
  */
 
+// Package v2 for v2 rank table test
 package v2
 
 import (
@@ -26,8 +27,8 @@ func TestCachePodInfo(t *testing.T) {
 	po := &apiCoreV1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test1"}}
 	rank := 1
 	const (
-		podString = "{\"pod_name\":\"test1\",\"server_id\":\"0.0.0.0\"," +
-			"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.0\"}]}"
+		podString = `{"pod_name":"test1","server_id":"0.0.0.0","devices":[{"device_id":"0",
+"device_ip":"0.0.0.0"}]}`
 		RankNumExpect = 2
 	)
 	var instance v1.Instance
@@ -56,7 +57,7 @@ func TestCachePodInfo(t *testing.T) {
 
 	fmt.Println("CachePodInfo() should return err != nil when deviceInfo is wrong")
 	rank = 1
-	if err = json.Unmarshal([]byte("{\"pod_name\":\"test1\",\"server_id\":}"), &instance); err != nil {
+	if err = json.Unmarshal([]byte(`{"pod_name":"test1","server_id":}`), &instance); err != nil {
 		instance = v1.Instance{}
 	}
 	fake = &RankTable{ServerCount: "0", ServerList: []*Server{},
@@ -74,8 +75,8 @@ func TestRemovePodInfo(t *testing.T) {
 			RankTableStatus: v1.RankTableStatus{Status: v1.ConfigmapInitializing}, Version: "1.0"}
 		po := &apiCoreV1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test1"}}
 		rank := 1
-		const podString = "{\"pod_name\":\"test1\",\"server_id\":\"0.0.0.0\"," +
-			"\"devices\":[{\"device_id\":\"0\",\"device_ip\":\"0.0.0.1\"}]}"
+		const podString = `{"pod_name":"test1","server_id":"0.0.0.0","devices":[{"device_id":"0",
+"device_ip":"0.0.0.1"}]}`
 		var instance v1.Instance
 		if err := json.Unmarshal([]byte(podString), &instance); err != nil {
 			instance = v1.Instance{}

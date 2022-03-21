@@ -10,11 +10,11 @@ import (
 	"errors"
 	"strconv"
 
+	"huawei.com/npu-exporter/hwlog"
+
 	agent2 "hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // GetReplicas : to return the replicas in deployment.

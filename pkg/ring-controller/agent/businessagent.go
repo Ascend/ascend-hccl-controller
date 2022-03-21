@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,8 +27,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"hccl-controller/pkg/ring-controller/common"
-
-	"huawei.com/npu-exporter/hwlog"
 )
 
 // String  to return podIdentifier string style :
