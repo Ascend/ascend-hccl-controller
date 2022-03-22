@@ -96,7 +96,7 @@ func main() {
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
 
-	control := controller.NewController(kubeClient, jobClient, newConfig(),
+	control := controller.NewEventController(kubeClient, jobClient, newConfig(),
 		controller.InformerInfo{JobInformer: jobInformer, DeployInformer: deploymentInformer,
 			CacheIndexers: cacheIndexer}, stopCh)
 

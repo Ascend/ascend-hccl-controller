@@ -23,6 +23,7 @@ import (
 	informers "volcano.sh/apis/pkg/client/informers/externalversions"
 
 	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	"hccl-controller/pkg/ring-controller/model"
 	_ "hccl-controller/pkg/testtool"
 )
@@ -56,13 +57,14 @@ func TestProcessNextWorkItem(t *testing.T) {
 	Convey("controller ProcessNextWorkItem", t, func() {
 		ctr := newFakeController()
 		Convey("res == true when process  ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
-			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *Controller,
+			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
 				return fmt.Errorf("undefined condition, things is %s", m.GetModelKey())
 			})
@@ -73,13 +75,14 @@ func TestProcessNextWorkItem(t *testing.T) {
 		})
 
 		Convey("err != nil when cache not exist ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
-			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *Controller,
+			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
 				return nil
 			})
@@ -96,25 +99,28 @@ func TestControllerSyncHandler(t *testing.T) {
 	Convey("controller Controller_SyncHandler", t, func() {
 		ctr := newFakeController()
 		Convey("err != nil when splitKeyFunc return err  ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test", GenerateName: "",
-				Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
+				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
+				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
-			patches := ApplyFunc(splitKeyFunc, func(_ string) (namespace, name, eventType string, err error) {
-				return "", "", "", fmt.Errorf("undefined condition")
-			})
+			patches := ApplyMethod(reflect.TypeOf(new(model.VCJobModel)), "GetModelKey",
+				func(_ *model.VCJobModel) string {
+					return ""
+				})
 			defer patches.Reset()
 			err := ctr.SyncHandler(rs)
 			So(err, ShouldNotEqual, nil)
 		})
 		Convey("err != nil when index getByKey return err  ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test", GenerateName: "",
-				Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
+				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
+				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			rs.GetCacheIndex().Add(obj)
 			patches := ApplyMethod(reflect.TypeOf(rs), "EventAdd", func(_ *model.VCJobModel,
@@ -128,15 +134,15 @@ func TestControllerSyncHandler(t *testing.T) {
 	})
 }
 
-func newFakeController() *Controller {
+func newFakeController() *EventController {
 	config := newTestConfig()
 	kube := fake.NewSimpleClientset()
 	volcano := vofake.NewSimpleClientset()
-	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(volcano, time.Second*30,
+	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(volcano, time.Second*common.InformerInterval,
 		informers.WithTweakListOptions(func(options *v1.ListOptions) {
 			return
 		}))
-	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kube, time.Second*30,
+	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kube, time.Second*common.InformerInterval,
 		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
 			return
 		}))
@@ -145,7 +151,7 @@ func newFakeController() *Controller {
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
-	return NewController(kube, volcano, config, InformerInfo{JobInformer: jobInformer,
+	return NewEventController(kube, volcano, config, InformerInfo{JobInformer: jobInformer,
 		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, make(chan struct{}))
 }
 

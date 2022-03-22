@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
@@ -193,7 +194,7 @@ func TestDeployModelGenerateGrouplist(t *testing.T) {
 		model := &DeployModel{replicas: DeployRep}
 		Convey("err == nil & Group is ok ", func() {
 			resouceList := make(corev1.ResourceList, 1)
-			resouceList[agent.ResourceName] = *resource.NewScaledQuantity(2, 0)
+			resouceList[agent.ResourceName] = *resource.NewScaledQuantity(common.Index2, 0)
 			containers := []corev1.Container{
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},

@@ -34,7 +34,7 @@ const (
 	NameSpace    = "namespace"
 	Name         = "test1"
 	DataKey      = "hccl.json"
-	DataValue    = "{\"status\":\"initializing\"}"
+	DataValue    = `{"status":"initializing"}`
 	CMName       = "rings-config-test1"
 	Initializing = "initializing"
 )
@@ -49,32 +49,35 @@ func TestFactory(t *testing.T) {
 		})
 
 		Convey("err !=nil&  when obj is daemonSet ", func() {
-			obj := &appsV1.DaemonSet{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				appsV1.DaemonSetSpec{}, appsV1.DaemonSetStatus{}}
+			obj := &appsV1.DaemonSet{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: appsV1.DaemonSetSpec{},
+				Status: appsV1.DaemonSetStatus{}}
 			_, err := Factory(obj, "add", nil)
 			So(err, ShouldNotEqual, nil)
 		})
 
 		Convey("err ==nil& resourceHandle = jobHandle when obj is job ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := Factory(obj, "add", nil)
 			So(rs, ShouldEqual, nil)
 		})
 
 		Convey("err ==nil& resourceHandle = DeploymentHandle when obj is deployment ", func() {
 			replicas := int32(1)
-			obj := &appsV1.Deployment{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				appsV1.DeploymentSpec{Replicas: &replicas}, appsV1.DeploymentStatus{}}
+			obj := &appsV1.Deployment{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				Spec: appsV1.DeploymentSpec{Replicas: &replicas}, Status: appsV1.DeploymentStatus{}}
 			rs, _ := Factory(obj, "add", nil)
 			So(rs, ShouldEqual, nil)
 		})

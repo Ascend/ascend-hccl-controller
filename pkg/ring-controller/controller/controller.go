@@ -30,10 +30,10 @@ import (
 	"hccl-controller/pkg/ring-controller/model"
 )
 
-// NewController returns a new sample controller
-func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
+// NewEventController returns a new sample controller
+func NewEventController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
 	informerInfo InformerInfo,
-	stopCh <-chan struct{}) *Controller {
+	stopCh <-chan struct{}) *EventController {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
@@ -47,7 +47,7 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 	if err != nil {
 		hwlog.RunLog.Fatalf("Error creating business agent: %s", err.Error())
 	}
-	c := &Controller{
+	c := &EventController{
 		kubeclientset: kubeclientset,
 		jobclientset:  jobclientset,
 		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
@@ -63,7 +63,7 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
-func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
+func (c *EventController) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer pkgutilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	defer c.agent.Workqueue.ShuttingDown()
@@ -89,12 +89,12 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (c *Controller) runMaster() {
+func (c *EventController) runMaster() {
 	for c.processNextWork() {
 	}
 }
 
-func (c *Controller) processNextWork() bool {
+func (c *EventController) processNextWork() bool {
 	hwlog.RunLog.Debug("get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
@@ -133,7 +133,7 @@ func (c *Controller) processNextWork() bool {
 // enqueueJob takes a Job resource and converts
 // it into a namespace/name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than Job.
-func (c *Controller) enqueueJob(obj interface{}, eventType string) {
+func (c *EventController) enqueueJob(obj interface{}, eventType string) {
 	models, err := model.Factory(obj, eventType, c.cacheIndexers)
 	if err != nil {
 		pkgutilruntime.HandleError(err)
@@ -143,12 +143,25 @@ func (c *Controller) enqueueJob(obj interface{}, eventType string) {
 }
 
 // SyncHandler : to do things from model
-func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
+func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
 	hwlog.RunLog.Infof("SyncHandler start, current key is %v", key)
-	namespace, name, eventType, err := splitKeyFunc(key)
-	if err != nil {
-		return fmt.Errorf("failed to split key: %v", err)
+
+	var namespace, name, eventType string
+	parts := strings.Split(key, "/")
+	switch len(parts) {
+	case common.Index2:
+		// name only, no namespace
+		namespace = ""
+		name = parts[common.Index0]
+		eventType = parts[common.Index1]
+	case common.Index3:
+		// namespace and name
+		namespace = parts[common.Index0]
+		name = parts[common.Index1]
+		eventType = parts[common.Index2]
+	default:
+		return fmt.Errorf("failed to split key, unexpected key format: %q", key)
 	}
 
 	_, exists, err := model.GetCacheIndex().GetByKey(namespace + "/" + name)
@@ -165,13 +178,13 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	switch eventType {
 	case agent.EventAdd:
 		hwlog.RunLog.Infof("exist + add, current job is %s/%s", namespace, name)
-		err := model.EventAdd(c.agent)
+		err = model.EventAdd(c.agent)
 		if err != nil {
 			return err
 		}
 	case agent.EventUpdate:
 		// unnecessary to handle
-		err := model.EventUpdate(c.agent)
+		err = model.EventUpdate(c.agent)
 		if err != nil {
 			return err
 		}
@@ -182,7 +195,7 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	return nil
 }
 
-func (in *InformerInfo) addEventHandle(controller *Controller) {
+func (in *InformerInfo) addEventHandle(controller *EventController) {
 	eventHandlerFunc := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			controller.enqueueJob(obj, agent.EventAdd)
@@ -198,19 +211,4 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 	}
 	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
-}
-
-// splitKeyFunc to split key by format namespace,jobname,eventType
-func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
-	parts := strings.Split(key, "/")
-	switch len(parts) {
-	case common.Index2:
-		// name only, no namespace
-		return "", parts[common.Index0], parts[common.Index1], nil
-	case common.Index3:
-		// namespace and name
-		return parts[common.Index0], parts[common.Index1], parts[common.Index2], nil
-	default:
-		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
-	}
 }
