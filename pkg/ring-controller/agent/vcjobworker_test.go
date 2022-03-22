@@ -26,7 +26,7 @@ import (
 const (
 	NameSpace = "namespace"
 	DataKey   = "hccl.json"
-	DataValue = "{\"status\":\"initializing\"}"
+	DataValue = `{"status":"initializing"}`
 	CMName    = "rings-config-test1"
 )
 

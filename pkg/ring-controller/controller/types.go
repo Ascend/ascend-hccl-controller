@@ -22,8 +22,8 @@ const (
 	controllerName = "ring-controller"
 )
 
-// Controller initialize business agent
-type Controller struct {
+// EventController for handling event and initialize business agent
+type EventController struct {
 	// component for recycle resources
 	agent *agent.BusinessAgent
 

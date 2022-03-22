@@ -25,7 +25,7 @@ func TestUnmarshalToRankTable(t *testing.T) {
 		r := &RankTableStatus{}
 		Convey("UnmarshalToRankTable() should return err == nil &&"+
 			" r.status == ConfigmapInitializing when Normal", func() {
-			err := r.UnmarshalToRankTable("{\"status\":\"initializing\"}")
+			err := r.UnmarshalToRankTable(`{"status":"initializing"}`)
 			So(err, ShouldEqual, nil)
 			So(r.Status, ShouldEqual, ConfigmapInitializing)
 		})
