@@ -310,9 +310,10 @@ playbooks/
 ├── 06.nfs.yaml
 ├── 07.prometheus.yaml
 ├── 08.kubeedge.yaml
-├── 09.pre-image.yaml
-├── 10.redis.yaml
-├── 11.mindxdl.yaml
+├── 09.redis.yaml
+├── 10.inner-image.yaml
+├── 11.pre-image.yaml
+├── 12.mindxdl.yaml
 ```
 
 例如:

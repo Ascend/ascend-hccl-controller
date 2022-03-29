@@ -6,7 +6,7 @@
   - name: set HARBOR_IP
     include_tasks: task_set_harbor_ip.yaml
 
-# push pre-images to harbor
+# push inner-images to harbor
 - hosts: master
   gather_facts: False
   roles:
@@ -15,4 +15,4 @@
         project_list:
           - mindx
         project_public: "false"
-        images_dir: mindx-images
+        images_dir: mindx-inner-images

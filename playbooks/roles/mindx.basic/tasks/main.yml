@@ -25,6 +25,44 @@
   loop:
     - /etc/mindx-dl
     - /etc/mindx-dl/edge-manager
+    - /etc/mindx-dl/data-manager
+
+- name: check ssh_host_ed25519_key
+  stat:
+    dest: /etc/mindx-dl/data-manager/ssh_host_ed25519_key
+  register: stat_ed25519_key
+
+- name: check ssh_host_rsa_key
+  stat:
+    dest: /etc/mindx-dl/data-manager/ssh_host_rsa_key
+  register: stat_rsa_key
+
+- name: ssh-keygen data-manager ssh_host_key
+  shell: |
+    ssh-keygen -t ed25519 -f ssh_host_ed25519_key -N ""
+    ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key -N ""
+  args:
+    chdir: /etc/mindx-dl/data-manager
+  when: not stat_ed25519_key.stat.exists and not stat_rsa_key.stat.exists
+
+- name: chmod ssh_host_key
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: "{{DL_USR}}"
+    group: "{{DL_GRP}}"
+    mode: 0400
+  loop:
+    - /etc/mindx-dl/data-manager/ssh_host_ed25519_key
+    - /etc/mindx-dl/data-manager/ssh_host_rsa_key
+
+- name: absent ssh_host_key.pub
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/mindx-dl/data-manager/ssh_host_ed25519_key.pub
+    - /etc/mindx-dl/data-manager/ssh_host_rsa_key.pub
 
 - name: create log directories for "{{DL_USR}}"
   file:
