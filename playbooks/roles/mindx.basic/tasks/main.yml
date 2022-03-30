@@ -29,12 +29,12 @@
 
 - name: check ssh_host_ed25519_key
   stat:
-    dest: /etc/mindx-dl/data-manager/ssh_host_ed25519_key
+    path: /etc/mindx-dl/data-manager/ssh_host_ed25519_key
   register: stat_ed25519_key
 
 - name: check ssh_host_rsa_key
   stat:
-    dest: /etc/mindx-dl/data-manager/ssh_host_rsa_key
+    path: /etc/mindx-dl/data-manager/ssh_host_rsa_key
   register: stat_rsa_key
 
 - name: ssh-keygen data-manager ssh_host_key
