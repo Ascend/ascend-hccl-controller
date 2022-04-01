@@ -49,7 +49,7 @@
     mode: 0700
 
 - name: install MindX DL
-  shell: "/usr/bin/dlinstall --harbor {{ HARBOR_IP }} --harbor-port {{ HARBOR_HTTPS_PORT }} --nfs {{ NFS_IP }} {{ item }}"
+  shell: "/usr/bin/dlinstall --harbor {{ HARBOR_IP }} --harbor-port {{ HARBOR_HTTPS_PORT }} --storage-info {{ STORAGE_INFO }} {{ item }}"
   ignore_errors: true
   when: "ansible_architecture in item"
   with_fileglob:

@@ -4,7 +4,6 @@
     - master
     - worker
     - harbor
-    - nfs_server
   roles:
     - role: mindx.resource
       vars:
@@ -12,6 +11,17 @@
           - pylibs
           - linux_aarch64
           - linux_x86_64
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy nfs resources to nfs_server host
+- hosts:
+    - nfs_server
+  roles:
+    - role: mindx.resource
+      when: STORAGE_TYPE == "NFS"
+      vars:
+        resource_list:
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
 

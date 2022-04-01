@@ -1,0 +1,35 @@
+- name: create yaml directory
+  file:
+    path: "{{ CEPHFS_YAML_DIR }}"
+    state: directory
+    mode: 0750
+
+- name: create secret for cephfs
+  shell: |
+    kubectl delete secret --namespace={{ K8S_NAMESPACE }} ceph-secret --ignore-not-found=true
+    kubectl create secret --namespace={{ K8S_NAMESPACE }} generic ceph-secret --from-literal="key={{ CEPHFS_KEY }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: create yamls
+  template:
+    src: "{{ item }}"
+    dest: "{{ CEPHFS_YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - cephfs-pv.yaml
+    - cephfs-pvc.yaml
+
+- name: deploy mysql
+  shell: "kubectl apply -f {{ CEPHFS_YAML_DIR }}/{{ item }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  with_items:
+    - cephfs-pv.yaml
+    - cephfs-pvc.yaml

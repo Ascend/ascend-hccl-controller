@@ -7,7 +7,7 @@ TAG=""
 ARCH=""
 HARBOR_HOST=""
 HARBOR_PORT=""
-NFS_HOST=""
+STORAGE_INFO=""
 YML_PATH=""
 YML_FILE=""
 YML_DIR=""
@@ -28,7 +28,7 @@ function print_usage()
     echo "    --dryrun       not running, just test process"
     echo "    --harbor       set harbor ip or domain"
     echo "    --harbor-port  set harbor port, default 443"
-    echo "    --nfs          set nfs ip"
+    echo "    --storage-info set nfs ip or cephfs pvc"
 }
 
 function parse_args()
@@ -61,8 +61,8 @@ function parse_args()
             shift
             shift
             ;;
-        --nfs)
-            NFS_HOST=$2
+        --storage-info)
+            STORAGE_INFO=$2
             shift
             shift
             ;;
@@ -81,7 +81,7 @@ function parse_args()
         echo "DEBUG: APP_PATH=$APP_PATH"
         echo "DEBUG: HARBOR_HOST=$HARBOR_HOST"
         echo "DEBUG: HARBOR_PORT=$HARBOR_PORT"
-        echo "DEBUG: NFS_HOST=$NFS_HOST"
+        echo "DEBUG: STORAGE_INFO=$STORAGE_INFO"
     fi
 }
 
@@ -103,12 +103,19 @@ function get_app_info()
     else
         YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yaml' | grep -v '\-without-token-')
     fi
-    if [ -z ${YML_PATH} ];then
+    if [ -z "${YML_PATH}" ];then
         YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yml')
     fi
-    if [ -z $YML_PATH ];then
+    if [ -z "$YML_PATH" ];then
         echo "FATAL: no yaml file found!!!"
         exit 1
+    fi
+    if [ $(echo "$YML_PATH" | wc -l) == 2 ]; then
+        if [ ${STORAGE_INFO} == "cephfs-pv-claim" ]; then
+            YML_PATH=$(echo "$YML_PATH" | grep '\-cephfs-')
+        else
+            YML_PATH=$(echo "$YML_PATH" | grep -v '\-cephfs-')
+        fi
     fi
     YML_DIR=$(dirname $YML_PATH)
     YML_FILE=$(basename $YML_PATH)
@@ -232,7 +239,9 @@ function do_install()
     cp -rf ${APP_PATH}/* ${DEPLOY_PATH}/
     sed -i "s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g" ${DEPLOY_PATH}/${YML_FILE}
     sed -i "s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g" ${DEPLOY_PATH}/${YML_FILE}
-    sed -i "s#server: 127.0.0.1#server: ${NFS_HOST}#g" ${DEPLOY_PATH}/${YML_FILE}
+    if [ ${STORAGE_INFO} != "cephfs-pv-claim" ]; then
+        sed -i "s#server: 127.0.0.1#server: ${STORAGE_INFO}#g" ${DEPLOY_PATH}/${YML_FILE}
+    fi
     build_images
     if [ ${DEBUG} == "y" ];then
         echo "sed -i \"s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g\" ${DEPLOY_PATH}/${YML_FILE}"
@@ -283,8 +292,8 @@ function pre_check()
         echo "no harbor set, please set harbor by --harbor"
         exit 1
     fi
-    if [ -z ${NFS_HOST} ];then
-        echo "no nfs set, please set nfs by --nfs"
+    if [ -z ${STORAGE_INFO} ];then
+        echo "no storage info set, please set by --storage-info"
         exit 1
     fi
 }

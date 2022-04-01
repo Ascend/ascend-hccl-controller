@@ -5,8 +5,10 @@
     - worker
   roles:
     - role: mindx.nfs.client
+      when: STORAGE_TYPE == "NFS"
 
 # config nfs server
 - hosts: nfs_server
   roles:
     - role: mindx.nfs.server
+      when: STORAGE_TYPE == "NFS"
