@@ -1,0 +1,6 @@
+---
+# master install cephfs pv and pvc
+- hosts: master
+  roles:
+    - role: mindx.k8s.cephfspv
+      when: STORAGE_TYPE == "CEPHFS"

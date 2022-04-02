@@ -7,18 +7,32 @@ HARBOR_PATH: /data/harbor
 # password for harbor, can not be empty, delete immediately after finished
 HARBOR_PASSWORD: ""
 
-# mindx k8s namespace
-K8S_NAMESPACE: "mindx-dl"
-# ip address for api-server
-K8S_API_SERVER_IP: ""
-
-# nfs shared path, can be multiple configurations
-NFS_PATH: ["/data/atlas_dls"]
-
 # mysql install path
 MYSQL_DATAPATH: /data/mysql
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
+
+# select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
+STORAGE_TYPE: "NFS"
+
+# nfs shared path, can be multiple configurations. can not be empty if "STORAGE_TYPE" is "NFS"
+NFS_PATH: ["/data/atlas_dls"]
+
+# cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_IP: ""
+# cephfs port. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_PORT: ""
+# cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_USER: ""
+# cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_KEY: ""
+# cephfs request storage. can not be zero if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_REQUEST_STORAGE: "0Gi"
+
+# mindx k8s namespace
+K8S_NAMESPACE: "mindx-dl"
+# ip address for api-server
+K8S_API_SERVER_IP: ""
 
 #mindx user
 MINDX_USER: hwMindX

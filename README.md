@@ -5,14 +5,15 @@
 本文主要介绍如何使用ansible安装mindxdl所需开源软件安装。其中包含如下开源软件
 
 | 软件名        | 备注                    |
-| ---------- | --------------------- |
-| docker     | 集群中所有节点都需要安装          |
-| kubernetes | k8s平台                 |
-| mysql      | 安装在k8s集群中，挂载host的文件系统 |
-| nfs        | 所有节点都需要安装nfsclient    |
-| harbor     | 容器镜像仓                 |
-| prometheus | 安装在kubernetes集群中      |
-| grafana    | 安装在kubernetes集群中      |
+| ---------- | -------------------------|
+| docker     | 集群中所有节点都需要安装   |
+| harbor     | 容器镜像仓                |
+| kubernetes | k8s平台                  |
+| nfs        | nfs存储系统              |
+| mysql      | 安装在k8s集群中，关系型数据库系统 |
+| redis      | 安装在k8s集群中，非关系型数据库系统 |
+| kubeedge   | 安装在k8s集群中，使能边缘计算的平台 |
+| prometheus + grafana + node-exporter | 安装在k8s集群中，资源监控组件      |
 
 ## 环境要求
 
@@ -86,7 +87,7 @@ ansible默认安装在系统自带python3中，安装完成后执行ansible --ve
 
 4. mysql安装的节点ip，只能为本机localhost
 
-5. nfs服务器ip。nfs可使用已有nfs服务器。
+5. nfs服务器ip。nfs可使用已有nfs服务器。当【步骤3：配置安装信息】"STORAGE_TYPE"设置为"CEPHFS"时，此项配置无效，可删除。
 
 ```bash
 [harbor]
@@ -135,18 +136,32 @@ HARBOR_PATH: /data/harbor
 # password for harbor, can not be empty, delete immediately after finished
 HARBOR_PASSWORD: ""
 
-# mindx k8s namespace
-K8S_NAMESPACE: "mindx-dl"
-# ip address for api-server
-K8S_API_SERVER_IP: ""
-
-# nfs shared path, can be multiple configurations
-NFS_PATH: ["/data/atlas_dls"]
-
 # mysql install path
 MYSQL_DATAPATH: /data/mysql
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
+
+# select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
+STORAGE_TYPE: "NFS"
+
+# nfs shared path, can be multiple configurations. can not be empty if "STORAGE_TYPE" is "NFS"
+NFS_PATH: ["/data/atlas_dls"]
+
+# cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_IP: ""
+# cephfs port. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_PORT: ""
+# cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_USER: ""
+# cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_KEY: ""
+# cephfs request storage. can not be zero if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_REQUEST_STORAGE: "0Gi"
+
+# mindx k8s namespace
+K8S_NAMESPACE: "mindx-dl"
+# ip address for api-server
+K8S_API_SERVER_IP: ""
 
 #mindx user
 MINDX_USER: hwMindX
@@ -159,21 +174,35 @@ MINDX_GROUP_ID: 9000
 
 | 配置项               | 说明                                   |
 | ----------------- | ------------------------------------ |
-| HARBOR_HOST_IP    | 配置harbor的监听ip，多网卡场景下**建议配置**         |
+| HARBOR_HOST_IP    | 配置harbor的监听ip，多网卡场景下*建议配置*         |
 | HARBOR_HTTPS_PORT | harbor的https监听端口，默认为7443             |
-| HARBOR_PATH       | Harbor的安装路径                          |
-| HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。安装完成后应立即删除 |
+| HARBOR_PATH       | Harbor的安装路径，默认为/data/harbor                   |
+| HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
+| MYSQL_DATAPATH    | mysql的安装路径，默认为/data/mysql                           |
+| MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
+| STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"           |
+| NFS_PATH          | nfs服务器的共享路径，可配置多个路径，默认为/data/atlas_dls。   |
+| CEPHFS_IP         | cephfs集群的monitor ip，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
+| CEPHFS_PORT       | cephfs集群的port，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
+| CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
+| CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。**安装完成后应立即删除**  |
+| CEPHFS_REQUEST_STORAGE| cephfs集群分配的存储空间，*"STORAGE_TYPE"设置为"CEPHFS"时不可为"0Gi"，必须配置*。  |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
-| K8S_API_SERVER_IP | K8s的api server监听地址，多网卡场景下**建议配置**    |
-| NFS_PATH          | nfs服务器的共享路径，可配置多个路径                  |
-| MYSQL_DATAPATH    | mysql的安装路径                           |
-| MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。安装完成后应立即删除  |
+| K8S_API_SERVER_IP | K8s的api server监听地址，多网卡场景下*建议配置*    |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
 | MINDX_USER_ID     | mindx dl组件默认运行用户id                   |
 | MINDX_GROUP       | mindx dl组件默认运行用户组                    |
 | MINDX_GROUP_ID    | mindx dl组件默认运行用户组id                  |
 
-harbor的登录用户名默认为admin
+注：
+
+1. harbor的登录用户名默认为admin
+
+2. 本工具支持使用nfs和cephfs 2种存储方案，默认选用nfs方案。用户可通过设置"STORAGE_TYPE"为"CEPHFS"选用cephfs方案。
+
+   - 2.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认"NFS_PATH"配置项和【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
+
+   - 2.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"、"CEPHFS_REQUEST_STORAGE"这5个配置项填写正确。
 
 ### 步骤4：检查集群状态
 
@@ -216,7 +245,7 @@ root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
 
 2. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
 
-3. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的~/resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e resources_no_copy=true`参数，避免重复执行耗时的~/resources目录打包、分发操作。
+3. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的/root/resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e resources_no_copy=true`参数，避免重复执行耗时的~/resources目录打包、分发操作。
 
 ### 步骤6：安装后检查
 

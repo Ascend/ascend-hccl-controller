@@ -4,7 +4,6 @@
     - master
     - worker
     - harbor
-    - nfs_server
   roles:
     - role: mindx.resource
       vars:
@@ -12,6 +11,17 @@
           - pylibs
           - linux_aarch64
           - linux_x86_64
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy nfs resources to nfs_server host
+- hosts:
+    - nfs_server
+  roles:
+    - role: mindx.resource
+      when: STORAGE_TYPE == "NFS"
+      vars:
+        resource_list:
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
 
@@ -35,6 +45,7 @@
     - role: mindx.docker
     - role: mindx.k8s.install
     - role: mindx.nfs.client
+      when: STORAGE_TYPE == "NFS"
 
 # install harbor
 - hosts:
@@ -89,6 +100,13 @@
   gather_facts: False
   roles:
     - role: mindx.nfs.server
+      when: STORAGE_TYPE == "NFS"
+
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.cephfspv
+      when: STORAGE_TYPE == "CEPHFS"
 
 # mysql
 - hosts: mysql
