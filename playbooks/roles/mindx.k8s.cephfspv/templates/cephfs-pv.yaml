@@ -12,6 +12,7 @@ spec:
     user: {{ CEPHFS_USER }}
     secretRef:
       name: ceph-secret
+      namespace: {{ K8S_NAMESPACE }}
   claimRef:
     name: cephfs-pv-claim
     namespace: {{ K8S_NAMESPACE }}
