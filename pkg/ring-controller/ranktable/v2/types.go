@@ -5,11 +5,13 @@
 
 package v2
 
-import v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+import (
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+)
 
 // RankTable : ranktable of v2
 type RankTable struct {
-	v1.RankTableStatus
+	ranktablev1.RankTableStatus
 	ServerList  []*Server `json:"server_list"`  // hccl_json server list
 	ServerCount string    `json:"server_count"` // hccl_json server count
 	Version     string    `json:"version"`      // hccl_json version
@@ -24,6 +26,6 @@ type Server struct {
 
 // Device to hccl
 type Device struct {
-	v1.Device
+	ranktablev1.Device
 	RankID string `json:"rank_id"` // rank id
 }

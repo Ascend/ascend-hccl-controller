@@ -56,12 +56,27 @@ const (
 )
 
 var (
-	// JSONVersion of hccl.json
-	JSONVersion = "v2"
+	// jsonVersion of hccl.json
+	jsonVersion = "v2"
 	// ResourceList pod annotation
-	ResourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
+	resourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
 		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
 )
+
+// SetJSONVersion set jsonVersion
+func SetJSONVersion(v string) {
+	jsonVersion = v
+}
+
+// GetJSONVersion get jsonVersion
+func GetJSONVersion() string {
+	return jsonVersion
+}
+
+// GetResourceList get ResourceList
+func GetResourceList() []string {
+	return resourceList
+}
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
 // * list/watch 910 pods, and assign each pod to corresponding handler

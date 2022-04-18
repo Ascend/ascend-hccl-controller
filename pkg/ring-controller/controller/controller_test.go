@@ -10,17 +10,17 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/agiledragon/gomonkey/v2"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/agiledragon/gomonkey/v2"
+	"github.com/smartystreets/goconvey/convey"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	cinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	vofake "volcano.sh/apis/pkg/client/clientset/versioned/fake"
-	informers "volcano.sh/apis/pkg/client/informers/externalversions"
+	"volcano.sh/apis/pkg/client/informers/externalversions"
 
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
@@ -30,33 +30,33 @@ import (
 
 // TestControllerRun test Controller Run
 func TestControllerRun(t *testing.T) {
-	Convey("controller Controller_Run", t, func() {
+	convey.Convey("controller Controller_Run", t, func() {
 		ctr := newFakeController()
-		Convey("err != nil when cache not exist ", func() {
-			patches := ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
+		convey.Convey("err != nil when cache not exist ", func() {
+			patches := gomonkey.ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
 				return false
 			})
 			defer patches.Reset()
 			err := ctr.Run(1, nil)
-			So(err, ShouldNotEqual, nil)
+			convey.So(err, convey.ShouldNotEqual, nil)
 		})
 
-		Convey("err == nil when cache exist ", func() {
-			patches := ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
+		convey.Convey("err == nil when cache exist ", func() {
+			patches := gomonkey.ApplyFunc(cache.WaitForCacheSync, func(_ <-chan struct{}, _ ...cache.InformerSynced) bool {
 				return true
 			})
 			defer patches.Reset()
 			err := ctr.Run(1, nil)
-			So(err, ShouldEqual, nil)
+			convey.So(err, convey.ShouldEqual, nil)
 		})
 	})
 }
 
 // TestProcessNextWorkItem test ProcessNextWorkItem
 func TestProcessNextWorkItem(t *testing.T) {
-	Convey("controller ProcessNextWorkItem", t, func() {
+	convey.Convey("controller ProcessNextWorkItem", t, func() {
 		ctr := newFakeController()
-		Convey("res == true when process  ", func() {
+		convey.Convey("res == true when process  ", func() {
 			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
@@ -64,17 +64,17 @@ func TestProcessNextWorkItem(t *testing.T) {
 				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
 				Status: v1alpha1apis.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
-			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
+			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
 				return fmt.Errorf("undefined condition, things is %s", m.GetModelKey())
 			})
 			defer patches.Reset()
 			res := ctr.processNextWork()
-			So(res, ShouldEqual, true)
-			So(ctr.workqueue.Len(), ShouldEqual, 0)
+			convey.So(res, convey.ShouldEqual, true)
+			convey.So(ctr.workqueue.Len(), convey.ShouldEqual, 0)
 		})
 
-		Convey("err != nil when cache not exist ", func() {
+		convey.Convey("err != nil when cache not exist ", func() {
 			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
@@ -82,23 +82,23 @@ func TestProcessNextWorkItem(t *testing.T) {
 				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
 				Status: v1alpha1apis.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
-			patches := ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
+			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
 				return nil
 			})
 			defer patches.Reset()
 			res := ctr.processNextWork()
-			So(res, ShouldEqual, true)
-			So(ctr.workqueue.Len(), ShouldEqual, 0)
+			convey.So(res, convey.ShouldEqual, true)
+			convey.So(ctr.workqueue.Len(), convey.ShouldEqual, 0)
 		})
 	})
 }
 
 // TestControllerSyncHandler test Controller SyncHandler
 func TestControllerSyncHandler(t *testing.T) {
-	Convey("controller Controller_SyncHandler", t, func() {
+	convey.Convey("controller Controller_SyncHandler", t, func() {
 		ctr := newFakeController()
-		Convey("err != nil when splitKeyFunc return err  ", func() {
+		convey.Convey("err != nil when splitKeyFunc return err  ", func() {
 			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
@@ -106,15 +106,15 @@ func TestControllerSyncHandler(t *testing.T) {
 				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
 				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
-			patches := ApplyMethod(reflect.TypeOf(new(model.VCJobModel)), "GetModelKey",
+			patches := gomonkey.ApplyMethod(reflect.TypeOf(new(model.VCJobModel)), "GetModelKey",
 				func(_ *model.VCJobModel) string {
 					return ""
 				})
 			defer patches.Reset()
 			err := ctr.SyncHandler(rs)
-			So(err, ShouldNotEqual, nil)
+			convey.So(err, convey.ShouldNotEqual, nil)
 		})
-		Convey("err != nil when index getByKey return err  ", func() {
+		convey.Convey("err != nil when index getByKey return err  ", func() {
 			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
@@ -123,13 +123,13 @@ func TestControllerSyncHandler(t *testing.T) {
 				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			rs.GetCacheIndex().Add(obj)
-			patches := ApplyMethod(reflect.TypeOf(rs), "EventAdd", func(_ *model.VCJobModel,
+			patches := gomonkey.ApplyMethod(reflect.TypeOf(rs), "EventAdd", func(_ *model.VCJobModel,
 				_ *agent.BusinessAgent) error {
 				return nil
 			})
 			defer patches.Reset()
 			err := ctr.SyncHandler(rs)
-			So(err, ShouldEqual, nil)
+			convey.So(err, convey.ShouldEqual, nil)
 		})
 	})
 }
@@ -138,12 +138,12 @@ func newFakeController() *EventController {
 	config := newTestConfig()
 	kube := fake.NewSimpleClientset()
 	volcano := vofake.NewSimpleClientset()
-	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(volcano, time.Second*common.InformerInterval,
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
+	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(volcano, time.Second*common.InformerInterval,
+		externalversions.WithTweakListOptions(func(options *v1.ListOptions) {
 			return
 		}))
-	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kube, time.Second*common.InformerInterval,
-		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+	deploymentFactory := informers.NewSharedInformerFactoryWithOptions(kube, time.Second*common.InformerInterval,
+		informers.WithTweakListOptions(func(options *v1.ListOptions) {
 			return
 		}))
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()

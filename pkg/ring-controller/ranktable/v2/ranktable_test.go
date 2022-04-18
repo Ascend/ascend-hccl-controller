@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 	apiCoreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,7 +69,7 @@ func TestCachePodInfo(t *testing.T) {
 
 // TestRemovePodInfo test RemovePodInfo
 func TestRemovePodInfo(t *testing.T) {
-	Convey("TestRankTableV2 RemovePodInfo", t, func() {
+	convey.Convey("TestRankTableV2 RemovePodInfo", t, func() {
 		var serverList []*Server
 		fake := &RankTable{ServerCount: strconv.Itoa(len(serverList)), ServerList: serverList,
 			RankTableStatus: v1.RankTableStatus{Status: v1.ConfigmapInitializing}, Version: "1.0"}
@@ -81,19 +81,19 @@ func TestRemovePodInfo(t *testing.T) {
 		if err := json.Unmarshal([]byte(podString), &instance); err != nil {
 			instance = v1.Instance{}
 		}
-		Convey("RemovePodInfo() should return err == nil when Normal", func() {
+		convey.Convey("RemovePodInfo() should return err == nil when Normal", func() {
 			fake.CachePodInfo(po, instance, &rank)
 			err := fake.RemovePodInfo("", "test1")
-			So(err, ShouldEqual, nil)
-			So(len(fake.ServerList), ShouldEqual, 0)
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(len(fake.ServerList), convey.ShouldEqual, 0)
 
 		})
 
-		Convey("RemovePodInfo() should return err != nil when podName !contain GroupList ", func() {
+		convey.Convey("RemovePodInfo() should return err != nil when podName !contain GroupList ", func() {
 			fake.CachePodInfo(po, instance, &rank)
 			err := fake.RemovePodInfo("", "1")
-			So(err, ShouldNotEqual, nil)
-			So(len(fake.ServerList), ShouldEqual, 1)
+			convey.So(err, convey.ShouldNotEqual, nil)
+			convey.So(len(fake.ServerList), convey.ShouldEqual, 1)
 		})
 	})
 }
