@@ -138,8 +138,8 @@ func newFakeController() *EventController {
 	config := newTestConfig()
 	kube := fake.NewSimpleClientset()
 	volcano := vofake.NewSimpleClientset()
-	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(volcano, time.Second*common.InformerInterval,
-		externalversions.WithTweakListOptions(func(options *v1.ListOptions) {
+	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(volcano,
+		time.Second*common.InformerInterval, externalversions.WithTweakListOptions(func(options *v1.ListOptions) {
 			return
 		}))
 	deploymentFactory := informers.NewSharedInformerFactoryWithOptions(kube, time.Second*common.InformerInterval,

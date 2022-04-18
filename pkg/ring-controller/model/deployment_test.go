@@ -96,8 +96,8 @@ func eventAddWhenV2(model *DeployModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	model = &DeployModel{}
-	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (v1.RankTabler,
-		int32, error) {
+	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus,
+		_ string) (v1.RankTabler, int32, error) {
 		return nil, int32(1), nil
 	})
 	defer patch.Reset()
