@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 const maxRankIndex = 10000
@@ -34,10 +34,11 @@ type Worker interface {
 }
 
 // NewVCJobWorker : Generates a Worker that handles the VCJob type
-func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable v1.RankTabler, replicasTotal int32) *VCJobWorker {
-	jobWorker := &VCJobWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
-		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
-		configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, job.JobName),
+func NewVCJobWorker(agent *BusinessAgent, job JobInfo, ranktable ranktablev1.RankTabler,
+	replicasTotal int32) *VCJobWorker {
+	jobWorker := &VCJobWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet,
+		podsIndexer: agent.PodsIndexer, recorder: agent.recorder, dryRun: agent.dryRun,
+		statisticSwitch: make(chan struct{}), configmapName: fmt.Sprintf("%s-%s", ConfigmapPrefix, job.JobName),
 		configmapData: ranktable, statisticStopped: false, cachedPodNum: 0, taskReplicasTotal: replicasTotal},
 		JobInfo: job}
 	return jobWorker
@@ -188,7 +189,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if !exist {
 		return errors.New("the key of " + PodDeviceKey + " does not exist ")
 	}
-	var instance v1.Instance
+	var instance ranktablev1.Instance
 	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
 		return fmt.Errorf("parse annotation of pod %s/%s error: %#v", pod.Namespace, pod.Name, err)
 	}

@@ -15,13 +15,13 @@ import (
 	apiCoreV1 "k8s.io/api/core/v1"
 
 	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // CachePodInfo :Cache pod info to RankTableV2
-func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance v1.Instance, rankIndex *int) error {
+func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance ranktablev1.Instance, rankIndex *int) error {
 	var server Server
-	if !v1.CheckDeviceInfo(&instance) {
+	if !ranktablev1.CheckDeviceInfo(&instance) {
 		return errors.New("deviceInfo failed the validation")
 	}
 	for _, server := range r.ServerList {

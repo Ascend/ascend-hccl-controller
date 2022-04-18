@@ -14,7 +14,7 @@ import (
 
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // GetReplicas : to return the replicas in deployment.
@@ -36,7 +36,7 @@ func (deploy *DeployModel) EventAdd(businessAgent *agent.BusinessAgent) error {
 	if !ok {
 		return errors.New("the key of " + agent.ConfigmapKey + " does not exist")
 	}
-	var rst v1.RankTableStatus
+	var rst ranktablev1.RankTableStatus
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
@@ -85,8 +85,8 @@ func (deploy *DeployModel) EventUpdate(businessAgent *agent.BusinessAgent) error
 }
 
 // GenerateGrouplist to create GroupList. in ranktable v1 will use it.
-func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
-	var groupList []*v1.Group
+func (deploy *DeployModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, error) {
+	var groupList []*ranktablev1.Group
 	var deviceTotal int32
 
 	for _, container := range deploy.containers {
@@ -94,8 +94,8 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
 	}
 	deviceTotal *= deploy.replicas
 
-	var instanceList []*v1.Instance
-	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
+	var instanceList []*ranktablev1.Instance
+	group := ranktablev1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
 		common.Decimal), InstanceCount: strconv.FormatInt(int64(deploy.replicas), common.Decimal),
 		InstanceList: instanceList}
 	groupList = append(groupList, &group)

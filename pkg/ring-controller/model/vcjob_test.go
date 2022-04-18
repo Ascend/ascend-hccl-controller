@@ -26,7 +26,7 @@ import (
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
 	"hccl-controller/pkg/ring-controller/agent"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	_ "hccl-controller/pkg/testtool"
 )
 
@@ -90,22 +90,22 @@ func TestRanktableFactory(t *testing.T) {
 		model := &VCJobModel{}
 		convey.Convey("err != nil when obj == nil", func() {
 			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(0), fmt.Errorf("test")
 			})
 			defer patch.Reset()
-			_, _, err := RanktableFactory(model, v1.RankTableStatus{Status: ""}, "")
+			_, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: ""}, "")
 			convey.So(err, convey.ShouldNotEqual, nil)
 		})
 
 		convey.Convey("err ==nil& when RankTableStatus is ok and version is v1", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
 			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer patch.Reset()
-			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v1")
+			rt, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: Initializing}, "v1")
 			convey.So(err, convey.ShouldEqual, nil)
 			convey.So(rt.GetStatus(), convey.ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
@@ -115,11 +115,11 @@ func TestRanktableFactory(t *testing.T) {
 		convey.Convey("err ==nil& when RankTableStatus is ok and version is v2", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
 			pathch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer pathch.Reset()
-			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v2")
+			rt, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: Initializing}, "v2")
 			convey.So(err, convey.ShouldEqual, nil)
 			convey.So(rt.GetStatus(), convey.ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
@@ -217,8 +217,8 @@ func TestVCJobModelEventAdd(t *testing.T) {
 			convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 1)
 		})
 		convey.Convey("err !=nil&  when configmap is not exist ", func() {
-			patches := gomonkey.ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
-				*corev1.ConfigMap, error) {
+			patches := gomonkey.ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface,
+				_ *agent.Config) (*corev1.ConfigMap, error) {
 				return nil, fmt.Errorf(" failed to get configmap for job")
 			})
 			defer patches.Reset()
@@ -248,7 +248,7 @@ func eventAddWhenVersionV2(model *VCJobModel, ag *agent.BusinessAgent) {
 	defer patches.Reset()
 	model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
 	patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-		[]*v1.Group, int32, error) {
+		[]*ranktablev1.Group, int32, error) {
 		return nil, int32(1), nil
 	})
 	defer patch.Reset()
@@ -267,8 +267,8 @@ func eventAddWhenFactNil(model *VCJobModel, ag *agent.BusinessAgent) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	patches2 := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (
-		v1.RankTabler, int32, error) {
+	patches2 := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ ranktablev1.RankTableStatus,
+		_ string) (ranktablev1.RankTabler, int32, error) {
 		return nil, int32(0), fmt.Errorf("generate group list from job error")
 	})
 	defer patches2.Reset()

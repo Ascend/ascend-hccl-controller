@@ -21,7 +21,7 @@ import (
 
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // TestDeployModelEventAdd test Dep6loyModel_EventAdd
@@ -75,8 +75,8 @@ func eventAddWhenWorkerExist(ag *agent.BusinessAgent, model *DeployModel) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (
-		v1.RankTabler, int32, error) {
+	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ ranktablev1.RankTableStatus,
+		_ string) (ranktablev1.RankTabler, int32, error) {
 		return nil, int32(1), nil
 	})
 	defer patch.Reset()
@@ -96,8 +96,8 @@ func eventAddWhenV2(model *DeployModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	model = &DeployModel{}
-	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus,
-		_ string) (v1.RankTabler, int32, error) {
+	patch := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ ranktablev1.RankTableStatus,
+		_ string) (ranktablev1.RankTabler, int32, error) {
 		return nil, int32(1), nil
 	})
 	defer patch.Reset()
@@ -117,7 +117,7 @@ func eventAddWhenFacNil(model *DeployModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	patches2 := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler,
-		_ v1.RankTableStatus, _ string) (v1.RankTabler, int32, error) {
+		_ ranktablev1.RankTableStatus, _ string) (ranktablev1.RankTabler, int32, error) {
 		return nil, int32(0), errors.New("generated group list from job error")
 	})
 	defer patches2.Reset()

@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 const (
@@ -171,7 +171,7 @@ type WorkerInfo struct {
 	podsIndexer cache.Indexer
 
 	configmapName string
-	configmapData v1.RankTabler
+	configmapData ranktablev1.RankTabler
 
 	statisticStopped  bool
 	rankIndex         int
