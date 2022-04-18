@@ -15,7 +15,7 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 	"huawei.com/npu-exporter/utils"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apisv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -68,7 +68,7 @@ func main() {
 	if hcclVersion != "v1" && hcclVersion != "v2" {
 		hwlog.RunLog.Fatalf("invalid json version value, should be v1/v2")
 	}
-	agent.JSONVersion = hcclVersion
+	agent.SetJSONVersion(hcclVersion)
 	validateParallelism()
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -122,11 +122,12 @@ func newInformerFactory(jobClient *versioned.Clientset, kubeClient *kubernetes.C
 	externalversions.SharedInformerFactory, informers.SharedInformerFactory) {
 	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
 	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(jobClient,
-		time.Second*common.InformerInterval, externalversions.WithTweakListOptions(func(options *v1.ListOptions) {
+		time.Second*common.InformerInterval, externalversions.WithTweakListOptions(func(options *apisv1.
+			ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 	deploymentFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient,
-		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *v1.ListOptions) {
+		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *apisv1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 	return jobInformerFactory, deploymentFactory

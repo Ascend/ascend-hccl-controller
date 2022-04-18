@@ -7,7 +7,7 @@ package agent
 import (
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/smartystreets/goconvey/convey"
 	"k8s.io/client-go/kubernetes/fake"
 
 	_ "hccl-controller/pkg/testtool"
@@ -15,18 +15,18 @@ import (
 
 // TestDeleteWorker test DeleteWorker
 func TestDeleteWorker(t *testing.T) {
-	Convey("agent DeleteWorker", t, func() {
+	convey.Convey("agent DeleteWorker", t, func() {
 		bus, _ := NewBusinessAgent(fake.NewSimpleClientset(), nil,
 			&Config{PodParallelism: 1}, make(chan struct{}))
-		Convey("DeleteWorker businessAgent when exist", func() {
+		convey.Convey("DeleteWorker businessAgent when exist", func() {
 			bus.BusinessWorker["namespace/test"] = new(VCJobWorker)
 			DeleteWorker("namespace", "test", bus)
-			So(len(bus.BusinessWorker), ShouldEqual, 0)
+			convey.So(len(bus.BusinessWorker), convey.ShouldEqual, 0)
 		})
-		Convey("DeleteWorker businessAgent when not exist", func() {
+		convey.Convey("DeleteWorker businessAgent when not exist", func() {
 			bus.BusinessWorker["namespace/test1"] = nil
 			DeleteWorker("namespace", "test", bus)
-			So(len(bus.BusinessWorker), ShouldEqual, 1)
+			convey.So(len(bus.BusinessWorker), convey.ShouldEqual, 1)
 		})
 	})
 }

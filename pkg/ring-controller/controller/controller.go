@@ -14,7 +14,7 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 	corev1 "k8s.io/api/core/v1"
-	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -22,7 +22,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
+	"volcano.sh/apis/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/apis/pkg/client/clientset/versioned/scheme"
 
 	"hccl-controller/pkg/ring-controller/agent"
@@ -31,13 +31,13 @@ import (
 )
 
 // NewEventController returns a new sample controller
-func NewEventController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
+func NewEventController(kubeclientset kubernetes.Interface, jobclientset versioned.Interface, config *agent.Config,
 	informerInfo InformerInfo,
 	stopCh <-chan struct{}) *EventController {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
-	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
+	runtime.Must(samplescheme.AddToScheme(scheme.Scheme))
 	hwlog.RunLog.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(hwlog.RunLog.Infof)
@@ -64,7 +64,7 @@ func NewEventController(kubeclientset kubernetes.Interface, jobclientset clients
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
 func (c *EventController) Run(threadiness int, stopCh <-chan struct{}) error {
-	defer pkgutilruntime.HandleCrash()
+	defer runtime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	defer c.agent.Workqueue.ShuttingDown()
 
@@ -123,7 +123,7 @@ func (c *EventController) processNextWork() bool {
 
 	if err != nil {
 		hwlog.RunLog.Errorf("processNextWork controller, err %v", err)
-		pkgutilruntime.HandleError(err)
+		runtime.HandleError(err)
 		return true
 	}
 
@@ -136,7 +136,7 @@ func (c *EventController) processNextWork() bool {
 func (c *EventController) enqueueJob(obj interface{}, eventType string) {
 	models, err := model.Factory(obj, eventType, c.cacheIndexers)
 	if err != nil {
-		pkgutilruntime.HandleError(err)
+		runtime.HandleError(err)
 		return
 	}
 	c.workqueue.AddRateLimited(models)

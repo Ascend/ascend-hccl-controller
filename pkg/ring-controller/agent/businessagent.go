@@ -39,12 +39,8 @@ func (p *podIdentifier) String() string {
 // implemented in the form of worker interface in the agent framework run.
 // Agent monitors POD events with a specific label and implements the
 // combination of tasks through different workers at different times.
-var NewBusinessAgent = func(
-	kubeClientSet kubernetes.Interface,
-	recorder record.EventRecorder,
-	config *Config,
+func NewBusinessAgent(kubeClientSet kubernetes.Interface, recorder record.EventRecorder, config *Config,
 	stopCh <-chan struct{}) (*BusinessAgent, error) {
-
 	// create pod informer factory
 	labelSelector := labels.Set(map[string]string{
 		Key910: Val910,
@@ -276,7 +272,7 @@ func containerUsedChip(pod *apiCoreV1.Pod) bool {
 func GetNPUNum(c apiCoreV1.Container) int32 {
 	var qtt resource.Quantity
 	var exist bool
-	for _, res := range ResourceList {
+	for _, res := range GetResourceList() {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
 		if !exist {
 			continue
