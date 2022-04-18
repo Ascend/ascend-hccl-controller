@@ -12,11 +12,11 @@ import (
 	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // NewDeploymentWorker ： to create Deployment Worker
-func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable v1.RankTabler,
+func NewDeploymentWorker(agent *BusinessAgent, deploy DeployInfo, ranktable ranktablev1.RankTabler,
 	replicasTotal int32) *DeployWorker {
 	return &DeployWorker{WorkerInfo: WorkerInfo{kubeclientset: agent.KubeClientSet, podsIndexer: agent.PodsIndexer,
 		recorder: agent.recorder, dryRun: agent.dryRun, statisticSwitch: make(chan struct{}),
