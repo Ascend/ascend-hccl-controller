@@ -194,7 +194,7 @@ func TestDeployModelGenerateGrouplist(t *testing.T) {
 		model := &DeployModel{replicas: DeployRep}
 		convey.Convey("err == nil & Group is ok ", func() {
 			resouceList := make(corev1.ResourceList, 1)
-			resouceList[agent.ResourceName] = *resource.NewScaledQuantity(common.Index2, 0)
+			resouceList[agent.A910ResourceName] = *resource.NewScaledQuantity(common.Index2, 0)
 			containers := []corev1.Container{
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
