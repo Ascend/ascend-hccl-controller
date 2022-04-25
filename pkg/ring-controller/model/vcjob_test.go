@@ -338,7 +338,7 @@ func TestVCJobModelGenerateGrouplist(t *testing.T) {
 		model := &VCJobModel{JobInfo: agent.JobInfo{JobNamespace: "namespace", JobName: "test"}}
 		convey.Convey("err == nil & Group is ok ", func() {
 			resouceList := make(corev1.ResourceList)
-			resouceList[agent.ResourceName] = *resource.NewScaledQuantity(TaskRep, 0)
+			resouceList[agent.A910ResourceName] = *resource.NewScaledQuantity(TaskRep, 0)
 			containers := []corev1.Container{
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},

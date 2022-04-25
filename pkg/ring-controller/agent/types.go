@@ -23,8 +23,8 @@ const (
 	Key910 = "ring-controller.atlas"
 	// Val910 to get Configmap
 	Val910 = "ascend-910" // Val910 to get Configmap
-	// ResourceName for 910
-	ResourceName = "huawei.com/Ascend910"
+	// A910ResourceName resource name for 910
+	A910ResourceName = "huawei.com/Ascend910"
 	// ConfigmapPrefix to get from configmap
 	ConfigmapPrefix = "rings-config"
 	// ConfigmapCompleted Staus
@@ -53,14 +53,19 @@ const (
 	retryMilliSecond = 5
 	threeMinutes     = 180
 	splitNum         = 4
+
+	a910With2CResourceName  = A910ResourceName + "-2c"
+	a910With4CResourceName  = A910ResourceName + "-4c"
+	a910With8CResourceName  = A910ResourceName + "-8c"
+	a910With16CResourceName = A910ResourceName + "-16c"
 )
 
 var (
 	// jsonVersion of hccl.json
 	jsonVersion = "v2"
 	// ResourceList pod annotation
-	resourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
-		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
+	resourceList = []string{A910ResourceName, a910With2CResourceName, a910With4CResourceName,
+		a910With8CResourceName, a910With16CResourceName}
 )
 
 // SetJSONVersion set jsonVersion
