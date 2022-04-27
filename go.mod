@@ -6,7 +6,7 @@ require (
 	github.com/agiledragon/gomonkey/v2 v2.2.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.7.0
-	huawei.com/npu-exporter v0.2.1
+	huawei.com/npu-exporter v0.2.5
 	k8s.io/api v0.19.11
 	k8s.io/apimachinery v0.19.11
 	k8s.io/client-go v0.19.11
@@ -17,7 +17,7 @@ replace (
 	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
 	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
 	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.4
+	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.5
 	k8s.io/api v0.0.0 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
 	k8s.io/api v0.19.11 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
 	k8s.io/apiextensions-apiserver v0.0.0 => k8s.io/apiextensions-apiserver v0.19.4
