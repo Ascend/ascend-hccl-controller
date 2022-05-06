@@ -8,11 +8,13 @@ package model
 
 import (
 	"errors"
-	agent2 "hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/common"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	"huawei.com/npu-exporter/hwlog"
 	"strconv"
+
+	"huawei.com/npu-exporter/hwlog"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // GetReplicas : to return the replicas in deployment.
@@ -21,59 +23,60 @@ func (deploy *DeployModel) GetReplicas() string {
 }
 
 // EventAdd : to handle deployment add event
-func (deploy *DeployModel) EventAdd(agent *agent2.BusinessAgent) error {
+func (deploy *DeployModel) EventAdd(businessAgent *agent.BusinessAgent) error {
 	// check if job's corresponding configmap is created successfully via volcano controller
-	cm, err := checkCMCreation(deploy.DeployNamespace, deploy.DeployName, agent.KubeClientSet, agent.Config)
+	cm, err := checkCMCreation(deploy.DeployNamespace, deploy.DeployName, businessAgent.KubeClientSet,
+		businessAgent.Config)
 	if err != nil {
 		return err
 	}
 
 	// retrieve configmap data
-	jobStartString, ok := cm.Data[agent2.ConfigmapKey]
+	jobStartString, ok := cm.Data[agent.ConfigmapKey]
 	if !ok {
-		return errors.New("the key of " + agent2.ConfigmapKey + " does not exist")
+		return errors.New("the key of " + agent.ConfigmapKey + " does not exist")
 	}
-	var rst v1.RankTableStatus
+	var rst ranktablev1.RankTableStatus
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
 	hwlog.RunLog.Debug("jobStarting: ", jobStartString)
 
-	ranktable, replicasTotal, err := RanktableFactory(deploy, rst, agent2.JSONVersion)
+	ranktable, replicasTotal, err := RanktableFactory(deploy, rst, agent.GetJSONVersion())
 	if err != nil {
 		return err
 	}
-	deploymentWorker := agent2.NewDeploymentWorker(agent, deploy.DeployInfo, ranktable, replicasTotal)
+	deploymentWorker := agent.NewDeploymentWorker(businessAgent, deploy.DeployInfo, ranktable, replicasTotal)
 
 	// create a business worker for current deployment
-	agent.RwMutex.Lock()
-	defer agent.RwMutex.Unlock()
+	businessAgent.RwMutex.Lock()
+	defer businessAgent.RwMutex.Unlock()
 
 	hwlog.RunLog.Infof("create business worker for %s/%s", deploy.DeployNamespace, deploy.DeployName)
-	_, exist := agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
+	_, exist := businessAgent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
 	if exist {
 		hwlog.RunLog.Infof("business worker for %s/%s is already existed", deploy.DeployNamespace, deploy.DeployName)
 		return nil
 	}
 
 	// start to report rank table build statistic for current deployment
-	if agent.Config.DisplayStatistic {
+	if businessAgent.Config.DisplayStatistic {
 		go deploymentWorker.Statistic(BuildStatInterval)
 	}
 
 	// save current business worker
-	agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName] = deploymentWorker
+	businessAgent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName] = deploymentWorker
 	return nil
 }
 
 // EventUpdate : to handle deployment update event
-func (deploy *DeployModel) EventUpdate(agent *agent2.BusinessAgent) error {
-	agent.RwMutex.RLock()
-	_, exist := agent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
-	agent.RwMutex.RUnlock()
+func (deploy *DeployModel) EventUpdate(businessAgent *agent.BusinessAgent) error {
+	businessAgent.RwMutex.RLock()
+	_, exist := businessAgent.BusinessWorker[deploy.DeployNamespace+"/"+deploy.DeployName]
+	businessAgent.RwMutex.RUnlock()
 	if !exist {
 		// for pod update,  the version will be incorrect
-		err := deploy.EventAdd(agent)
+		err := deploy.EventAdd(businessAgent)
 		if err != nil {
 			return err
 		}
@@ -82,17 +85,17 @@ func (deploy *DeployModel) EventUpdate(agent *agent2.BusinessAgent) error {
 }
 
 // GenerateGrouplist to create GroupList. in ranktable v1 will use it.
-func (deploy *DeployModel) GenerateGrouplist() ([]*v1.Group, int32, error) {
-	var groupList []*v1.Group
+func (deploy *DeployModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, error) {
+	var groupList []*ranktablev1.Group
 	var deviceTotal int32
 
 	for _, container := range deploy.containers {
-		deviceTotal += agent2.GetNPUNum(container)
+		deviceTotal += agent.GetNPUNum(container)
 	}
 	deviceTotal *= deploy.replicas
 
-	var instanceList []*v1.Instance
-	group := v1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
+	var instanceList []*ranktablev1.Instance
+	group := ranktablev1.Group{GroupName: deploy.DeployName, DeviceCount: strconv.FormatInt(int64(deviceTotal),
 		common.Decimal), InstanceCount: strconv.FormatInt(int64(deploy.replicas), common.Decimal),
 		InstanceList: instanceList}
 	groupList = append(groupList, &group)

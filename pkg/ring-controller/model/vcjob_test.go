@@ -8,11 +8,12 @@ package model
 import (
 	"context"
 	"fmt"
-	. "github.com/agiledragon/gomonkey/v2"
-	. "github.com/smartystreets/goconvey/convey"
-	"hccl-controller/pkg/ring-controller/agent"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	_ "hccl-controller/pkg/testtool"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/agiledragon/gomonkey/v2"
+	"github.com/smartystreets/goconvey/convey"
 	appsV1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,103 +23,107 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/workqueue"
-	"reflect"
-	"testing"
-	"time"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	_ "hccl-controller/pkg/testtool"
 )
 
 const (
 	NameSpace    = "namespace"
 	Name         = "test1"
 	DataKey      = "hccl.json"
-	DataValue    = "{\"status\":\"initializing\"}"
+	DataValue    = `{"status":"initializing"}`
 	CMName       = "rings-config-test1"
 	Initializing = "initializing"
 )
 
 // TestFactory test Factory
 func TestFactory(t *testing.T) {
-	Convey("model Factory", t, func() {
-		Convey("err != nil when obj == nil", func() {
+	convey.Convey("model Factory", t, func() {
+		convey.Convey("err != nil when obj == nil", func() {
 			_, err := Factory(nil, "", nil)
-			So(err, ShouldNotEqual,
+			convey.So(err, convey.ShouldNotEqual,
 				nil)
 		})
 
-		Convey("err !=nil&  when obj is daemonSet ", func() {
-			obj := &appsV1.DaemonSet{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				appsV1.DaemonSetSpec{}, appsV1.DaemonSetStatus{}}
+		convey.Convey("err !=nil&  when obj is daemonSet ", func() {
+			obj := &appsV1.DaemonSet{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: appsV1.DaemonSetSpec{},
+				Status: appsV1.DaemonSetStatus{}}
 			_, err := Factory(obj, "add", nil)
-			So(err, ShouldNotEqual, nil)
+			convey.So(err, convey.ShouldNotEqual, nil)
 		})
 
-		Convey("err ==nil& resourceHandle = jobHandle when obj is job ", func() {
-			obj := &v1alpha1apis.Job{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				v1alpha1apis.JobSpec{}, v1alpha1apis.JobStatus{}}
+		convey.Convey("err ==nil& resourceHandle = jobHandle when obj is job ", func() {
+			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
+				Status: v1alpha1apis.JobStatus{}}
 			rs, _ := Factory(obj, "add", nil)
-			So(rs, ShouldEqual, nil)
+			convey.So(rs, convey.ShouldEqual, nil)
 		})
 
-		Convey("err ==nil& resourceHandle = DeploymentHandle when obj is deployment ", func() {
+		convey.Convey("err ==nil& resourceHandle = DeploymentHandle when obj is deployment ", func() {
 			replicas := int32(1)
-			obj := &appsV1.Deployment{metav1.TypeMeta{}, metav1.ObjectMeta{Name: "test1", GenerateName: "",
-				Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "", Generation: 0,
-				CreationTimestamp: metav1.Now(), DeletionTimestamp: nil, DeletionGracePeriodSeconds: nil, Labels: nil,
-				Annotations: nil, OwnerReferences: nil, Finalizers: nil, ClusterName: "", ManagedFields: nil},
-				appsV1.DeploymentSpec{Replicas: &replicas}, appsV1.DeploymentStatus{}}
+			obj := &appsV1.Deployment{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
+				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
+				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
+				Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				Spec: appsV1.DeploymentSpec{Replicas: &replicas}, Status: appsV1.DeploymentStatus{}}
 			rs, _ := Factory(obj, "add", nil)
-			So(rs, ShouldEqual, nil)
+			convey.So(rs, convey.ShouldEqual, nil)
 		})
 	})
 }
 
 // TestRanktableFactory test RanktableFactory
 func TestRanktableFactory(t *testing.T) {
-	Convey("model RankTableFactory", t, func() {
+	convey.Convey("model RankTableFactory", t, func() {
 		model := &VCJobModel{}
-		Convey("err != nil when obj == nil", func() {
-			patch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+		convey.Convey("err != nil when obj == nil", func() {
+			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(0), fmt.Errorf("test")
 			})
 			defer patch.Reset()
-			_, _, err := RanktableFactory(model, v1.RankTableStatus{Status: ""}, "")
-			So(err, ShouldNotEqual, nil)
+			_, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: ""}, "")
+			convey.So(err, convey.ShouldNotEqual, nil)
 		})
 
-		Convey("err ==nil& when RankTableStatus is ok and version is v1", func() {
+		convey.Convey("err ==nil& when RankTableStatus is ok and version is v1", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
-			patch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer patch.Reset()
-			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v1")
-			So(err, ShouldEqual, nil)
-			So(rt.GetStatus(), ShouldEqual, "initializing")
+			rt, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: Initializing}, "v1")
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(rt.GetStatus(), convey.ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
-			So(rv.FieldByName("GroupCount").String(), ShouldEqual, "1")
+			convey.So(rv.FieldByName("GroupCount").String(), convey.ShouldEqual, "1")
 		})
 
-		Convey("err ==nil& when RankTableStatus is ok and version is v2", func() {
+		convey.Convey("err ==nil& when RankTableStatus is ok and version is v2", func() {
 			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
-			pathch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-				[]*v1.Group, int32, error) {
+			pathch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
+				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
 			})
 			defer pathch.Reset()
-			rt, _, err := RanktableFactory(model, v1.RankTableStatus{Status: Initializing}, "v2")
-			So(err, ShouldEqual, nil)
-			So(rt.GetStatus(), ShouldEqual, "initializing")
+			rt, _, err := RanktableFactory(model, ranktablev1.RankTableStatus{Status: Initializing}, "v2")
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(rt.GetStatus(), convey.ShouldEqual, "initializing")
 			rv := reflect.ValueOf(rt).Elem()
-			So(rv.FieldByName("ServerCount").String(), ShouldEqual, "0")
+			convey.So(rv.FieldByName("ServerCount").String(), convey.ShouldEqual, "0")
 		})
 	})
 }
@@ -136,14 +141,14 @@ func TestCheckCMCreation(t *testing.T) {
 		CmCheckInterval:  CmInterval,
 		CmCheckTimeout:   CmTimeout,
 	}
-	Convey("model checkCMCreation", t, func() {
+	convey.Convey("model checkCMCreation", t, func() {
 		fakeClient := fake.NewSimpleClientset()
 		fakeCoreV1 := fakeClient.CoreV1()
 		cms := fakeCoreV1.ConfigMaps(NameSpace)
-		Convey("err == nil when Normal", func() {
+		convey.Convey("err == nil when Normal", func() {
 			checkCmWhenNormal(cms, fakeClient, config)
 		})
-		Convey("err != nil when Label not exist", func() {
+		convey.Convey("err != nil when Label not exist", func() {
 			data := make(map[string]string, 1)
 			label := make(map[string]string, 1)
 			data[DataKey] = DataValue
@@ -151,10 +156,10 @@ func TestCheckCMCreation(t *testing.T) {
 				Namespace: "namespace", Labels: label}, Data: data}
 			cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 			getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
-			So(err, ShouldNotEqual, nil)
-			So(getCM, ShouldEqual, nil)
+			convey.So(err, convey.ShouldNotEqual, nil)
+			convey.So(getCM, convey.ShouldEqual, nil)
 		})
-		Convey("err != nil when cm not exist", func() {
+		convey.Convey("err != nil when cm not exist", func() {
 			data := make(map[string]string, 1)
 			label := make(map[string]string, 1)
 			data[DataKey] = DataValue
@@ -162,8 +167,8 @@ func TestCheckCMCreation(t *testing.T) {
 				Namespace: "namespace", Labels: label}, Data: data}
 			cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 			getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
-			So(err, ShouldNotEqual, nil)
-			So(getCM, ShouldEqual, nil)
+			convey.So(err, convey.ShouldNotEqual, nil)
+			convey.So(getCM, convey.ShouldEqual, nil)
 		})
 	})
 }
@@ -177,13 +182,13 @@ func checkCmWhenNormal(cms typedcorev1.ConfigMapInterface, fakeClient *fake.Clie
 		Namespace: "namespace", Labels: label}, Data: data}
 	cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
 	getCM, err := checkCMCreation(NameSpace, Name, fakeClient, config)
-	So(err, ShouldEqual, nil)
-	So(getCM.String(), ShouldEqual, putCM.String())
+	convey.So(err, convey.ShouldEqual, nil)
+	convey.So(getCM.String(), convey.ShouldEqual, putCM.String())
 }
 
 // TestVCJobModelEventAdd test VCJobModel_EventAdd
 func TestVCJobModelEventAdd(t *testing.T) {
-	Convey("model VCJobModel_EventAdd", t, func() {
+	convey.Convey("model VCJobModel_EventAdd", t, func() {
 		model := &VCJobModel{JobInfo: agent.JobInfo{JobNamespace: "namespace", JobName: "test"}}
 		const (
 			CmInterval = 2
@@ -205,34 +210,34 @@ func TestVCJobModelEventAdd(t *testing.T) {
 			BusinessWorker: make(map[string]agent.Worker, 1),
 			Config:         config,
 		}
-		Convey("err == nil when BusinessWorker [namespace/name] exist", func() {
+		convey.Convey("err == nil when BusinessWorker [namespace/name] exist", func() {
 			ag.BusinessWorker["namespace/test"] = nil
 			err := model.EventAdd(ag)
-			So(err, ShouldEqual, nil)
-			So(len(ag.BusinessWorker), ShouldEqual, 1)
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 1)
 		})
-		Convey("err !=nil&  when configmap is not exist ", func() {
-			patches := ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
-				*corev1.ConfigMap, error) {
+		convey.Convey("err !=nil&  when configmap is not exist ", func() {
+			patches := gomonkey.ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface,
+				_ *agent.Config) (*corev1.ConfigMap, error) {
 				return nil, fmt.Errorf(" failed to get configmap for job")
 			})
 			defer patches.Reset()
 			err := model.EventAdd(ag)
-			So(err, ShouldNotEqual, nil)
-			So(len(ag.BusinessWorker), ShouldEqual, 0)
+			convey.So(err, convey.ShouldNotEqual, nil)
+			convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 0)
 		})
-		Convey("err !=nil & when rankTableFactory return nil", func() {
+		convey.Convey("err !=nil & when rankTableFactory return nil", func() {
 			eventAddWhenFactNil(model, ag)
 		})
 
-		Convey("err ==nil& when jobStartString is ok and version is v2", func() {
+		convey.Convey("err ==nil& when jobStartString is ok and version is v2", func() {
 			eventAddWhenVersionV2(model, ag)
 		})
 	})
 }
 
 func eventAddWhenVersionV2(model *VCJobModel, ag *agent.BusinessAgent) {
-	patches := ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
+	patches := gomonkey.ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
 		*corev1.ConfigMap, error) {
 		data := make(map[string]string, 1)
 		data[DataKey] = DataValue
@@ -242,18 +247,18 @@ func eventAddWhenVersionV2(model *VCJobModel, ag *agent.BusinessAgent) {
 	})
 	defer patches.Reset()
 	model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
-	patch := ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
-		[]*v1.Group, int32, error) {
+	patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
+		[]*ranktablev1.Group, int32, error) {
 		return nil, int32(1), nil
 	})
 	defer patch.Reset()
 	err := model.EventAdd(ag)
-	So(err, ShouldEqual, nil)
-	So(len(ag.BusinessWorker), ShouldEqual, 1)
+	convey.So(err, convey.ShouldEqual, nil)
+	convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 1)
 }
 
 func eventAddWhenFactNil(model *VCJobModel, ag *agent.BusinessAgent) {
-	patches := ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
+	patches := gomonkey.ApplyFunc(checkCMCreation, func(_, _ string, _ kubernetes.Interface, _ *agent.Config) (
 		*corev1.ConfigMap, error) {
 		data := make(map[string]string, 1)
 		data[DataKey] = DataValue
@@ -262,19 +267,19 @@ func eventAddWhenFactNil(model *VCJobModel, ag *agent.BusinessAgent) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	patches2 := ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ v1.RankTableStatus, _ string) (
-		v1.RankTabler, int32, error) {
+	patches2 := gomonkey.ApplyFunc(RanktableFactory, func(_ ResourceEventHandler, _ ranktablev1.RankTableStatus,
+		_ string) (ranktablev1.RankTabler, int32, error) {
 		return nil, int32(0), fmt.Errorf("generate group list from job error")
 	})
 	defer patches2.Reset()
 	err := model.EventAdd(ag)
-	So(err, ShouldNotEqual, nil)
-	So(len(ag.BusinessWorker), ShouldEqual, 0)
+	convey.So(err, convey.ShouldNotEqual, nil)
+	convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 0)
 }
 
 // TestVCJobModelEventUpdate test VCJobModel_EventUpdate
 func TestVCJobModelEventUpdate(t *testing.T) {
-	Convey("model VCJobModel_EventUpdate", t, func() {
+	convey.Convey("model VCJobModel_EventUpdate", t, func() {
 		const (
 			CmTimeout     = 5
 			TimeSleep     = 3
@@ -286,54 +291,54 @@ func TestVCJobModelEventUpdate(t *testing.T) {
 				CmTimeout*time.Millisecond, TimeSleep*time.Second), "Pods"),
 			BusinessWorker: make(map[string]agent.Worker, 1),
 		}
-		Convey("err == nil when BusinessWorker exist job", func() {
+		convey.Convey("err == nil when BusinessWorker exist job", func() {
 			ag.BusinessWorker["namespace/test"] = nil
 			err := model.EventUpdate(ag)
-			So(err, ShouldEqual, nil)
-			So(len(ag.BusinessWorker), ShouldEqual, 1)
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 1)
 		})
 
-		Convey("err == nil && len(map)==len(map)+1 when BusinessWorker do not exist job", func() {
+		convey.Convey("err == nil && len(map)==len(map)+1 when BusinessWorker do not exist job", func() {
 			ag.BusinessWorker["namespace/test1"] = nil
-			patch := ApplyMethod(reflect.TypeOf(model), "EventAdd", func(vc *VCJobModel,
+			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "EventAdd", func(vc *VCJobModel,
 				agent *agent.BusinessAgent) error {
 				agent.BusinessWorker[fmt.Sprintf("%s/%s", vc.JobNamespace, vc.JobName)] = nil
 				return nil
 			})
 			defer patch.Reset()
 			err := model.EventUpdate(ag)
-			So(err, ShouldEqual, nil)
-			So(len(ag.BusinessWorker), ShouldEqual, WorkLenExpect)
+			convey.So(err, convey.ShouldEqual, nil)
+			convey.So(len(ag.BusinessWorker), convey.ShouldEqual, WorkLenExpect)
 		})
-		Convey("err != nil  when eventAdd has error", func() {
+		convey.Convey("err != nil  when eventAdd has error", func() {
 			updateWhenAddErr(model, ag)
 		})
 	})
 }
 
 func updateWhenAddErr(model *VCJobModel, ag *agent.BusinessAgent) {
-	patch := ApplyMethod(reflect.TypeOf(model), "EventAdd", func(_ *VCJobModel,
+	patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "EventAdd", func(_ *VCJobModel,
 		agent *agent.BusinessAgent) error {
 		return fmt.Errorf("get configmap error")
 	})
 	defer patch.Reset()
 	err := model.EventUpdate(ag)
-	So(err, ShouldNotEqual, nil)
-	So(len(ag.BusinessWorker), ShouldEqual, 0)
+	convey.So(err, convey.ShouldNotEqual, nil)
+	convey.So(len(ag.BusinessWorker), convey.ShouldEqual, 0)
 }
 
 // TestVCJobModelGenerateGrouplist test VCJobModel_GenerateGrouplist
 func TestVCJobModelGenerateGrouplist(t *testing.T) {
-	Convey("model VCJobModel_GenerateGrouplist", t, func() {
+	convey.Convey("model VCJobModel_GenerateGrouplist", t, func() {
 		const (
 			TaskRep   = 2
 			RepExpect = 2
 		)
 
 		model := &VCJobModel{JobInfo: agent.JobInfo{JobNamespace: "namespace", JobName: "test"}}
-		Convey("err == nil & Group is ok ", func() {
+		convey.Convey("err == nil & Group is ok ", func() {
 			resouceList := make(corev1.ResourceList)
-			resouceList[agent.ResourceName] = *resource.NewScaledQuantity(TaskRep, 0)
+			resouceList[agent.A910ResourceName] = *resource.NewScaledQuantity(TaskRep, 0)
 			containers := []corev1.Container{
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
@@ -341,9 +346,9 @@ func TestVCJobModelGenerateGrouplist(t *testing.T) {
 			model.taskSpec = append(model.taskSpec, v1alpha1apis.TaskSpec{Replicas: TaskRep,
 				Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: containers}}})
 			groupList, re, _ := model.GenerateGrouplist()
-			So(len(groupList), ShouldEqual, 1)
-			So(groupList[0].DeviceCount, ShouldEqual, "8")
-			So(re, ShouldEqual, RepExpect)
+			convey.So(len(groupList), convey.ShouldEqual, 1)
+			convey.So(groupList[0].DeviceCount, convey.ShouldEqual, "8")
+			convey.So(re, convey.ShouldEqual, RepExpect)
 		})
 	})
 }

@@ -7,22 +7,23 @@
 package controller
 
 import (
-	"hccl-controller/pkg/ring-controller/agent"
-	v1 "k8s.io/client-go/informers/apps/v1"
+	appsv1 "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	clientset "volcano.sh/apis/pkg/client/clientset/versioned"
-	v1alpha1informers "volcano.sh/apis/pkg/client/informers/externalversions/batch/v1alpha1"
+	"volcano.sh/apis/pkg/client/clientset/versioned"
+	v1alpha1Informers "volcano.sh/apis/pkg/client/informers/externalversions/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
 )
 
 const (
 	controllerName = "ring-controller"
 )
 
-// Controller initialize business agent
-type Controller struct {
+// EventController for handling event and initialize business agent
+type EventController struct {
 	// component for recycle resources
 	agent *agent.BusinessAgent
 
@@ -31,7 +32,7 @@ type Controller struct {
 	kubeclientset kubernetes.Interface
 
 	// jobclientset is a clientset for volcano job
-	jobclientset clientset.Interface
+	jobclientset versioned.Interface
 
 	// component for resource batch/v1alpha1/Job
 	jobsSynced   cache.InformerSynced
@@ -52,7 +53,7 @@ type InformerInfo struct {
 	// CacheIndexers : to store different type cache index
 	CacheIndexers map[string]cache.Indexer
 	// JobInformer : vcjob type informer
-	JobInformer v1alpha1informers.JobInformer
+	JobInformer v1alpha1Informers.JobInformer
 	// DeployInformer: deployment type informer
-	DeployInformer v1.DeploymentInformer
+	DeployInformer appsv1.DeploymentInformer
 }

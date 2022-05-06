@@ -7,25 +7,28 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/common"
-	"hccl-controller/pkg/ring-controller/model"
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
 	"os"
 	"time"
 
-	"hccl-controller/pkg/resource-controller/signals"
-	"hccl-controller/pkg/ring-controller/controller"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	cinformers "k8s.io/client-go/informers"
+	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/npu-exporter/utils"
+	apisv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	vkClientset "volcano.sh/apis/pkg/client/clientset/versioned"
-	informers "volcano.sh/apis/pkg/client/informers/externalversions"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"volcano.sh/apis/pkg/client/clientset/versioned"
+	"volcano.sh/apis/pkg/client/informers/externalversions"
+
+	"hccl-controller/pkg/resource-controller/signals"
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
+	"hccl-controller/pkg/ring-controller/controller"
+	"hccl-controller/pkg/ring-controller/model"
 )
 
 var (
@@ -57,32 +60,31 @@ func main() {
 	}
 	stopLogCh := make(chan struct{})
 	defer close(stopLogCh)
-	initHwLogger(stopLogCh)
+	if err := initHwLogger(stopLogCh); err != nil {
+		fmt.Printf("%v", err)
+		return
+	}
 	hwlog.RunLog.Infof("hccl controller starting and the version is %s", BuildVersion)
 	if hcclVersion != "v1" && hcclVersion != "v2" {
 		hwlog.RunLog.Fatalf("invalid json version value, should be v1/v2")
 	}
-	agent.JSONVersion = hcclVersion
+	agent.SetJSONVersion(hcclVersion)
 	validateParallelism()
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 	if KubeConfig == "" && utils.IsExists(defaultKubeConfig) {
 		KubeConfig = defaultKubeConfig
 	}
-	path, err := utils.CheckPath(KubeConfig)
+	cfg, err := getK8sConfig()
 	if err != nil {
-		hwlog.RunLog.Fatal(err)
+		hwlog.RunLog.Error(err)
+		return
 	}
-	cfg, err := utils.BuildConfigFromFlags("", path)
-	if err != nil {
-		hwlog.RunLog.Fatalf("Error building kubeconfig")
-	}
-
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		hwlog.RunLog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
-	jobClient, err := vkClientset.NewForConfig(cfg)
+	jobClient, err := versioned.NewForConfig(cfg)
 	if err != nil {
 		hwlog.RunLog.Fatalf("Error building job clientset: %s", err.Error())
 	}
@@ -94,8 +96,9 @@ func main() {
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
 
-	control := controller.NewController(kubeClient, jobClient, newConifg(), controller.InformerInfo{JobInformer: jobInformer,
-		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
+	control := controller.NewEventController(kubeClient, jobClient, newConfig(),
+		controller.InformerInfo{JobInformer: jobInformer, DeployInformer: deploymentInformer,
+			CacheIndexers: cacheIndexer}, stopCh)
 
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
@@ -104,7 +107,7 @@ func main() {
 	}
 }
 
-func newConifg() *agent.Config {
+func newConfig() *agent.Config {
 	config := &agent.Config{
 		DryRun:           dryRun,
 		DisplayStatistic: displayStatistic,
@@ -115,15 +118,16 @@ func newConifg() *agent.Config {
 	return config
 }
 
-func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
-	informers.SharedInformerFactory, cinformers.SharedInformerFactory) {
+func newInformerFactory(jobClient *versioned.Clientset, kubeClient *kubernetes.Clientset) (
+	externalversions.SharedInformerFactory, informers.SharedInformerFactory) {
 	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
-	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(jobClient, time.Second*30,
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
+	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(jobClient,
+		time.Second*common.InformerInterval, externalversions.WithTweakListOptions(func(options *apisv1.
+			ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
-	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30,
-		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+	deploymentFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient,
+		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *apisv1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 	return jobInformerFactory, deploymentFactory
@@ -153,11 +157,12 @@ func init() {
 
 }
 
-func initHwLogger(stopCh chan struct{}) {
+func initHwLogger(stopCh chan struct{}) error {
 	if err := hwlog.InitRunLogger(hwLogConfig, stopCh); err != nil {
-		fmt.Printf("hwlog init failed, error is %v", err)
-		os.Exit(-1)
+		return fmt.Errorf("hwlog init failed, error is %v", err)
 	}
+
+	return nil
 }
 
 func validateParallelism() {
@@ -169,4 +174,17 @@ func validateParallelism() {
 	if podParallelism <= 0 || podParallelism > common.MaxPodParallelism {
 		hwlog.RunLog.Fatalf("Error parsing parameters: pod parallelism should be range [1, 32].")
 	}
+}
+
+func getK8sConfig() (*rest.Config, error) {
+	path, err := utils.CheckPath(KubeConfig)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := utils.BuildConfigFromFlags("", path)
+	if err != nil {
+		return nil, errors.New("error building kubeconfig")
+	}
+
+	return cfg, nil
 }

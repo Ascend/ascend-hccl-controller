@@ -8,6 +8,11 @@ package agent
 
 import (
 	"fmt"
+	"math"
+	"reflect"
+	"strings"
+	"time"
+
 	"huawei.com/npu-exporter/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,11 +25,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"math"
-	"strings"
-	"time"
 
-	"reflect"
+	"hccl-controller/pkg/ring-controller/common"
 )
 
 // String  to return podIdentifier string style :
@@ -37,18 +39,14 @@ func (p *podIdentifier) String() string {
 // implemented in the form of worker interface in the agent framework run.
 // Agent monitors POD events with a specific label and implements the
 // combination of tasks through different workers at different times.
-var NewBusinessAgent = func(
-	kubeClientSet kubernetes.Interface,
-	recorder record.EventRecorder,
-	config *Config,
+func NewBusinessAgent(kubeClientSet kubernetes.Interface, recorder record.EventRecorder, config *Config,
 	stopCh <-chan struct{}) (*BusinessAgent, error) {
-
 	// create pod informer factory
 	labelSelector := labels.Set(map[string]string{
 		Key910: Val910,
 	}).AsSelector().String()
-	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*30,
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet,
+		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 
@@ -211,16 +209,16 @@ func nameGenerationFunc(obj interface{}, eventType string) (string, error) {
 	return metaData.GetNamespace() + "/" + metaData.GetName() + "/" + getWorkName(labelMaps) + "/" + eventType, nil
 }
 
-func splitWorkerKey(key string) (podInfo *podIdentifier, err error) {
+func splitWorkerKey(key string) (*podIdentifier, error) {
 	parts := strings.Split(key, "/")
 	if len(parts) != splitNum {
 		return nil, fmt.Errorf("unexpected key format: %q", key)
 	}
-	podInfo = &podIdentifier{
-		namespace: parts[0],
-		name:      parts[1],
-		jobName:   parts[2],
-		eventType: parts[3],
+	podInfo := &podIdentifier{
+		namespace: parts[common.Index0],
+		name:      parts[common.Index1],
+		jobName:   parts[common.Index2],
+		eventType: parts[common.Index3],
 	}
 	return podInfo, nil
 }
@@ -274,7 +272,7 @@ func containerUsedChip(pod *apiCoreV1.Pod) bool {
 func GetNPUNum(c apiCoreV1.Container) int32 {
 	var qtt resource.Quantity
 	var exist bool
-	for _, res := range ResourceList {
+	for _, res := range GetResourceList() {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
 		if !exist {
 			continue

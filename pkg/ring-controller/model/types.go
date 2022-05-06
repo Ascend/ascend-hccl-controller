@@ -6,11 +6,13 @@
 package model
 
 import (
-	"hccl-controller/pkg/ring-controller/agent"
+	"time"
+
 	apiCorev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"time"
 	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
 )
 
 const (

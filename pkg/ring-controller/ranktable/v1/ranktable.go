@@ -10,11 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"huawei.com/npu-exporter/hwlog"
-	apiCoreV1 "k8s.io/api/core/v1"
 	"net"
 	"strconv"
 	"unicode/utf8"
+
+	"huawei.com/npu-exporter/hwlog"
+	apiCoreV1 "k8s.io/api/core/v1"
 )
 
 // RankTabler interface to maintain properties

@@ -5,21 +5,22 @@
 package agent
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
+
+	"github.com/smartystreets/goconvey/convey"
 )
 
 // TestDeployWorkerStatistic test DeployWorker_Statistic
 func TestDeployWorkerStatistic(t *testing.T) {
-	Convey("agent VCJobWorker_Statistic", t, func() {
+	convey.Convey("agent VCJobWorker_Statistic", t, func() {
 		d := &DeployWorker{WorkerInfo: WorkerInfo{statisticSwitch: make(chan struct{}), statisticStopped: false}}
 		const (
 			TaskRep   = 2
 			SleepTime = 3
 		)
 
-		Convey(" chan will return when chan close ", func() {
+		convey.Convey(" chan will return when chan close ", func() {
 			d.taskReplicasTotal = TaskRep
 			d.cachedPodNum = 1
 			go func() {
@@ -29,7 +30,7 @@ func TestDeployWorkerStatistic(t *testing.T) {
 			d.Statistic(1 * time.Second)
 		})
 
-		Convey(" chan will return when taskReplicasTotal==cachedPodNum ", func() {
+		convey.Convey(" chan will return when taskReplicasTotal==cachedPodNum ", func() {
 			const CachePod = 2
 			d.taskReplicasTotal = TaskRep
 			d.cachedPodNum = CachePod

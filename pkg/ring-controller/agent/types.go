@@ -6,14 +6,16 @@
 package agent
 
 import (
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	"sync"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sync"
+
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 const (
@@ -21,8 +23,8 @@ const (
 	Key910 = "ring-controller.atlas"
 	// Val910 to get Configmap
 	Val910 = "ascend-910" // Val910 to get Configmap
-	// ResourceName for 910
-	ResourceName = "huawei.com/Ascend910"
+	// A910ResourceName resource name for 910
+	A910ResourceName = "huawei.com/Ascend910"
 	// ConfigmapPrefix to get from configmap
 	ConfigmapPrefix = "rings-config"
 	// ConfigmapCompleted Staus
@@ -51,15 +53,35 @@ const (
 	retryMilliSecond = 5
 	threeMinutes     = 180
 	splitNum         = 4
+
+	a910With2CResourceName  = A910ResourceName + "-2c"
+	a910With4CResourceName  = A910ResourceName + "-4c"
+	a910With8CResourceName  = A910ResourceName + "-8c"
+	a910With16CResourceName = A910ResourceName + "-16c"
 )
 
 var (
-	// JSONVersion of hccl.json
-	JSONVersion = "v2"
+	// jsonVersion of hccl.json
+	jsonVersion = "v2"
 	// ResourceList pod annotation
-	ResourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
-		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
+	resourceList = []string{A910ResourceName, a910With2CResourceName, a910With4CResourceName,
+		a910With8CResourceName, a910With16CResourceName}
 )
+
+// SetJSONVersion set jsonVersion
+func SetJSONVersion(v string) {
+	jsonVersion = v
+}
+
+// GetJSONVersion get jsonVersion
+func GetJSONVersion() string {
+	return jsonVersion
+}
+
+// GetResourceList get ResourceList
+func GetResourceList() []string {
+	return resourceList
+}
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
 // * list/watch 910 pods, and assign each pod to corresponding handler
@@ -154,7 +176,7 @@ type WorkerInfo struct {
 	podsIndexer cache.Indexer
 
 	configmapName string
-	configmapData v1.RankTabler
+	configmapData ranktablev1.RankTabler
 
 	statisticStopped  bool
 	rankIndex         int
