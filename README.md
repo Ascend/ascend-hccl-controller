@@ -24,6 +24,8 @@
 | Ubuntu | 18.04.1/5 | aarch64 |
 | Ubuntu | 18.04.1/5 | x86_64  |
 
+根目录的磁盘空间利用率高于85%会触发Kubelet的镜像垃圾回收机制，将导致服务不可用。请确保根目录有足够的磁盘空间，建议大于1 TB
+
 ### 支持的硬件形态说明
 
 | 中心推理硬件         | 中心训练硬件     |
@@ -73,7 +75,11 @@ jinja version = 3.0.1
 libyaml = True
 ```
 
-ansible默认安装在系统自带python3中，安装完成后执行ansible --version查看ansible是否安装成功
+ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装完成后执行ansible --version查看ansible是否安装成功
+
+注：
+
+如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
 
 ### 步骤2：配置集群信息
 
@@ -241,11 +247,13 @@ root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
 
 注：
 
-1. k8s节点不可重复初始化或加入，使用本工具前，请先执行`kubeadm reset`清除节点上已有的k8s配置
+1. k8s节点不可重复初始化或加入，使用本工具前，请先在master和worker节点执行`kubeadm reset`清除节点上已有的k8s系统
 
-2. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
+2. mysql数据库会持久化MindX DL平台组件的相关数据，存储在master节点的MYSQL_DATAPATH目录下（默认为/data/mysql），如果需手动清除k8s系统，请务必也删除该目录，避免后续MindX DL平台组件运行异常
 
-3. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的/root/resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e resources_no_copy=true`参数，避免重复执行耗时的~/resources目录打包、分发操作。
+3. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
+
+4. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的/root/resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e resources_no_copy=true`参数，避免重复执行耗时的~/resources目录打包、分发操作
 
 ### 步骤6：安装后检查
 
@@ -283,9 +291,9 @@ mindx-dl      mysql-55569fc484-bb6kw                     1/1     Running   1    
 
 注：
 
-1. 手动执行kubectl命令时，需取消http(s)_proxy网络代理配置，否则会连接报错或一直卡死
+1. 手动执行kubectl命令时，需取消http(s)_proxy系统网络代理配置，否则会连接报错或一直卡死
 
-### 步骤7：安装MindX DL组件
+### 步骤7：安装MindX DL平台组件
 
 1. 在~/resources/目录下创建mindxdl目录。如果该目录已存在，请确保该目录下为空
    
@@ -293,35 +301,45 @@ mindx-dl      mysql-55569fc484-bb6kw                     1/1     Running   1    
       mkdir -p ~/resources/mindxdl
    ```
 
-2. 将MindX DL组件放到~/resource/mindxdl目录中
+2. 将MindX DL平台组件放到~/resource/mindxdl目录中
    
    ```bash
    ~/resources/
     `── mindxdl
-        ├── Ascend-mindxdl-volcano_{version}-{arch}.zip
-        ├── Ascend-mindxdl-hccl-controller_{version}-{arch}.zip
+        ├── Ascend-mindxdl-apigw_{version}-{arch}.zip
+        ├── Ascend-mindxdl-cluster-manager_{version}-{arch}.zip
          ....
    ```
 
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/11.mindxdl.yaml
+   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/13.mindxdl.yaml
    ```
 
 注：
 
-1. MindX DL相关组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
+1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 安装MindX DL组件，当前仅支持k8s为master单机节点，或worker与master节点的CPU架构相同的情况
+2. 只支持安装MindX DL平台组件，当前包括11个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager）
 
-## 更新MindX DL组件
+## 更新MindX DL平台组件
 
-如果用户已完整执行过以上安装步骤，本工具支持单独更新MindX DL组件。
+如果用户已完整执行过以上安装步骤，本工具支持单独更新MindX DL平台组件
 
 1. 查阅“步骤2：配置集群信息”的inventory文件和“步骤3：配置安装信息”的group_vars/all.yaml文件，确保这2个配置文件同上一次使用本工具时的配置完全一致
 
-2. 执行“步骤7：安装MindX DL组件”。该步骤可重复执行
+2. 执行“步骤7：安装MindX DL平台组件”。该步骤可重复执行
+
+## 后续依赖软件安装
+
+完成安装MindX DL平台后，还需要完成相关依赖软件的安装，才能构建昇腾NPU的训练和推理任务
+
+| 软件名称         | 获取方式     |
+|:---------------:|:-----------:|
+| NPU的驱动和固件  | 请参见各硬件产品中驱动和固件安装升级指南获取对应的指导 | 
+| Ascend docker runtime | 请参见《MindX ToolBox用户指南》安装实用工具包“Ascend-mindx-toolbox_{version}_linux-{arch}.run” |
+| MindX DL基础组件 | 请参见《MindX DL用户指南》安装4个基础组件（Volcano、Ascend Device Plugin、NPU-Exporter、HCCL-Controller） |
 
 # 详细说明
 
@@ -342,7 +360,8 @@ playbooks/
 ├── 09.redis.yaml
 ├── 10.inner-image.yaml
 ├── 11.pre-image.yaml
-├── 12.mindxdl.yaml
+├── 12.cephfs.yaml
+├── 13.mindxdl.yaml
 ```
 
 例如:
@@ -361,9 +380,9 @@ playbooks/
    ansible-playbook -i inventory_file playbooks/02.docker.yaml
    ```
 
-## 安装过程配置
+3. 安装过程配置
 
-工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~10编号的yaml效果一致。实际安装时可根据需要对组件灵活删减
+工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~12编号的yaml效果一致（不包括13.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
 
 # 高级配置
 
@@ -386,8 +405,8 @@ playbooks/
 参数：
 
 | 参数名                         | 说明                                                             |
-| --------------------------- | -------------------------------------------------------------- |
-| apiserver_advertise_address | 指定kubenetes的apiserver绑定的ip地址，默认空。在多网卡时建议配置，防止apiserver监听到其他网卡上 |
+| ----------------- | -------------------------------------------------------------- |
+| K8S_API_SERVER_IP | 指定kubenetes的apiserver绑定的ip地址，默认空。在多网卡时建议配置，防止apiserver监听到其他网卡上 |
 
 ### 角色：mindx.k8s.worker
 
