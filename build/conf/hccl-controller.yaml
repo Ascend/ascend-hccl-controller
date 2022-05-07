@@ -8,9 +8,6 @@ compile:
   input:
     envVariables:
       GO111MODULE: "on"
-      GONOSUMDB: "*"
-      GOPROXY: "http://mirrors.tools.huawei.com/goproxy,direct"
-      CGO_ENABLED: "1"
       CGO_CFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
       CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
     files:
@@ -59,10 +56,9 @@ compile:
             src: [ "{{ systemEnv.workspace }}/{{component}}/output/hccl-controller" ]
             mode: "500"
         - commands:
-            - command: "unzip -n -d {{ systemEnv.workspace }}/{{component}}/npu-exporter/ {{ systemEnv.workspace }}/{{ component}}/npu-exporter/Ascend-mindxdl-npu-exporter_*_linux-{{systemEnv.processor}}.zip"
-            - command: "if [ -d '{{ systemEnv.workspace }}/{{component}}/npu-exporter' ];
-        then cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/lib {{ systemEnv.workspace }}/{{component}}/output;
-        cp -rf {{ systemEnv.workspace }}/{{component}}/npu-exporter/cert-importer {{ systemEnv.workspace }}/{{component}}/output;
+            - command: "if [ -d '{{ systemEnv.workspace }}/npu-exporter' ];
+        then cp -rf {{ systemEnv.workspace }}/npu-exporter/lib {{ systemEnv.workspace }}/{{component}}/output;
+        cp -rf {{ systemEnv.workspace }}/npu-exporter/cert-importer {{ systemEnv.workspace }}/{{component}}/output;
         chmod 550 {{ systemEnv.workspace }}/{{component}}/output/lib;
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/lib/*;
         chmod 500 {{ systemEnv.workspace }}/{{component}}/output/cert-importer;fi"
