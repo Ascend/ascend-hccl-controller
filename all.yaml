@@ -95,6 +95,18 @@
     - role: mindx.k8s.worker
     - role: mindx.k8s.autolabel
 
+# mysql
+- hosts: mysql
+  roles:
+    - role: mindx.k8s.label
+      vars:
+        label_key: mysql
+        label_value: master
+    - role: mindx.mysql
+      vars:
+        capacity: 20Gi
+        data_path: "{{ MYSQL_DATAPATH }}"
+
 # config nfs server
 - hosts: nfs_server
   gather_facts: False
@@ -107,18 +119,6 @@
   roles:
     - role: mindx.k8s.cephfspv
       when: STORAGE_TYPE == "CEPHFS"
-
-# mysql
-- hosts: mysql
-  roles:
-    - role: mindx.k8s.label
-      vars:
-        label_key: mysql
-        label_value: master
-    - role: mindx.mysql
-      vars:
-        capacity: 20Gi
-        data_path: "{{ MYSQL_DATAPATH }}"
 
 # push inner-images to harbor
 - hosts: master

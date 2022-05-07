@@ -1,2 +1,1 @@
 # defaults file for ascend.k8s.autolabel
-product_name: "{{ lookup('pipe', 'dmidecode -t 1 | grep \"Product Name\"') }}"

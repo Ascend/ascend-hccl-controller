@@ -19,7 +19,7 @@
 
 ### 支持的操作系统说明
 
-| 操作系统   | 版本        | CPU架构   |
+| 操作系统   | 版本   | CPU架构 |
 |:------:|:---------:|:-------:|
 | Ubuntu | 18.04.1/5 | aarch64 |
 | Ubuntu | 18.04.1/5 | x86_64  |
@@ -28,7 +28,7 @@
 
 ### 支持的硬件形态说明
 
-| 中心推理硬件         | 中心训练硬件     |
+| 中心推理硬件    | 中心训练硬件|
 |:--------------:|:----------:|
 | A300-3000      | A300T-9000 |
 | A300-3010      | A800-9000  |
@@ -77,9 +77,7 @@ libyaml = True
 
 ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装完成后执行ansible --version查看ansible是否安装成功
 
-注：
-
-如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
+注意：如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
 
 ### 步骤2：配置集群信息
 
@@ -249,7 +247,7 @@ root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
 
 1. k8s节点不可重复初始化或加入，使用本工具前，请先在master和worker节点执行`kubeadm reset`清除节点上已有的k8s系统
 
-2. mysql数据库会持久化MindX DL平台组件的相关数据，存储在master节点的MYSQL_DATAPATH目录下（默认为/data/mysql），如果需手动清除k8s系统，请务必也删除该目录，避免后续MindX DL平台组件运行异常
+2. mysql数据库会持久化MindX DL平台组件的相关数据，存储在master节点的MYSQL_DATAPATH目录下（默认为/data/mysql）。如果需手动清除k8s系统，请务必也删除该目录，避免后续MindX DL平台组件运行异常
 
 3. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
 
@@ -271,22 +269,23 @@ worker-1         Ready    worker   60s   v1.19.16
 ```bash
 root@master:~# kubectl get pods -A
 NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
-default       node-exporter-ds5f5                        1/1     Running   0          19h
-default       node-exporter-s5j9s                        1/1     Running   1          19h
 kube-system   calico-kube-controllers-659bd7879c-l7q55   1/1     Running   2          19h
 kube-system   calico-node-5zk76                          1/1     Running   1          19h
 kube-system   calico-node-cxhdn                          1/1     Running   0          19h
 kube-system   coredns-f9fd979d6-l42rb                    1/1     Running   2          19h
 kube-system   coredns-f9fd979d6-x2bg2                    1/1     Running   2          19h
 kube-system   etcd-node-10-0-2-15                        1/1     Running   1          19h
-kube-system   grafana-core-58664d599b-4d8s8              1/1     Running   1          19h
 kube-system   kube-apiserver-node-10-0-2-15              1/1     Running   1          19h
 kube-system   kube-controller-manager-node-10-0-2-15     1/1     Running   5          19h
 kube-system   kube-proxy-g65rn                           1/1     Running   1          19h
 kube-system   kube-proxy-vqzb7                           1/1     Running   0          19h
 kube-system   kube-scheduler-node-10-0-2-15              1/1     Running   4          19h
-kube-system   prometheus-577fb6b799-k6mwl                1/1     Running   1          19h
+mindx-dl      grafana-core-58664d599b-4d8s8              1/1     Running   1          19h
 mindx-dl      mysql-55569fc484-bb6kw                     1/1     Running   1          19h
+mindx-dl      node-exporter-ds5f5                        1/1     Running   0          19h
+mindx-dl      node-exporter-s5j9s                        1/1     Running   1          19h
+mindx-dl      prometheus-577fb6b799-k6mwl                1/1     Running   1          19h
+mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1          19h
 ```
 
 注：
@@ -335,11 +334,13 @@ mindx-dl      mysql-55569fc484-bb6kw                     1/1     Running   1    
 
 完成安装MindX DL平台后，还需要完成相关依赖软件的安装，才能构建昇腾NPU的训练和推理任务
 
-| 软件名称         | 获取方式     |
+| 软件名称         | 安装文档     |
 |:---------------:|:-----------:|
 | NPU的驱动和固件  | 请参见各硬件产品中驱动和固件安装升级指南获取对应的指导 | 
-| Ascend docker runtime | 请参见《MindX ToolBox用户指南》安装实用工具包“Ascend-mindx-toolbox_{version}_linux-{arch}.run” |
-| MindX DL基础组件 | 请参见《MindX DL用户指南》安装4个基础组件（Volcano、Ascend Device Plugin、NPU-Exporter、HCCL-Controller） |
+| Ascend docker runtime | 请参见MindX 《MindX ToolBox用户指南》安装实用工具包“Ascend-mindx-toolbox_{version}_linux-{arch}.run” |
+| MindX DL基础组件 | 请参见MindX 《MindX DL用户指南》安装4个基础组件（Volcano、Ascend Device Plugin、NPU-Exporter、HCCL-Controller） |
+
+上述软件安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)
 
 # 详细说明
 
@@ -349,19 +350,21 @@ playbooks目录下有很多文件，其中每个yaml文件对应一个组件，�
 
 ```bash
 playbooks/
-├── 01.resource.yaml
-├── 02.docker.yaml
-├── 03.harbor.yaml
-├── 04.k8s.yaml
-├── 05.mysql.yaml
-├── 06.nfs.yaml
-├── 07.prometheus.yaml
-├── 08.kubeedge.yaml
-├── 09.redis.yaml
-├── 10.inner-image.yaml
-├── 11.pre-image.yaml
-├── 12.cephfs.yaml
-├── 13.mindxdl.yaml
+├── 01.resource.yaml  # 分发/root/resources目录
+├── 02.basic.yaml  # 创建MindX DL所需的用户、日志目录等基础操作
+├── 03.docker.yaml  # 安装docker
+├── 04.harbor.yaml  # 安装harbor并登录
+├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor
+├── 06.k8s.yaml  # 安装k8s系统
+├── 07.mysql.yaml  # 安装mysql
+├── 08.redis.yaml  # 安装redis
+├── 09.prometheus.yaml  # 安装prometheus、grafana、node-exporter
+├── 10.kubeedge.yaml  # 安装kubeedge
+├── 11.nfs.yaml  # 安装nfs
+├── 12.cephfs.yaml  # 创建cephfs的pv、pvc、secret
+├── 13.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor
+├── 14.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor
+├── 15.mindxdl.yaml  # 安装或更新MindX DL平台组件
 ```
 
 例如:
@@ -372,17 +375,17 @@ playbooks/
    ansible-playbook -i inventory_file playbooks/01.resource.yaml
    ```
 
-   可在以上命令后加`-e resources_no_copy=true`参数，该参数作用请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>
+   可在以上命令后加`-e resources_no_copy=true`参数，该参数作用请见<a href="#resources_no_copy">步骤5：执行安装注意事项第4点</a>
 
-2. 只安装docker，则执行
+2. 只安装k8s系统，则执行
    
    ```bash
-   ansible-playbook -i inventory_file playbooks/02.docker.yaml
+   ansible-playbook -i inventory_file playbooks/06.k8s.yaml
    ```
 
 3. 安装过程配置
 
-工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~12编号的yaml效果一致（不包括13.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
+工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~14编号的yaml效果一致（不包括15.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
 
 # 高级配置
 
