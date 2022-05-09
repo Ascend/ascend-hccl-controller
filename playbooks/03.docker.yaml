@@ -4,5 +4,4 @@
     - master
     - worker
   roles:
-    - role: mindx.basic
     - role: mindx.docker

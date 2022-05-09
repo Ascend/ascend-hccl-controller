@@ -1,0 +1,13 @@
+---
+# install harbor
+- hosts:
+    - harbor
+  roles:
+    - role: mindx.docker
+    - role: mindx.harbor.install
+
+- hosts:
+    - master
+    - worker
+  roles:
+    - role: mindx.harbor.login

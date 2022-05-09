@@ -20,6 +20,11 @@
     HTTPS_PROXY: ""
   when: ansible_architecture == "aarch64"
 
+- name: check product name
+  shell: dmidecode -t 1 | grep "Product Name"
+  register: product_name
+  ignore_errors: yes
+
 - name: check device
   shell: lspci | grep "Processing accelerators"
   register: processing_accelerator
@@ -74,4 +79,4 @@
     HTTPS_PROXY: ""
   when:
     - "'Device d801' in processing_accelerator.stdout"
-    - "'Atlas' not in product_name"
+    - "'Atlas' not in product_name.stdout"

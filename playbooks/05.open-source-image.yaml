@@ -1,19 +1,13 @@
 ---
-# install harbor
 - hosts:
     - harbor
-  roles:
-    - role: mindx.docker
-    - role: mindx.harbor.install
-
-- hosts:
     - master
-    - worker
-  roles:
-    - role: mindx.harbor.login
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
 
+# push open source images to harbor
 - hosts: master
-  gather_facts: False
   roles:
     - role: mindx.harbor.push
       vars:

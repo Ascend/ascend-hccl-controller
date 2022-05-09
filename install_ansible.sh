@@ -28,13 +28,19 @@ function install_ansible()
         export DEBIAN_PRIORITY=critical
         RESOURCE_DIR=~/resources
         if [ ! -d $RESOURCE_DIR ];then
-            echo "no resource dir $RESOURCE_DIR"
-	    return
+            echo "error: no resource dir $RESOURCE_DIR"
+	        return
         fi
         echo "resource dir=$RESOURCE_DIR"
 
         echo "dpkg -i --force-all $RESOURCE_DIR/${os_name}_${os_version}_${arch}/python/*.deb"
         dpkg -i --force-all $RESOURCE_DIR/${os_name}_${os_version}_${arch}/python/*.deb
+        local python3_version=$(python3 -V)
+        if [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
+            echo "python3_version is '${python3_version}'"
+            echo "error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'"
+	        return
+        fi
         python3 -m pip install --upgrade pip --no-index --find-links $RESOURCE_DIR/pylibs
         python3 -m pip install ansible --no-index --find-links $RESOURCE_DIR/pylibs
     else

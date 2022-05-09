@@ -112,9 +112,6 @@
 - name: label dls master
   shell: |
     kubectl label --overwrite node {{ansible_hostname}} masterselector=dls-master-node
-    kubectl label --overwrite node {{ansible_hostname}} workerselector=dls-worker-node
-    kubectl label --overwrite node {{ansible_hostname}} node-role.kubernetes.io/worker=worker
-    kubectl label --overwrite node {{ansible_hostname}} access-selector=access-manager-worker-node
   environment:
     http_proxy: ""
     https_proxy: ""

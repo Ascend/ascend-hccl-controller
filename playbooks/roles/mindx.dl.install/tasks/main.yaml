@@ -12,7 +12,6 @@
   register: namespace_result
   changed_when: false
   loop:
-    - volcano-system
     - edge-app
 
 - name: create namespace
@@ -37,10 +36,7 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   loop:
-    - default
-    - kube-system
     - mindx-dl
-    - volcano-system
 
 - name: copy dlinstall script
   copy:
