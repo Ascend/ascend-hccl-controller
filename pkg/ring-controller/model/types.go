@@ -21,7 +21,7 @@ const (
 	// DeploymentType To determine the type of listening：deployment.
 	DeploymentType = "deployment"
 
-	// BuildStatInterval 1 * time.Minute
+	// BuildStatInterval 30 * time.Second
 	BuildStatInterval = 30 * time.Second
 )
 
