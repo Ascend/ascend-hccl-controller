@@ -93,7 +93,6 @@
     - { "user":"user_user",    "dbname":"user_manager",    "service": "user-manager"}
     - { "user":"edge_user",    "dbname":"edge_manager",    "service": "edge-manager"}
     - { "user":"dataset_user", "dbname":"dataset_manager", "service": "dataset-manager"}
-    - { "user":"license_user", "dbname":"license_manager", "service": "license-manager"}
     - { "user":"train_user",   "dbname":"train_manager",   "service": "train-manager"}
     - { "user":"label_user",   "dbname":"label_manager",   "service": "label-manager"}
     - { "user":"model_user",   "dbname":"model_manager",   "service": "model-manager"}
@@ -101,7 +100,6 @@
     - { "user":"image_user",   "dbname":"image_manager",   "service": "image-manager"}
     - { "user":"data_user",    "dbname":"data_manager",    "service": "data-manager"}
     - { "user":"cluster_user", "dbname":"cluster_manager", "service": "cluster-manager"}
-    - { "user":"access_user",  "dbname":"access_manager",  "service": "access-manager"}
 
 - name: create yamls
   template:

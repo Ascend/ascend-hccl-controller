@@ -313,7 +313,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/13.mindxdl.yaml
+   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/15.mindxdl.yaml
    ```
 
 注：
@@ -369,7 +369,7 @@ playbooks/
 
 例如:
 
-1. 分发软件包
+1. 只分发软件包，则执行
    
    ```bash
    ansible-playbook -i inventory_file playbooks/01.resource.yaml
@@ -383,9 +383,9 @@ playbooks/
    ansible-playbook -i inventory_file playbooks/06.k8s.yaml
    ```
 
-3. 安装过程配置
+   k8s节点不可重复初始化或加入，执行本步骤前，请先在master和worker节点执行`kubeadm reset`清除节点上已有的k8s系统
 
-工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~14编号的yaml效果一致（不包括15.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
+3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~14编号的yaml效果一致（不包括15.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
 
 # 高级配置
 
@@ -414,3 +414,9 @@ playbooks/
 ### 角色：mindx.k8s.worker
 
 加入集群。该角色将在执行的节点上执行`kubeadm join`加入已经初始化好kubernetes集群。需在mindx.k8s.master之后执行
+
+# FAQ
+
+1. Q: 某个节点的calico-node-**出现READY “0/1”，`kubectl describe pod calico-node-**(master的calico-node)`时有报错信息“calico/node is not ready: BIRD is not ready: BGP not established with \<ip\>”
+
+- A: 可能是该节点的交换分区被打开了（swap on，可通过`free`查询)，kubelet报错“failed to run Kubelet: running with swap on is not supported, please disable swap”，导致该节点calico访问失败。解决方案是禁用swap（执行`swapoff -a`）

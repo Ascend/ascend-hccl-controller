@@ -29,7 +29,6 @@
   loop:
     - /etc/mindx-dl
     - /etc/mindx-dl/edge-manager
-    - /etc/mindx-dl/cluster-manager
 
 - name: create /etc/mindx-dl/image-manager
   file:
@@ -76,15 +75,6 @@
     mode: 0600
   loop:
     - /etc/mindx-dl/edge-manager
-    - /etc/mindx-dl/cluster-manager
-
-- name: copy rootCA.key to cluster-manager
-  copy:
-    src: /etc/kubeedge/ca/rootCA.key
-    dest: /etc/mindx-dl/cluster-manager
-    owner: "{{DL_USR}}"
-    group: "{{DL_GRP}}"
-    mode: 0600
 
 - name: copy rootCA.crt to image-manager
   copy:
