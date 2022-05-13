@@ -16,6 +16,8 @@ DEBUG="n"
 DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
+DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,edge-manager,"\
+"image-manager,label-manager,model-manager,task-manager,train-manager,user-manager"
 
 function print_usage()
 {
@@ -255,10 +257,28 @@ function do_install()
     for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}')
     do
         docker pull ${image}
-        ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
+        if [[ $(check_components ${DL_PLATFORM_COMPONENTS} ${image}) == 0 ]]; then
+            ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
+        fi
     done
     [[ -d ${DEPLOY_PATH}.last ]] && kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}
     kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}
+}
+
+function check_components()
+{
+    IFS=","
+    for component in $1
+    do
+        if [[ "$2" =~ ${component} ]];then
+            echo 1
+            unset IFS
+            return 0
+        fi
+    done
+    echo 0
+    unset IFS
+    return 0
 }
 
 function unarchive_app()
