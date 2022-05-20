@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
@@ -187,7 +187,7 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 		return nil, fmt.Errorf("the key does not exist err %v ", ok)
 	}
 	switch t := obj.(type) {
-	case *v1alpha1apis.Job:
+	case *v1alpha1.Job:
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},
 			JobInfo: agent.JobInfo{JobUID: string(t.UID), JobVersion: t.Status.Version,
 				JobCreationTimestamp: t.CreationTimestamp, JobNamespace: t.Namespace, JobName: t.Name},

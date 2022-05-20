@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
-	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 	vofake "volcano.sh/apis/pkg/client/clientset/versioned/fake"
 	"volcano.sh/apis/pkg/client/informers/externalversions"
 
@@ -57,12 +57,12 @@ func TestProcessNextWorkItem(t *testing.T) {
 	convey.Convey("controller ProcessNextWorkItem", t, func() {
 		ctr := newFakeController()
 		convey.Convey("res == true when process  ", func() {
-			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+			obj := &v1alpha1.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
-				Status: v1alpha1apis.JobStatus{}}
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Status: v1alpha1.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
@@ -75,12 +75,12 @@ func TestProcessNextWorkItem(t *testing.T) {
 		})
 
 		convey.Convey("err != nil when cache not exist ", func() {
-			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+			obj := &v1alpha1.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
-				Status: v1alpha1apis.JobStatus{}}
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Status: v1alpha1.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
 				m model.ResourceEventHandler) error {
@@ -99,12 +99,12 @@ func TestControllerSyncHandler(t *testing.T) {
 	convey.Convey("controller Controller_SyncHandler", t, func() {
 		ctr := newFakeController()
 		convey.Convey("err != nil when splitKeyFunc return err  ", func() {
-			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
+			obj := &v1alpha1.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
-				Status: v1alpha1apis.JobStatus{}}
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Status: v1alpha1.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(new(model.VCJobModel)), "GetModelKey",
 				func(_ *model.VCJobModel) string {
@@ -115,12 +115,12 @@ func TestControllerSyncHandler(t *testing.T) {
 			convey.So(err, convey.ShouldNotEqual, nil)
 		})
 		convey.Convey("err != nil when index getByKey return err  ", func() {
-			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
+			obj := &v1alpha1.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test",
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
-				Status: v1alpha1apis.JobStatus{}}
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Status: v1alpha1.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			rs.GetCacheIndex().Add(obj)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(rs), "EventAdd", func(_ *model.VCJobModel,

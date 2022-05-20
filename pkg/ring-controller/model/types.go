@@ -10,7 +10,7 @@ import (
 
 	apiCorev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
 	"hccl-controller/pkg/ring-controller/agent"
 )
@@ -35,7 +35,7 @@ type VCJobModel struct {
 	modelCommon
 	agent.JobInfo
 	jobPhase string
-	taskSpec []v1alpha1apis.TaskSpec
+	taskSpec []v1alpha1.TaskSpec
 }
 
 // DeployModel : to handle deployment type
