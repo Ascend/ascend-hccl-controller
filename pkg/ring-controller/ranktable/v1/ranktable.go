@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"huawei.com/npu-exporter/hwlog"
-	apiCoreV1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 )
 
 // RankTabler interface to maintain properties
@@ -23,7 +23,7 @@ type RankTabler interface {
 	// UnmarshalToRankTable Unmarshal json string to RankTable
 	UnmarshalToRankTable(jsonString string) error
 	// CachePodInfo cache pod info to RankTableV1
-	CachePodInfo(pod *apiCoreV1.Pod, instance Instance, rankIndex *int) error
+	CachePodInfo(pod *v1.Pod, instance Instance, rankIndex *int) error
 	// RemovePodInfo Remove pod info from RankTable
 	RemovePodInfo(namespace string, name string) error
 	// SetStatus Set status of RankTableStatus
@@ -79,7 +79,7 @@ func CheckDeviceInfo(instance *Instance) bool {
 }
 
 // CachePodInfo : cache pod info to RankTableV1
-func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance Instance, rankIndex *int) error {
+func (r *RankTable) CachePodInfo(pod *v1.Pod, instance Instance, rankIndex *int) error {
 	if len(r.GroupList) < 1 {
 		return fmt.Errorf("grouplist of ranktable is empty")
 	}
@@ -121,7 +121,7 @@ func (r *RankTable) RemovePodInfo(namespace string, podID string) error {
 	return nil
 }
 
-func checkPodCache(group *Group, pod *apiCoreV1.Pod) error {
+func checkPodCache(group *Group, pod *v1.Pod) error {
 	for _, instance := range group.InstanceList {
 		if instance.PodName == pod.Name {
 			hwlog.RunLog.Infof("ANOMALY: pod %s/%s is already cached", pod.Namespace,

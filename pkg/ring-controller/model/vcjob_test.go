@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/workqueue"
-	v1alpha1apis "volcano.sh/apis/pkg/apis/batch/v1alpha1"
+	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
 	"hccl-controller/pkg/ring-controller/agent"
 	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
@@ -60,12 +60,12 @@ func TestFactory(t *testing.T) {
 		})
 
 		convey.Convey("err ==nil& resourceHandle = jobHandle when obj is job ", func() {
-			obj := &v1alpha1apis.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
+			obj := &v1alpha1.Job{TypeMeta: metav1.TypeMeta{}, ObjectMeta: metav1.ObjectMeta{Name: "test1",
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1apis.JobSpec{},
-				Status: v1alpha1apis.JobStatus{}}
+				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Status: v1alpha1.JobStatus{}}
 			rs, _ := Factory(obj, "add", nil)
 			convey.So(rs, convey.ShouldEqual, nil)
 		})
@@ -99,7 +99,7 @@ func TestRanktableFactory(t *testing.T) {
 		})
 
 		convey.Convey("err ==nil& when RankTableStatus is ok and version is v1", func() {
-			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
+			model = &VCJobModel{taskSpec: append([]v1alpha1.TaskSpec(nil), v1alpha1.TaskSpec{})}
 			patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
 				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
@@ -113,7 +113,7 @@ func TestRanktableFactory(t *testing.T) {
 		})
 
 		convey.Convey("err ==nil& when RankTableStatus is ok and version is v2", func() {
-			model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
+			model = &VCJobModel{taskSpec: append([]v1alpha1.TaskSpec(nil), v1alpha1.TaskSpec{})}
 			pathch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
 				[]*ranktablev1.Group, int32, error) {
 				return nil, int32(1), nil
@@ -246,7 +246,7 @@ func eventAddWhenVersionV2(model *VCJobModel, ag *agent.BusinessAgent) {
 		return putCM, nil
 	})
 	defer patches.Reset()
-	model = &VCJobModel{taskSpec: append([]v1alpha1apis.TaskSpec(nil), v1alpha1apis.TaskSpec{})}
+	model = &VCJobModel{taskSpec: append([]v1alpha1.TaskSpec(nil), v1alpha1.TaskSpec{})}
 	patch := gomonkey.ApplyMethod(reflect.TypeOf(model), "GenerateGrouplist", func(_ *VCJobModel) (
 		[]*ranktablev1.Group, int32, error) {
 		return nil, int32(1), nil
@@ -343,7 +343,7 @@ func TestVCJobModelGenerateGrouplist(t *testing.T) {
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 				{Resources: corev1.ResourceRequirements{Limits: resouceList}},
 			}
-			model.taskSpec = append(model.taskSpec, v1alpha1apis.TaskSpec{Replicas: TaskRep,
+			model.taskSpec = append(model.taskSpec, v1alpha1.TaskSpec{Replicas: TaskRep,
 				Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: containers}}})
 			groupList, re, _ := model.GenerateGrouplist()
 			convey.So(len(groupList), convey.ShouldEqual, 1)
