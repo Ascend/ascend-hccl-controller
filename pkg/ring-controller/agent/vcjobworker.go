@@ -238,7 +238,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if errs != nil {
 		return errs
 	}
-	
+
 	return nil
 }
 
