@@ -198,11 +198,9 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	tmpRankIndex := b.rankIndex
-	hwlog.RunLog.Debugf("now pod(%s), the job now randIndex is (%v)", pod.Name, tmpRankIndex)
 	// Get rankIndex from pod, use rankIndex if rankIndex exists in pod, use memory if it doesn't.
 	rankIndexStr, rankExist := pod.Annotations[PodRankIndexKey]
 	if rankExist {
-		hwlog.RunLog.Debugf("now pod(%s), with rankIndex (%s)", pod.Name, rankIndexStr)
 		rank, err := strconv.ParseInt(rankIndexStr, common.Decimal, common.BitSize32)
 		if err != nil {
 			return err
@@ -212,39 +210,25 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 			return err
 		}
 		b.rankIndex = int(rank)
-		hwlog.RunLog.Debugf("now pod(%s), job now randIndex is temporarily set to pod's rankIndex ("+
-			"%v) for init rank table file", pod.Name, b.rankIndex)
 	} else {
-		hwlog.RunLog.Debugf("now pod(%s), without rankIndex", pod.Name)
 		err := b.updatePod(podInfo, func(newPod *apiCoreV1.Pod) {
 			rank := b.rankIndex
 			rankIndex := strconv.Itoa(rank)
-			hwlog.RunLog.Debugf("now pod(%s), without rankIndex, set job now rankIndex(%s) to it",
-				newPod.Name, rankIndex)
 			newPod.Annotations[PodRankIndexKey] = rankIndex
 		})
 		if err != nil {
 			return err
 		}
-		hwlog.RunLog.Debugf("now pod(%s), without rankIndex, set job now rankIndex(%v) to it successful",
-			podInfo.name, b.rankIndex)
 	}
 	// Cache device info from the pod
-	hwlog.RunLog.Debugf("now pod(%s), start init rank table file with job now rankIndex(%v)", pod.Name,
-		b.rankIndex)
 	err := b.configmapData.CachePodInfo(pod, instance, &b.rankIndex)
-	hwlog.RunLog.Debugf("now pod(%s), finish init rank table file, and job now rankIndex is (%v)",
-		pod.Name, b.rankIndex)
 
 	if rankExist {
-		hwlog.RunLog.Debugf("now pod(%s), with rankIndex, the job now randIndex (%v) is revert to(%v)",
-			pod.Name, b.rankIndex, tmpRankIndex)
 		b.rankIndex = tmpRankIndex
 	}
 	if err != nil {
 		return err
 	}
-	hwlog.RunLog.Debugf("now pod(%s), CachePodInfo successful", pod.Name)
 	// Cache pod num plus one
 	b.modifyStatistics(1)
 	hwlog.RunLog.Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
@@ -254,7 +238,6 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if errs != nil {
 		return errs
 	}
-	hwlog.RunLog.Debugf("now pod(%s), updateWithFinish successful", pod.Name)
 	return nil
 }
 
