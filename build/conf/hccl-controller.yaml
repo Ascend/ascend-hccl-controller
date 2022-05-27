@@ -3,18 +3,18 @@ product: MindXDL
 systemEnv:
   - workspace
   - processor
-
+version:
 compile:
   input:
     files:
       include:
         - sed:
             option: "-i"
-            srcstr: "s/hccl-controller:.*/hccl-controller:{{verison}}/"
+            srcstr: "s/hccl-controller:.*/hccl-controller:{{version}}/"
             curfile: "{{ systemEnv.workspace }}/{{component}}/build/hccl-controller.yaml"
         - sed:
             option: "-i"
-            srcstr: "s/hccl-controller:.*/hccl-controller:{{verison}}/"
+            srcstr: "s/hccl-controller:.*/hccl-controller:{{version}}/"
             curfile: "{{ systemEnv.workspace }}/{{component}}/build/hccl-controller-without-token.yaml"
       exclude:
         - remove:
