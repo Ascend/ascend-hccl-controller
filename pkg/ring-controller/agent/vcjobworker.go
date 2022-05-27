@@ -222,13 +222,13 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	}
 	// Cache device info from the pod
 	err := b.configmapData.CachePodInfo(pod, instance, &b.rankIndex)
-
 	if rankExist {
 		b.rankIndex = tmpRankIndex
 	}
 	if err != nil {
 		return err
 	}
+
 	// Cache pod num plus one
 	b.modifyStatistics(1)
 	hwlog.RunLog.Infof("rank table build progress for %s/%s: pods need to be cached = %d, "+
@@ -238,6 +238,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	if errs != nil {
 		return errs
 	}
+	
 	return nil
 }
 
