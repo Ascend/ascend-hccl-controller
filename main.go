@@ -10,7 +10,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"huawei.com/npu-exporter/hwlog"
@@ -56,7 +55,7 @@ func main() {
 	flag.Parse()
 	if version {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
-		os.Exit(0)
+		return
 	}
 	stopLogCh := make(chan struct{})
 	defer close(stopLogCh)

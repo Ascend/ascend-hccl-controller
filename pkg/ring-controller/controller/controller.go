@@ -32,8 +32,7 @@ import (
 
 // NewEventController returns a new sample controller
 func NewEventController(kubeclientset kubernetes.Interface, jobclientset versioned.Interface, config *agent.Config,
-	informerInfo InformerInfo,
-	stopCh <-chan struct{}) *EventController {
+	informerInfo InformerInfo, stopCh <-chan struct{}) *EventController {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
