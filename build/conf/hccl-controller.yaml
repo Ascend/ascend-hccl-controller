@@ -23,7 +23,6 @@ compile:
       GO111MODULE: "on"
       CGO_CFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
       CGO_CPPFLAGS: "-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-
   process:
     language: go
     compilePath: "{{ systemEnv.workspace }}/{{ component}}/"
