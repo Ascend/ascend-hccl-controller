@@ -198,7 +198,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 	b.cmMu.Lock()
 	defer b.cmMu.Unlock()
 	tmpRankIndex := b.rankIndex
-	hwlog.RunLog.Debugf("now pod(%s), the job now randIndex is (%v)",pod.Name, tmpRankIndex)
+	hwlog.RunLog.Debugf("now pod(%s), the job now randIndex is (%v)", pod.Name, tmpRankIndex)
 	// Get rankIndex from pod, use rankIndex if rankIndex exists in pod, use memory if it doesn't.
 	rankIndexStr, rankExist := pod.Annotations[PodRankIndexKey]
 	if rankExist {
@@ -212,7 +212,7 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 			return err
 		}
 		b.rankIndex = int(rank)
-		hwlog.RunLog.Debugf("now pod(%s), job now randIndex is temporarily set to pod's rankIndex (" +
+		hwlog.RunLog.Debugf("now pod(%s), job now randIndex is temporarily set to pod's rankIndex ("+
 			"%v) for init rank table file", pod.Name, b.rankIndex)
 	} else {
 		hwlog.RunLog.Debugf("now pod(%s), without rankIndex", pod.Name)
@@ -230,11 +230,11 @@ func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1
 			podInfo.name, b.rankIndex)
 	}
 	// Cache device info from the pod
-	hwlog.RunLog.Debugf("now pod(%s), start init rank table file with job now rankIndex(%v)",pod.Name,
+	hwlog.RunLog.Debugf("now pod(%s), start init rank table file with job now rankIndex(%v)", pod.Name,
 		b.rankIndex)
 	err := b.configmapData.CachePodInfo(pod, instance, &b.rankIndex)
 	hwlog.RunLog.Debugf("now pod(%s), finish init rank table file, and job now rankIndex is (%v)",
-		pod.Name,b.rankIndex)
+		pod.Name, b.rankIndex)
 
 	if rankExist {
 		hwlog.RunLog.Debugf("now pod(%s), with rankIndex, the job now randIndex (%v) is revert to(%v)",
