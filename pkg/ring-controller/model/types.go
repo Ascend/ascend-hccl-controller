@@ -8,7 +8,7 @@ package model
 import (
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
@@ -43,5 +43,5 @@ type DeployModel struct {
 	modelCommon
 	agent.DeployInfo
 	replicas   int32
-	containers []v1.Container
+	containers []corev1.Container
 }
