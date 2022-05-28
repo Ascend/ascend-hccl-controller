@@ -8,7 +8,7 @@ package model
 import (
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"volcano.sh/apis/pkg/apis/batch/v1alpha1"
 
