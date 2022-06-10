@@ -202,11 +202,15 @@ MINDX_GROUP_ID: 9000
 
 1. harbor的登录用户名默认为admin
 
-2. 本工具支持使用nfs和cephfs 2种存储方案，默认选用nfs方案。用户可通过设置"STORAGE_TYPE"为"CEPHFS"选用cephfs方案。
+2. 默认暴露30306端口为mysql的HostPort，供用户调试使用
 
-   - 2.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认"NFS_PATH"配置项和【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
+3. 本工具支持使用nfs和cephfs 2种存储方案，默认选用nfs方案。用户可通过设置"STORAGE_TYPE"为"CEPHFS"选用cephfs方案。
 
-   - 2.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"、"CEPHFS_REQUEST_STORAGE"这5个配置项填写正确。
+   - 3.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认"NFS_PATH"配置项和【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
+
+   - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"、"CEPHFS_REQUEST_STORAGE"这5个配置项填写正确。
+
+4. 使用cephfs方案时，需要手动挂载cephfs并在挂载目录下创建data/atlas_dls目录，并修改该目录属主为hwMindX用户
 
 ### 步骤4：检查集群状态
 
@@ -419,4 +423,4 @@ playbooks/
 
 1. Q: 某个节点的calico-node-**出现READY “0/1”，`kubectl describe pod calico-node-**(master的calico-node)`时有报错信息“calico/node is not ready: BIRD is not ready: BGP not established with \<ip\>”
 
-- A: 可能是该节点的交换分区被打开了（swap on，可通过`free`查询)，kubelet报错“failed to run Kubelet: running with swap on is not supported, please disable swap”，导致该节点calico访问失败。解决方案是禁用swap（执行`swapoff -a`）
+- A: 可能是该节点的交换分区被打开了（swap on，可通过`free`查询)，kubelet日志报错“failed to run Kubelet: running with swap on is not supported, please disable swap”，导致该节点calico访问失败。解决方案是禁用swap（执行`swapoff -a`）
