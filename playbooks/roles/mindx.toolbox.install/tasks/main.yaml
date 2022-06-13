@@ -1,0 +1,88 @@
+- name: message
+  debug:
+    msg: "**********start install MindX Toolbox********************"
+
+- name: set log_path for root
+  set_fact:
+    arch: "{{ ansible_architecture }}"
+
+- name: find toolbox outer zip package
+  local_action:
+    module: find
+    paths: "{{ toolbox_dir }}"
+    recurse: no
+    file_type: file
+    use_regex: yes
+    patterns: ".*toolbox.*{{ arch }}.zip"
+  register: toolbox_outer_zip
+
+- name: message
+  debug:
+    msg:
+      - "can not find toolbox {{ arch }} package, toolbox install skipped"
+  when: toolbox_outer_zip.matched == 0
+
+- name: create directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0750
+  loop:
+    - "{{ toolbox_dir }}/outer_unarchive"
+    - "{{ toolbox_dir }}/outer_unarchive/inner_unarchive"
+  when: toolbox_outer_zip.matched > 0
+
+- name: unarchive outer zip
+  ansible.builtin.unarchive:
+    src: "{{ toolbox_outer_zip.files[0].path }}"
+    dest: "{{ toolbox_dir }}/outer_unarchive"
+    mode: 0750
+  when: toolbox_outer_zip.matched > 0
+
+- name: find toolbox inner zip package
+  find:
+    paths: "{{ toolbox_dir }}/outer_unarchive"
+    recurse: no
+    file_type: file
+    use_regex: yes
+    patterns: ".*toolbox.*{{ arch }}.zip"
+  register: toolbox_inner_zip
+  when: toolbox_outer_zip.matched > 0
+
+- name: message
+  debug:
+    msg:
+      - "toolbox inner has no available zip package, toolbox install failed"
+  failed_when: true
+  when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched == 0
+
+- name: unarchive inner zip
+  ansible.builtin.unarchive:
+    src: "{{ toolbox_inner_zip.files[0].path }}"
+    dest: "{{ toolbox_dir }}/outer_unarchive/inner_unarchive"
+    mode: 0750
+    remote_src: yes
+  when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0
+
+- name: find toolbox .sh file
+  find:
+    paths: "{{ toolbox_dir }}/outer_unarchive/inner_unarchive"
+    recurse: no
+    file_type: file
+    use_regex: yes
+    patterns: ".*toolbox.*{{ arch }}.sh"
+  register: toolbox_sh_file
+  when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0
+
+- name: message
+  debug:
+    msg:
+      - "toolbox has no available .sh file, toolbox install failed"
+  failed_when: true
+  when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0 and toolbox_sh_file.matched == 0
+
+- name: install toolbox
+  shell: "bash {{ toolbox_sh_file.files[0].path }} /var/log/ascend_seclog/"
+  register: toolbox_result
+  failed_when: "toolbox_result.rc != 0 and 'already installed' not in toolbox_result.stdout"
+  when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0 and toolbox_sh_file.matched > 0

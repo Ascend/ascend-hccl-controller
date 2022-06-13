@@ -45,8 +45,23 @@
     mode: 0700
 
 - name: install MindX DL
-  shell: "/usr/bin/dlinstall --harbor {{ HARBOR_IP }} --harbor-port {{ HARBOR_HTTPS_PORT }} --storage-info {{ STORAGE_INFO }} {{ item }}"
+  shell: "/usr/bin/dlinstall --harbor {{ HARBOR_IP }} --harbor-port {{ HARBOR_HTTPS_PORT }} {{ item }}"
   ignore_errors: true
   when: "ansible_architecture in item"
   with_fileglob:
-    - "{{ resource_dir }}/mindxdl/*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-cluster-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-apigw*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-user-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-data-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-dataset-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-edge-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-image-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-label-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-model-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-task-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-train-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-alarm-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-hccl-controller*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-volcano*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-npu-exporter*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-device-plugin*.zip"

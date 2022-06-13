@@ -46,8 +46,8 @@
     HTTPS_PROXY: ""
   when: "'Device d100' in processing_accelerator.stdout"
 
-- name: label ascend710
-  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator=huawei-Ascend710
+- name: label ascend310P
+  shell: kubectl label --overwrite node {{ ansible_hostname }} accelerator=huawei-Ascend310P
   delegate_to: "{{ groups['master'][0] }}"
   delegate_facts: true
   environment:

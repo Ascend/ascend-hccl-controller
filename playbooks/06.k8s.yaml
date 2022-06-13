@@ -3,22 +3,33 @@
     - harbor
     - master
     - worker
+    - master_backup
   tasks:
   - name: set HARBOR_IP
     include_tasks: task_set_harbor_ip.yaml
 
-# master init k8s
+# install k8s
 - hosts:
    - master
    - worker
+   - master_backup
   gather_facts: False
   roles:
     - role: mindx.k8s.install
 
+# master init k8s
 - hosts: master
   gather_facts: False
   roles:
+    - role: mindx.k8s.kubevip
     - role: mindx.k8s.master
+    - role: mindx.k8s.autolabel
+
+# master_backup join k8s
+- hosts: master_backup
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.master_backup
     - role: mindx.k8s.autolabel
 
 # worker join k8s

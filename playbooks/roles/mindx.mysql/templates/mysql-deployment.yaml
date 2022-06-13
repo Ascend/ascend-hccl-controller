@@ -15,11 +15,10 @@ spec:
         app: mysql
     spec:
       nodeSelector:
-        mysql: master
+        masterselector: dls-master-node
       containers:
-        - image: mysql-dl:8.0.26
+        - image: {{REPO_URL}}mysql/mysql-dl:8.0.26
           name: mysql-server
-          imagePullPolicy: Never
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
@@ -28,15 +27,13 @@ spec:
                   key: root_pwd
           ports:
             - containerPort: 3306
-              hostPort: 30306
               name: mysql
           volumeMounts:
             - name: mysql-persistent-storage
               mountPath: /var/lib/mysql
+              subPath: platform/mysql
             - name: localtime
               mountPath: /etc/localtime
-            - name: dls-log
-              mountPath: /var/log/
           resources:
             requests:
               cpu: "500m"
@@ -47,13 +44,10 @@ spec:
       volumes:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
-            claimName: pvc-mysql
+            claimName: storage-pvc
         - name: localtime
           hostPath:
             path: /etc/localtime
-        - name: dls-log
-          hostPath:
-            path: /var/log/atlas_dls/mysql
 ---
 apiVersion: v1
 kind: Service
@@ -66,3 +60,19 @@ spec:
       port: 3306
   selector:
     app: mysql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-nodeport
+  namespace: {{ k8s_namespace }}
+spec:
+  ports:
+    - name: mysql-nodeport
+      targetPort: 3306
+      port: 3306
+      nodePort: 30306
+  selector:
+    app: mysql
+  type: NodePort

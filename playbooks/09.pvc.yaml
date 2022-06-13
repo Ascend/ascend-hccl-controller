@@ -1,0 +1,8 @@
+---
+# create pvc
+- hosts: master
+  roles:
+    - role: mindx.k8s.pvc
+      vars:
+        pvc_name: storage-pvc
+        capacity: "{{ DL_CAP }}"

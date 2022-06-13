@@ -83,40 +83,42 @@ ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装�
 
 在inventory文件中，需要提前规划好如下集群信息：
 
-1. 安装harbor的服务器ip
+1. 安装harbor的服务器ip。默认为本机localhost，可更改为其他服务器ip
 
-2. master节点ip，只能为本机localhost
+2. 安装nfs-server的服务器ip。默认为本机localhost，可更改为其他服务器ip。当【步骤3：配置安装信息】"STORAGE_TYPE"设置为"CEPHFS"时，此项配置无效，可删除
 
-3. work节点ip（默认无，请根据需要添加，不可包括master节点，即不可包括localhost）
+3. master节点ip，只能为本机localhost，不可更改
 
-4. mysql安装的节点ip，只能为本机localhost
+4. master_backup节点ip。默认无，即为单master集群。如需部署master高可用集群，这里至少需要配置2个或2个以上的节点ip，不可包括master节点，即不可包括localhost。master_backup节点需要与master节点的系统架构一致
 
-5. nfs服务器ip。nfs可使用已有nfs服务器。当【步骤3：配置安装信息】"STORAGE_TYPE"设置为"CEPHFS"时，此项配置无效，可删除。
+5. work节点ip。默认无，即为无worker节点集群。可更改为其他服务器ip
+
 
 ```bash
 [harbor]
 localhost ansible_connection=local
 
+[nfs_server]
+localhost ansible_connection=local
+
 [master]
 localhost ansible_connection=local
 
+[master_backup]
+
 [worker]
-worker1_ip
-worker2_ip
-worker3_ip
 
-[mysql]
-localhost ansible_connection=local
-
-[nfs_server]
-localhost ansible_connection=local
 ```
 
-注意：k8s要求所有设备的hostname不一样，因此建议执行安装前设置所有设备使用不同的hostname。如果未统一设置且存在相同hostname的设备，那么可在inventory文件中设置set_hostname变量，安装过程将自动设置设备的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。例如：
+注意：k8s要求集群内节点的hostname不一样，因此建议执行安装前设置所有设备使用不同的hostname。如果未统一设置且存在相同hostname的设备，那么可在inventory文件中设置set_hostname变量，安装过程将自动设置设备的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。例如：
 
 ```ini
 [master]
 localhost ansible_connection=local
+
+[master_backup]
+master_backup1_ipaddress  set_hostname="master-backup-1"
+master_backup2_ipaddress  set_hostname="master-backup-2"
 
 [worker]
 worker1_ipaddress  set_hostname="worker-1"
@@ -140,16 +142,15 @@ HARBOR_PATH: /data/harbor
 # password for harbor, can not be empty, delete immediately after finished
 HARBOR_PASSWORD: ""
 
-# mysql install path
-MYSQL_DATAPATH: /data/mysql
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
 
 # select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
-
-# nfs shared path, can be multiple configurations. can not be empty if "STORAGE_TYPE" is "NFS"
-NFS_PATH: ["/data/atlas_dls"]
+# mindx-dl platform storage path on "NFS" or "CEPHFS", default to /data/atlas_dls
+STORAGE_PATH: "/data/atlas_dls"
+# storage capatity, default to "5120Gi", i.e. 5Ti
+STORAGE_CAPACITY: "5120Gi"
 
 # cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_IP: ""
@@ -159,8 +160,11 @@ CEPHFS_PORT: ""
 CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_KEY: ""
-# cephfs request storage. can not be zero if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_REQUEST_STORAGE: "0Gi"
+
+# kube-vip ip address, can not be empty if [master_backup] is not empty
+KUBE_VIP: ""
+# kube-vip interface, can not be empty if [master_backup] is not empty
+KUBE_INTERFACE: ""
 
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
@@ -182,15 +186,17 @@ MINDX_GROUP_ID: 9000
 | HARBOR_HTTPS_PORT | harbor的https监听端口，默认为7443             |
 | HARBOR_PATH       | Harbor的安装路径，默认为/data/harbor                   |
 | HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
-| MYSQL_DATAPATH    | mysql的安装路径，默认为/data/mysql                           |
 | MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
 | STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"           |
-| NFS_PATH          | nfs服务器的共享路径，可配置多个路径，默认为/data/atlas_dls。   |
+| STORAGE_PATH      | 存储的共享路径，默认为/data/atlas_dls   |
+| STORAGE_CAPACITY  | 存储的共享容量，默认为5Ti   |
 | CEPHFS_IP         | cephfs集群的monitor ip，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
 | CEPHFS_PORT       | cephfs集群的port，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
-| CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
-| CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。**安装完成后应立即删除**  |
+| CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。一般为admin  |
+| CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。可在cephfs monitor节点通过`ceph auth get-key client.admin`查询。**安装完成后应立即删除**  |
 | CEPHFS_REQUEST_STORAGE| cephfs集群分配的存储空间，*"STORAGE_TYPE"设置为"CEPHFS"时不可为"0Gi"，必须配置*。  |
+| KUBE_VIP          | *inventory_file中[master_backup]有设置节点ip时不可为空，必须配置*           |
+| KUBE_INTERFACE    | *inventory_file中[master_backup]有设置节点ip时不可为空，必须配置*           |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
 | K8S_API_SERVER_IP | K8s的api server监听地址，多网卡场景下*建议配置*    |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
@@ -200,17 +206,19 @@ MINDX_GROUP_ID: 9000
 
 注：
 
-1. harbor的登录用户名默认为admin
+1. harbor的登录用户名默认为admin。
 
-2. 默认暴露30306端口为mysql的HostPort，供用户调试使用
+2. 默认暴露30306 NodePort端口，供用户调试mysql使用。
 
 3. 本工具支持使用nfs和cephfs 2种存储方案，默认选用nfs方案。用户可通过设置"STORAGE_TYPE"为"CEPHFS"选用cephfs方案。
 
-   - 3.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认"NFS_PATH"配置项和【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
+   - 3.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
 
-   - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"、"CEPHFS_REQUEST_STORAGE"这5个配置项填写正确。
+   - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"这4个配置项填写正确。
 
-4. 使用cephfs方案时，需要手动挂载cephfs并在挂载目录下创建data/atlas_dls目录，并修改该目录属主为hwMindX用户
+4. 使用cephfs方案时，需要手动挂载cephfs并在挂载目录下创建STORAGE_PATH（默认为data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_ceph_dir.sh。
+
+5. 在部署master高可用集群时，即在inventory_file中[master_backup]有设置节点ip时，即需要设置KUBE_VIP和KUBE_INTERFACE。KUBE_VIP需跟k8s集群节点ip在同一子网，且为闲置、未被他人使用的ip，确认无法ping通后再使用，请联系网络管理员获取。KUBE_INTERFACE为当前master节点实际使用的ip对应的网卡名称，可通过`ip a`查询。
 
 ### 步骤4：检查集群状态
 
@@ -239,6 +247,12 @@ worker1_ipaddres | SUCCESS => {
 
 当所有设备都能ping通，则表示inventory中所有设备连通性正常。否则，请检查设备的ssh连接和inventory文件配置是否正确
 
+各个节点的时间应保持同步，不然可能会出现不可预知异常。手动将各个节点的时间设置为一致，可参考执行如下命令，'2022-06-01 08:00:00'请改成当前实际时间
+
+```bash
+root@master:~/mindxdl-deployer# ansible -i inventory_file all -m shell -a "date -s '2022-06-01 08:00:00'; hwclock -w"
+```
+
 ### <a name="resources_no_copy">步骤5：执行安装</a>
 
 在工具目录中执行：
@@ -249,9 +263,12 @@ root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
 
 注：
 
-1. k8s节点不可重复初始化或加入，使用本工具前，请先在master和worker节点执行`kubeadm reset`清除节点上已有的k8s系统
+1. k8s节点不可重复初始化或加入，执行本步骤前，请先在master和worker节点执行如下命令，清除节点上已有的k8s系统
+   ```bash
+   kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
+   ```
 
-2. mysql数据库会持久化MindX DL平台组件的相关数据，存储在master节点的MYSQL_DATAPATH目录下（默认为/data/mysql）。如果需手动清除k8s系统，请务必也删除该目录，避免后续MindX DL平台组件运行异常
+2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件证书存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必也清空该目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常
 
 3. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
 
@@ -317,14 +334,14 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/15.mindxdl.yaml
+   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
    ```
 
 注：
 
 1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 只支持安装MindX DL平台组件，当前包括11个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager）
+2. 只支持安装MindX DL平台组件，当前包括11个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager、alarm-manager）
 
 ## 更新MindX DL平台组件
 
@@ -360,15 +377,16 @@ playbooks/
 ├── 04.harbor.yaml  # 安装harbor并登录
 ├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor
 ├── 06.k8s.yaml  # 安装k8s系统
-├── 07.mysql.yaml  # 安装mysql
-├── 08.redis.yaml  # 安装redis
-├── 09.prometheus.yaml  # 安装prometheus、grafana、node-exporter
-├── 10.kubeedge.yaml  # 安装kubeedge
-├── 11.nfs.yaml  # 安装nfs
-├── 12.cephfs.yaml  # 创建cephfs的pv、pvc、secret
-├── 13.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor
-├── 14.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor
-├── 15.mindxdl.yaml  # 安装或更新MindX DL平台组件
+├── 07.nfs.yaml  # 安装nfs并创建nfs的pv。当"STORAGE_TYPE"设置为"CEPHFS"时，此步骤会自动跳过
+├── 08.cephfs.yaml  # 创建cephfs的pv、secret。当"STORAGE_TYPE"设置为"NFS"时，此步骤会自动跳过
+├── 09.pvc.yaml  # 创建pvc
+├── 10.mysql.yaml  # 安装mysql
+├── 11.redis.yaml  # 安装redis
+├── 12.prometheus.yaml  # 安装prometheus、grafana、node-exporter
+├── 13.kubeedge.yaml  # 安装kubeedge
+├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor
+├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor
+├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件
 ```
 
 例如:
@@ -387,9 +405,12 @@ playbooks/
    ansible-playbook -i inventory_file playbooks/06.k8s.yaml
    ```
 
-   k8s节点不可重复初始化或加入，执行本步骤前，请先在master和worker节点执行`kubeadm reset`清除节点上已有的k8s系统
+   k8s节点不可重复初始化或加入，执行本步骤前，请先在master和worker节点执行如下命令，清除节点上已有的k8s系统
+   ```bash
+   kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
+   ```
 
-3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~14编号的yaml效果一致（不包括15.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
+3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
 
 # 高级配置
 

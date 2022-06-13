@@ -22,10 +22,6 @@
     docker manifest push {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}}
   environment:
     DOCKER_CLI_EXPERIMENTAL: enabled
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
 
 - name: query mysql pod
   shell: "kubectl get pod -n {{ k8s_namespace }} -l app=mysql | awk 'END {print $1}'"

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ pv_name }}
+spec:
+  accessModes: ["ReadWriteMany"]
+  capacity:
+    storage: {{ capacity }}
+  nfs:
+    server: {{ hostvars[groups['nfs_server'][0]]['ansible_default_ipv4']['address'] }}
+    path:   {{ path }}
+  claimRef:
+    name: {{ claimRef_name }}
+    namespace: {{ K8S_NAMESPACE }}
+  persistentVolumeReclaimPolicy: Retain

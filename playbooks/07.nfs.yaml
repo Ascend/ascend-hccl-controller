@@ -1,0 +1,27 @@
+---
+# install nfs client
+- hosts:
+    - master
+    - worker
+    - master_backup
+  roles:
+    - role: mindx.nfs.client
+      when: STORAGE_TYPE == "NFS"
+
+# install nfs server
+- hosts: nfs_server
+  roles:
+    - role: mindx.nfs.server
+      when: STORAGE_TYPE == "NFS"
+
+# create nfs pv
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.nfspv
+      when: STORAGE_TYPE == "NFS"
+      vars:
+        pv_name: storage-pv-mindx-dl
+        capacity: "{{ DL_CAP }}"
+        path: "{{ DL_PATH }}"
+        claimRef_name: storage-pvc

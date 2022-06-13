@@ -1,5 +1,4 @@
-# defaults file for ascend.docker
-state: 'present'
+# defaults file for mindx.nfs.server
 resource_dir: "~/resources"
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
@@ -9,3 +8,6 @@ server_deb: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture
 
 DL_USR: "{{ MINDX_USER }}"
 DL_GRP: "{{ MINDX_GROUP }}"
+
+DL_PATH: "{{ STORAGE_PATH }}"
+PLATFORM_PATH: "{{ STORAGE_PATH }}/platform"

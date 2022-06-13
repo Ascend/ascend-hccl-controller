@@ -1,0 +1,11 @@
+- name: create log directories for "{{DL_USR}}"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{DL_USR}}"
+    group: "{{DL_GRP}}"
+    mode: 0750
+  loop:
+    - /var/log/mindx-dl/hccl-controller
+    - /var/log/mindx-dl/volcano-controller
+    - /var/log/mindx-dl/volcano-scheduler

@@ -1,7 +1,0 @@
-- name: label {{ ansible_hostname }} {{label_key}}={{label_value}}
-  shell: kubectl label --overwrite node {{ ansible_hostname }} {{label_key}}={{label_value}}
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""

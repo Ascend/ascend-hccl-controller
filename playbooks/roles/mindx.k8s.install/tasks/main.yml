@@ -2,6 +2,11 @@
   debug:
     msg: "******************************start install k8s******************************"
 
+- name: set hostname
+  ansible.builtin.hostname:
+    name: "{{set_hostname}}"
+  when: set_hostname is defined
+
 - name: disable swap
   shell: swapoff -a
 

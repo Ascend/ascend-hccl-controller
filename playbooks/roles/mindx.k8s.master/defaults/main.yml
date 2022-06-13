@@ -1,5 +1,4 @@
-# defaults file for ascend.docker
-state: 'present'
+# defaults file for mindx.k8s.master
 resource_dir: "~/resources"
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"

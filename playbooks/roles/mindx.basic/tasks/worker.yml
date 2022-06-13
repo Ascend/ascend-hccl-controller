@@ -1,0 +1,10 @@
+- name: create log directories for "{{DL_USR}}"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{DL_USR}}"
+    group: "{{DL_GRP}}"
+    mode: 0750
+  loop:
+    - /var/log/mindx-dl/devicePlugin
+    - /var/log/mindx-dl/npu-exporter

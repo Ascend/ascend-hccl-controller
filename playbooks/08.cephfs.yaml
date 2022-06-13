@@ -1,0 +1,11 @@
+---
+# create cephfs pv
+- hosts: master
+  roles:
+    - role: mindx.k8s.cephfspv
+      when: STORAGE_TYPE == "CEPHFS"
+      vars:
+        pv_name: storage-pv-mindx-dl
+        capacity: "{{ DL_CAP }}"
+        path: "{{ DL_PATH }}"
+        claimRef_name: storage-pvc

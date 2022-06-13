@@ -1,5 +1,4 @@
-# defaults file for ascend.mysql
-state: "present"
+# defaults file for mindx.basic
 DL_USR: "{{ MINDX_USER }}"
 DL_GRP: "{{ MINDX_GROUP }}"
 DL_UID: "{{ MINDX_USER_ID }}"

@@ -1,0 +1,6 @@
+# defaults file for minx.k8s.pvc
+YAML_DIR: "~/deploy_yamls/{{ pvc_name }}"
+
+# MYSQL_CAP: "20Gi"
+DL_CAP: "{{ STORAGE_CAPACITY }}"
+# KMC_CAP: "20Mi"

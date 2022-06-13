@@ -1,0 +1,4 @@
+KUBE_VIP_IMAGE: ghcr.io/kube-vip
+KVVERSION: v0.4.4
+HARBOR_URL: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/"
+REPO_URL: "{{ HARBOR_URL if HARBOR_IP != '' else '' }}"

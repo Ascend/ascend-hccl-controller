@@ -9,5 +9,6 @@
 - hosts:
     - master
     - worker
+    - master_backup
   roles:
     - role: mindx.harbor.login

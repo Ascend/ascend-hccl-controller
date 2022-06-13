@@ -1,6 +1,6 @@
 - name: message
   debug:
-    msg: "**********************start push images to harbor***********************"
+    msg: "**********************start push {{ images_dir }} to harbor***********************"
 
 - include: create_project.yml PROJECT_NAME="{{item}}"
   loop: "{{ project_list }}"

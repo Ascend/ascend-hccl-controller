@@ -1,6 +1,7 @@
----
-# tasks file for mindx.nfs.server
-#
+- name: message
+  debug:
+    msg: "******************************start install nfs server******************************"
+
 - name: install nfs server
   shell: |
       dpkg --force-all -i {{ client_deb }}/*.deb
@@ -14,18 +15,42 @@
   file:
     path: "{{ item }}"
     state: directory
-    owner: "{{DL_USR}}"
-    group: "{{DL_GRP}}"
+    owner: "{{ DL_USR }}"
+    group: "{{ DL_GRP }}"
     mode: 0750
-  loop: "{{ NFS_PATH }}"
+  loop:
+    - "{{ DL_PATH }}"
+    - "{{ PLATFORM_PATH }}"
+    - "{{ PLATFORM_PATH }}/kmc"
+    - "{{ PLATFORM_PATH }}/log"
+    - "{{ PLATFORM_PATH }}/log/apigw"
+    - "{{ PLATFORM_PATH }}/log/cluster-manager"
+    - "{{ PLATFORM_PATH }}/log/data-manager"
+    - "{{ PLATFORM_PATH }}/log/dataset-manager"
+    - "{{ PLATFORM_PATH }}/log/edge-manager"
+    - "{{ PLATFORM_PATH }}/log/label-manager"
+    - "{{ PLATFORM_PATH }}/log/model-manager"
+    - "{{ PLATFORM_PATH }}/log/task-manager"
+    - "{{ PLATFORM_PATH }}/log/train-manager"
+    - "{{ PLATFORM_PATH }}/log/user-manager"
+    - "{{ PLATFORM_PATH }}/log/alarm-manager"
+
+- name: create nfs path for image-manager log
+  file:
+    path: "{{ PLATFORM_PATH }}/log/image-manager"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
 
 - name: config nfs /etc/exports
   ansible.builtin.lineinfile:
     path: /etc/exports
-    regexp: "^{{item}} "
-    line: "{{item}} {{ MASTER_WORKER_IP | join('(rw,sync,no_root_squash) ') | replace('localhost', MASTER_IP) }}(rw,sync,no_root_squash)"
+    regexp: "^{{ item.path }} "
+    line: "{{ item.path }} {{ MASTER_WORKER_IP | join('(rw,sync,no_root_squash) ') | replace('localhost', MASTER_IP) }}(rw,sync,no_root_squash)"
     state: present
-  loop: "{{ NFS_PATH }}"
+  loop:
+    - { "path": "{{ DL_PATH }}" }
 
 - name: "restart nfs"
   systemd:
