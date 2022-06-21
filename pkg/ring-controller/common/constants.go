@@ -26,4 +26,7 @@ const (
 	Index2 = 2
 	// Index3 index 3
 	Index3 = 3
+
+	// A800MaxChipNum the max num of Ascend910 in Atlas 800 server
+	A800MaxChipNum = 8
 )

@@ -8,7 +8,6 @@ package agent
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"strings"
 	"time"
@@ -268,7 +267,10 @@ func containerUsedChip(pod *apiCoreV1.Pod) bool {
 	return false
 }
 
-// GetNPUNum get npu npuNum from container
+// GetNPUNum get npu npuNum from container:
+// 0 presents not use npu;
+// -1 presents got invalid npu num;
+// other values present use npu;
 func GetNPUNum(c apiCoreV1.Container) int32 {
 	var qtt resource.Quantity
 	var exist bool
@@ -277,15 +279,10 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 		if !exist {
 			continue
 		}
-		if math.MaxInt32 < qtt.Value() {
-			return math.MaxInt32
+		if common.A800MaxChipNum < qtt.Value() || qtt.Value() < 0 {
+			return InvalidNPUNum
 		}
-		if math.MinInt32 > qtt.Value() {
-			return math.MinInt32
-		}
-		if int32(qtt.Value()) > 0 {
-			return int32(qtt.Value())
-		}
+		return int32(qtt.Value())
 	}
 	return 0
 }

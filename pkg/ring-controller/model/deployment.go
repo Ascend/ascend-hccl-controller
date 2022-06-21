@@ -8,6 +8,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"huawei.com/npu-exporter/hwlog"
@@ -90,7 +91,11 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, err
 	var deviceTotal int32
 
 	for _, container := range deploy.containers {
-		deviceTotal += agent.GetNPUNum(container)
+		npuNum := agent.GetNPUNum(container)
+		if npuNum == agent.InvalidNPUNum {
+			return nil, 0, fmt.Errorf("get wrong npu num(%d) in container", npuNum)
+		}
+		deviceTotal += npuNum
 	}
 	deviceTotal *= deploy.replicas
 
