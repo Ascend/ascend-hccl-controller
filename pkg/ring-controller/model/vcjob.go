@@ -126,7 +126,11 @@ func (job *VCJobModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, error) 
 		var deviceTotal int32
 
 		for _, container := range taskSpec.Template.Spec.Containers {
-			deviceTotal += agent.GetNPUNum(container)
+			npuNum := agent.GetNPUNum(container)
+			if npuNum == agent.InvalidNPUNum {
+				return nil, 0, fmt.Errorf("get wrong npu num(%d) in container", npuNum)
+			}
+			deviceTotal += npuNum
 		}
 		deviceTotal *= taskSpec.Replicas
 

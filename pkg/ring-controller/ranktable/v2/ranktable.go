@@ -34,6 +34,9 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance ranktablev1.Instan
 	server.ServerID = instance.ServerID
 	server.PodID = instance.PodName
 	rankFactor := len(instance.Devices)
+	if rankFactor > common.A800MaxChipNum {
+		return fmt.Errorf("get error device num(%d), device num is too big", rankFactor)
+	}
 	for _, device := range instance.Devices {
 		var serverDevice Device
 		serverDevice.DeviceID = device.DeviceID

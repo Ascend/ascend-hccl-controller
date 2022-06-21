@@ -58,6 +58,9 @@ const (
 	a910With4CResourceName  = A910ResourceName + "-4c"
 	a910With8CResourceName  = A910ResourceName + "-8c"
 	a910With16CResourceName = A910ResourceName + "-16c"
+
+	// InvalidNPUNum invalid NPU num
+	InvalidNPUNum = -1
 )
 
 var (

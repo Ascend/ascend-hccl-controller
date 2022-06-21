@@ -58,7 +58,7 @@ func TestGetNPUNum(t *testing.T) {
 			rl[a910With2CResourceName] = resource.MustParse(strconv.Itoa(tooBigNum))
 			c := apiCorev1.Container{Resources: apiCorev1.ResourceRequirements{Limits: rl}}
 			val := GetNPUNum(c)
-			convey.So(val, convey.ShouldEqual, math.MaxInt32)
+			convey.So(val, convey.ShouldEqual, InvalidNPUNum)
 		})
 		convey.Convey("illegal npu number, number is too small", func() {
 			rl := apiCorev1.ResourceList{}
@@ -66,7 +66,7 @@ func TestGetNPUNum(t *testing.T) {
 			rl[a910With2CResourceName] = resource.MustParse(strconv.Itoa(tooSmallNum))
 			c := apiCorev1.Container{Resources: apiCorev1.ResourceRequirements{Limits: rl}}
 			val := GetNPUNum(c)
-			convey.So(val, convey.ShouldEqual, math.MinInt32)
+			convey.So(val, convey.ShouldEqual, InvalidNPUNum)
 		})
 	})
 }
