@@ -79,6 +79,7 @@ spec:
             mountPath: /var/log/mindx-dl/hccl-controller
           - name: localtime
             mountPath: /etc/localtime
+            readOnly: true
           - name: kmckeystore
             mountPath: /etc/mindx-dl
       volumes:
