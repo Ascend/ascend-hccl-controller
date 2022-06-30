@@ -44,7 +44,11 @@ spec:
             mountPath: /etc/localtime
             readOnly: true
           - name: kmckeystore
-            mountPath: /etc/mindx-dl
+            mountPath: /etc/mindx-dl/kmc_primary_store
+          - name: kmckeybak
+            mountPath: /etc/mindx-dl/.config
+          - name: kmc-hccl
+            mountPath: /etc/mindx-dl/hccl-controller
       volumes:
         - name: device-hcclcontroller
           hostPath:
@@ -55,4 +59,10 @@ spec:
             path: /etc/localtime
         - name: kmckeystore
           hostPath:
-            path: /etc/mindx-dl
+            path: /etc/mindx-dl/kmc_primary_store
+        - name: kmckeybak
+          hostPath:
+            path: /etc/mindx-dl/.config
+        - name: kmc-hccl
+          hostPath:
+            path: /etc/mindx-dl/hccl-controller

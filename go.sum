@@ -26,6 +26,7 @@ codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.5 h1
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.5/go.mod h1:sUdarWqC4+C7fr0rpGUNvx1n1JixILyKOlS1gDfpi/w=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.8 h1:JWB/EpbKx+R+Zgv3RaK1YOyAEC/9dQbhCDPTScz34RE=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.8/go.mod h1:sUdarWqC4+C7fr0rpGUNvx1n1JixILyKOlS1gDfpi/w=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.12/go.mod h1:sUdarWqC4+C7fr0rpGUNvx1n1JixILyKOlS1gDfpi/w=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4 h1:lVQ8yCZOb7UM2OMwIW0DDWc5242hFIM3n18Ri02IFR0=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4/go.mod h1:Y4VjjNur38HL6/QxaTVK2yno1zjEQlvcvwbbRQs2DtQ=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/apimachinery v1.19.4-h4 h1:JjPcaxbftW+24f0N5te5PhoKJ7GD6kjEnfXYcl7znyc=

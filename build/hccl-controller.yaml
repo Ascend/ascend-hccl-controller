@@ -80,8 +80,6 @@ spec:
           - name: localtime
             mountPath: /etc/localtime
             readOnly: true
-          - name: kmckeystore
-            mountPath: /etc/mindx-dl
       volumes:
         - name: device-hcclcontroller
           hostPath:
@@ -90,6 +88,3 @@ spec:
         - name: localtime
           hostPath:
             path: /etc/localtime
-        - name: kmckeystore
-          hostPath:
-            path: /etc/mindx-dl
