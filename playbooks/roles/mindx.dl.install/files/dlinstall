@@ -7,7 +7,6 @@ TAG=""
 ARCH=""
 HARBOR_HOST=""
 HARBOR_PORT=""
-STORAGE_INFO=""
 YML_PATH=""
 YML_FILE=""
 YML_DIR=""
@@ -16,8 +15,8 @@ DEBUG="n"
 DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
-DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,edge-manager,"\
-"image-manager,label-manager,model-manager,task-manager,train-manager,user-manager"
+DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,edge-manager,image-manager,"\
+"label-manager,model-manager,task-manager,train-manager,user-manager,alarm-manager,hccl-controller,volcano"
 
 function print_usage()
 {
@@ -30,7 +29,6 @@ function print_usage()
     echo "    --dryrun       not running, just test process"
     echo "    --harbor       set harbor ip or domain"
     echo "    --harbor-port  set harbor port, default 443"
-    echo "    --storage-info set nfs ip or cephfs pvc"
 }
 
 function parse_args()
@@ -63,11 +61,6 @@ function parse_args()
             shift
             shift
             ;;
-        --storage-info)
-            STORAGE_INFO=$2
-            shift
-            shift
-            ;;
         *)
             if [ "x$1" != "x" ]; then
                 APP_PATH=$1
@@ -83,7 +76,6 @@ function parse_args()
         echo "DEBUG: APP_PATH=$APP_PATH"
         echo "DEBUG: HARBOR_HOST=$HARBOR_HOST"
         echo "DEBUG: HARBOR_PORT=$HARBOR_PORT"
-        echo "DEBUG: STORAGE_INFO=$STORAGE_INFO"
     fi
 }
 
@@ -94,7 +86,7 @@ function get_app_info()
         if [[ ${accelerator} =~ "Device d100" ]];then
             local acc_flag="310"
         elif [[ ${accelerator} =~ "Device d500" ]];then
-            local acc_flag="710"
+            local acc_flag="310P"
         elif [[ ${accelerator} =~ "Device d801" ]];then
             local acc_flag="device-plugin"
         else
@@ -109,15 +101,8 @@ function get_app_info()
         YML_PATH=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yml')
     fi
     if [ -z "$YML_PATH" ];then
-        echo "FATAL: no yaml file found!!!"
+        echo "FATAL: no yaml file found, please check ${APP_PATH}"
         exit 1
-    fi
-    if [ $(echo "$YML_PATH" | wc -l) == 2 ]; then
-        if [ ${STORAGE_INFO} == "cephfs-pv-claim" ]; then
-            YML_PATH=$(echo "$YML_PATH" | grep '\-cephfs-')
-        else
-            YML_PATH=$(echo "$YML_PATH" | grep -v '\-cephfs-')
-        fi
     fi
     YML_DIR=$(dirname $YML_PATH)
     YML_FILE=$(basename $YML_PATH)
@@ -241,12 +226,14 @@ function do_install()
     cp -rf ${APP_PATH}/* ${DEPLOY_PATH}/
     sed -i "s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g" ${DEPLOY_PATH}/${YML_FILE}
     sed -i "s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g" ${DEPLOY_PATH}/${YML_FILE}
-    if [ ${STORAGE_INFO} != "cephfs-pv-claim" ]; then
-        sed -i "s#server: 127.0.0.1#server: ${STORAGE_INFO}#g" ${DEPLOY_PATH}/${YML_FILE}
+    if [[ ${APP_PATH} =~ "npu-exporter" ]]; then
+        sed -i "/args: /{s/$/ -enableHTTP=true /}" ${DEPLOY_PATH}/${YML_FILE}
     fi
     build_images
     if [ ${DEBUG} == "y" ];then
         echo "sed -i \"s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g\" ${DEPLOY_PATH}/${YML_FILE}"
+        echo "sed -i \"s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g\" ${DEPLOY_PATH}/${YML_FILE}"
+        echo "sed -i \"/args: /{s/$/ -enableHTTP=true /}\" ${DEPLOY_PATH}/${YML_FILE}"
         echo "kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}"
         echo "kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}"
     fi
@@ -257,7 +244,11 @@ function do_install()
     for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}')
     do
         docker pull ${image}
-        if [[ $(check_components ${DL_PLATFORM_COMPONENTS} ${image}) == 0 ]]; then
+        if [[ ! -z $(cat ../inventory_file | grep -A 1 "master_backup" | awk 'END {print}') ]]; then
+            ansible master_backup -i ../inventory_file -m shell -a "docker pull ${image}"
+        fi
+        if [[ $(check_components ${DL_PLATFORM_COMPONENTS} ${image}) == 0 ]] && \
+        [[ ! -z $(cat ../inventory_file | grep -A 1 "worker" | awk 'END {print}') ]]; then
             ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
         fi
     done
@@ -310,10 +301,6 @@ function pre_check()
     fi
     if [ -z ${HARBOR_HOST} ];then
         echo "no harbor set, please set harbor by --harbor"
-        exit 1
-    fi
-    if [ -z ${STORAGE_INFO} ];then
-        echo "no storage info set, please set by --storage-info"
         exit 1
     fi
 }

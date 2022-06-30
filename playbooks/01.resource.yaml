@@ -4,11 +4,11 @@
     - master
     - worker
     - harbor
+    - master_backup
   roles:
     - role: mindx.resource
       vars:
         resource_list:
-          - pylibs
           - linux_aarch64
           - linux_x86_64
           - ubuntu_18.04_aarch64

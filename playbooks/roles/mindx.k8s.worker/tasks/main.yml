@@ -2,67 +2,9 @@
   debug:
     msg: "******************************start join k8s on worker******************************"
 
-- name: message
-  debug:
-    msg: "There can only be one master in inventory_file, please check"
-  failed_when: true
-  when: "'master' not in groups or groups['master'] | length != 1"
-
-- name: message
-  debug:
-    msg: "worker can not contain master in inventory_file, please check"
-  failed_when: true
-  when:
-    - "'worker' in groups"
-    - item == groups['master'][0]
-  loop: "{{ groups['worker'] }}"
-
-- name: check k8s
-  shell: "kubectl cluster-info 2>&1 | grep 'is running at' | wc -l"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-  register: cluster_info
-
-- name: message
-  debug:
-    msg: "k8s is running already, please check"
-  failed_when: true
-  when: cluster_info.stdout != "0"
-
-- name: get token
-  shell: kubeadm token create --print-join-command
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-  delegate_to: "{{ groups['master'][0] }}"
-  run_once: true
-  register: register_cmd
-
-- name: join cluster
-  shell: "{{ register_cmd.stdout }}"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-
-- name: create kube directory
-  file:
-    path: "{{ ansible_env.HOME }}/.kube"
-    state: directory
-    mode: 0750
-
-- name: set cluster config
-  copy:
-    src: /etc/kubernetes/kubelet.conf
-    dest: "{{ ansible_env.HOME }}/.kube/config"
-    mode: "0640"
-    remote_src: yes
+- name: worker join k8s
+  include_tasks: worker_join.yml
+  when: ansible_connection != "local" and inventory_hostname not in groups['master_backup']
 
 - name: label worker
   shell: |

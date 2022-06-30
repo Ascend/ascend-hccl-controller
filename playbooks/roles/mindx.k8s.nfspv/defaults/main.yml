@@ -1,3 +1,6 @@
 # defaults file for minx.k8s.nfspv
-resource_dir: "~/resources"
-capacity: 5Gi
+YAML_DIR: "~/deploy_yamls/{{ pv_name }}"
+
+DL_CAP: "{{ STORAGE_CAPACITY }}"
+
+DL_PATH: "{{ STORAGE_PATH }}"

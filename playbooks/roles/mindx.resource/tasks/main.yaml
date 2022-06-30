@@ -2,7 +2,7 @@
   debug:
     msg: "HARBOR_PASSWORD and MYSQL_PASSWORD can not be empty in group_vars/all.yaml, please check"
   failed_when: true
-  when: HARBOR_PASSWORD == "" or MYSQL_PASSWORD == ""
+  when: HARBOR_PASSWORD | length == 0 or MYSQL_PASSWORD | length == 0
 
 - name: create resource directory
   file:

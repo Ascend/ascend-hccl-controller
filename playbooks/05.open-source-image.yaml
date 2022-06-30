@@ -19,5 +19,6 @@
           - mysql
           - openresty
           - calico
+          - ghcr.io
         project_public: "true"
         images_dir: images

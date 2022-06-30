@@ -1,0 +1,5 @@
+---
+# install toolbox
+- hosts: worker
+  roles:
+    - role: mindx.toolbox.install

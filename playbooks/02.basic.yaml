@@ -1,7 +1,20 @@
 ---
-# install docker
+# set basic config for mindxdl
 - hosts:
     - master
     - worker
-  roles:
-    - role: mindx.basic
+    - master_backup
+  tasks:
+  - include_tasks: roles/mindx.basic/tasks/common.yml
+
+- hosts:
+    - master
+    - master_backup
+  gather_facts: False
+  tasks:
+  - include_tasks: roles/mindx.basic/tasks/master.yml
+
+- hosts: worker
+  gather_facts: False
+  tasks:
+  - include_tasks: roles/mindx.basic/tasks/worker.yml

@@ -1,15 +1,23 @@
+- name: create yaml directory
+  file:
+    path: "{{ YAML_DIR }}"
+    state: directory
+    mode: 0750
+
 - name: create yamls
   template:
-    src: "pv.yaml"
-    dest: "{{ resource_dir }}/roles/mindx.k8s.nfspv/pv_{{ pv_name }}.yaml"
-    mode: 0644
+    src: "{{ item }}"
+    dest: "{{ YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - nfs-pv.yaml
 
-- name: create pv {{pv_name}}
-  shell: "kubectl apply -f {{ resource_dir }}/roles/mindx.k8s.nfspv/pv_{{ pv_name }}.yaml"
-  delegate_to: "{{ groups['master'][0] }}"
-  run_once: true
+- name: deploy mysql
+  shell: "kubectl apply -f {{ YAML_DIR }}/{{ item }}"
   environment:
     http_proxy: ""
     https_proxy: ""
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
+  with_items:
+    - nfs-pv.yaml

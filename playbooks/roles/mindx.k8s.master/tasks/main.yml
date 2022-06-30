@@ -2,6 +2,12 @@
   debug:
     msg: "******************************start init k8s on master******************************"
 
+- name: message
+  debug:
+    msg: "master must be localhost in inventory_file, please check"
+  failed_when: true
+  when: "'master' not in groups or groups['master'] | length != 1 or groups['master'][0] != 'localhost'"
+
 - name: check k8s
   shell: "kubectl cluster-info | grep 'is running at' | wc -l"
   environment:
@@ -21,6 +27,7 @@
   set_fact:
     addr_cmd: ""
     repo_cmd: ""
+    control_plane_cmd: ""
 
 - name: set apiserver_advertise_address
   set_fact:
@@ -34,13 +41,20 @@
   when:
     - K8S_REPO != ""
 
+- name: set control-plane-endpoint
+  set_fact:
+    control_plane_cmd: '--control-plane-endpoint "{{ KUBE_VIP }}:6443" --upload-certs'
+  when:
+    - "'master_backup' in groups"
+    - "groups['master_backup'] | length != 0"
+
 - name: init cluster by kubeadm init
   shell: >
     kubeadm init
     --kubernetes-version={{ kubernetes_version }}
     --node-name={{ ansible_hostname }}
     --pod-network-cidr={{ pod_network_cidr }}
-    {{ addr_cmd }} {{ repo_cmd }}
+    {{ addr_cmd }} {{ repo_cmd }} {{ control_plane_cmd }}
   environment:
     http_proxy: ""
     https_proxy: ""

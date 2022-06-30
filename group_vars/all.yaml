@@ -7,16 +7,15 @@ HARBOR_PATH: /data/harbor
 # password for harbor, can not be empty, delete immediately after finished
 HARBOR_PASSWORD: ""
 
-# mysql install path
-MYSQL_DATAPATH: /data/mysql
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
 
 # select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
-
-# nfs shared path, can be multiple configurations. can not be empty if "STORAGE_TYPE" is "NFS"
-NFS_PATH: ["/data/atlas_dls"]
+# mindx-dl platform storage path on "NFS" or "CEPHFS", default to /data/atlas_dls
+STORAGE_PATH: "/data/atlas_dls"
+# storage capatity, default to "5120Gi", i.e. 5Ti
+STORAGE_CAPACITY: "5120Gi"
 
 # cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_IP: ""
@@ -26,8 +25,11 @@ CEPHFS_PORT: ""
 CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_KEY: ""
-# cephfs request storage. can not be zero if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_REQUEST_STORAGE: "0Gi"
+
+# kube-vip ip address, can not be empty if [master_backup] is not empty
+KUBE_VIP: ""
+# kube-vip interface, can not be empty if [master_backup] is not empty
+KUBE_INTERFACE: ""
 
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
@@ -39,3 +41,6 @@ MINDX_USER: hwMindX
 MINDX_USER_ID: 9000
 MINDX_GROUP: hwMindX
 MINDX_GROUP_ID: 9000
+
+#HwHiAiUser group
+HIAI_GROUP: HwHiAiUser

@@ -11,8 +11,8 @@
 - name: message
   debug:
     msg: "no harbor password is set, please check"
+  failed_when: true
   when: HARBOR_PASSWORD | length == 0
-  failed_when: HARBOR_PASSWORD | length == 0
 
 - name: set HARBOR_IP
   set_fact:

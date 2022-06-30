@@ -4,11 +4,11 @@
     - master
     - worker
     - harbor
+    - master_backup
   roles:
     - role: mindx.resource
       vars:
         resource_list:
-          - pylibs
           - linux_aarch64
           - linux_x86_64
           - ubuntu_18.04_aarch64
@@ -35,13 +35,34 @@
           - harbor-offline-installer-v2.3.3.tgz
           - harbor-offline-installer-aarch64-v2.3.3.tgz
 
+# set basic config for mindxdl
+- hosts:
+    - master
+    - worker
+    - master_backup
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/common.yml
+
+- hosts:
+    - master
+    - master_backup
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/master.yml
+
+- hosts: worker
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/worker.yml
+
 # install softwares
 - hosts:
     - master
     - worker
+    - master_backup
   gather_facts: False
   roles:
-    - role: mindx.basic
     - role: mindx.docker
     - role: mindx.k8s.install
     - role: mindx.nfs.client
@@ -58,6 +79,7 @@
 - hosts:
     - master
     - worker
+    - master_backup
   gather_facts: False
   roles:
     - role: mindx.harbor.login
@@ -75,6 +97,7 @@
           - mysql
           - openresty
           - calico
+          - ghcr.io
         project_public: "true"
         images_dir: images
 
@@ -82,11 +105,16 @@
 - hosts: master
   gather_facts: False
   roles:
+    - role: mindx.k8s.kubevip
     - role: mindx.k8s.master
     - role: mindx.k8s.autolabel
-    - role: mindx.k8s.prom
-    - role: mindx.kubeedge
-    - role: mindx.redis
+
+# master_backup join k8s
+- hosts: master_backup
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.master_backup
+    - role: mindx.k8s.autolabel
 
 # worker join k8s
 - hosts: worker
@@ -95,30 +123,44 @@
     - role: mindx.k8s.worker
     - role: mindx.k8s.autolabel
 
-# mysql
-- hosts: mysql
-  roles:
-    - role: mindx.k8s.label
-      vars:
-        label_key: mysql
-        label_value: master
-    - role: mindx.mysql
-      vars:
-        capacity: 20Gi
-        data_path: "{{ MYSQL_DATAPATH }}"
-
-# config nfs server
+# install nfs server
 - hosts: nfs_server
   gather_facts: False
   roles:
     - role: mindx.nfs.server
       when: STORAGE_TYPE == "NFS"
 
+# create pv and pvc
 - hosts: master
   gather_facts: False
   roles:
+    - role: mindx.k8s.nfspv
+      when: STORAGE_TYPE == "NFS"
+      vars:
+        pv_name: storage-pv-mindx-dl
+        capacity: "{{ DL_CAP }}"
+        path: "{{ DL_PATH }}"
+        claimRef_name: storage-pvc
     - role: mindx.k8s.cephfspv
       when: STORAGE_TYPE == "CEPHFS"
+      vars:
+        pv_name: storage-pv-mindx-dl
+        capacity: "{{ DL_CAP }}"
+        path: "{{ DL_PATH }}"
+        claimRef_name: storage-pvc
+    - role: mindx.k8s.pvc
+      vars:
+        pvc_name: storage-pvc
+        capacity: "{{ DL_CAP }}"
+
+# mysql、redis、prom、kubeedge
+- hosts: master
+  gather_facts: False
+  roles:
+    - role: mindx.mysql
+    - role: mindx.redis
+    - role: mindx.k8s.prom
+    - role: mindx.kubeedge
 
 # push inner-images to harbor
 - hosts: master

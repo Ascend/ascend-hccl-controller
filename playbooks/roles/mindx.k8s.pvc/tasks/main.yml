@@ -1,0 +1,23 @@
+- name: create yaml directory
+  file:
+    path: "{{ YAML_DIR }}"
+    state: directory
+    mode: 0750
+
+- name: create yamls
+  template:
+    src: "{{ item }}"
+    dest: "{{ YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - pvc.yaml
+
+- name: deploy mysql
+  shell: "kubectl apply -f {{ YAML_DIR }}/{{ item }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  with_items:
+    - pvc.yaml

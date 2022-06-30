@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: cephfs-pv
+  name: {{ pv_name }}
 spec:
   accessModes: ["ReadWriteMany"]
   capacity:
-    storage: {{ CEPHFS_REQUEST_STORAGE }}
+    storage: {{ capacity }}
   cephfs:
     monitors:
       - {{ CEPHFS_IP }}:{{ CEPHFS_PORT }}
@@ -13,7 +13,8 @@ spec:
     secretRef:
       name: ceph-secret
       namespace: {{ K8S_NAMESPACE }}
+    path:   {{ path }}
   claimRef:
-    name: cephfs-pv-claim
+    name: {{ claimRef_name }}
     namespace: {{ K8S_NAMESPACE }}
   persistentVolumeReclaimPolicy: Retain

@@ -1,3 +1,9 @@
+- name: check HARBOR_PASSWORD and MYSQL_PASSWORD
+  debug:
+    msg:  CEPHFS_IP and CEPHFS_PORT and CEPHFS_USER and CEPHFS_KEY can not be empty in group_vars/all.yaml if "STORAGE_TYPE" is "CEPHFS", please check"
+  failed_when: true
+  when: CEPHFS_IP | length == 0 or CEPHFS_PORT | length == 0 or CEPHFS_USER | length == 0 or CEPHFS_KEY | length == 0
+
 - name: create yaml directory
   file:
     path: "{{ CEPHFS_YAML_DIR }}"
@@ -21,7 +27,6 @@
     mode: 0640
   with_items:
     - cephfs-pv.yaml
-    - cephfs-pvc.yaml
 
 - name: deploy mysql
   shell: "kubectl apply -f {{ CEPHFS_YAML_DIR }}/{{ item }}"
@@ -32,4 +37,3 @@
     HTTPS_PROXY: ""
   with_items:
     - cephfs-pv.yaml
-    - cephfs-pvc.yaml
