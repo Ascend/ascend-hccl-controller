@@ -343,7 +343,7 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
 	label910, exist := (*cm).Labels[Key910]
 	if !exist || label910 != Val910 {
-		return fmt.Errorf("invalid configmap label: " + label910)
+		return fmt.Errorf("invalid configmap label: %#v", label910)
 	}
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {

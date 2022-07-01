@@ -81,7 +81,7 @@ func (job *VCJobModel) EventAdd(businessAgent *agent.BusinessAgent) error {
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
-	hwlog.RunLog.Info("jobStarting: ", jobStartString)
+	hwlog.RunLog.Debugf("jobStarting: %#v", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(job, rst, agent.GetJSONVersion())
 	if err != nil {
