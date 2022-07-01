@@ -97,6 +97,9 @@ func (deploy *DeployModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, err
 		}
 		deviceTotal += npuNum
 	}
+	if deploy.replicas > maxNodeNum {
+		return nil, 0, errors.New("the number of Replicas in a deployment is too large")
+	}
 	deviceTotal *= deploy.replicas
 
 	var instanceList []*ranktablev1.Instance

@@ -125,12 +125,18 @@ func (job *VCJobModel) GenerateGrouplist() ([]*ranktablev1.Group, int32, error) 
 	for _, taskSpec := range job.taskSpec {
 		var deviceTotal int32
 
+		if len(taskSpec.Template.Spec.Containers) > maxContainerNum {
+			return nil, 0, errors.New("the number of container in a taskSpec is too large")
+		}
 		for _, container := range taskSpec.Template.Spec.Containers {
 			npuNum := agent.GetNPUNum(container)
 			if npuNum == agent.InvalidNPUNum {
 				return nil, 0, fmt.Errorf("get wrong npu num(%d) in container", npuNum)
 			}
 			deviceTotal += npuNum
+		}
+		if taskSpec.Replicas > maxNodeNum {
+			return nil, 0, errors.New("the number of Replicas in a taskSpec is too large")
 		}
 		deviceTotal *= taskSpec.Replicas
 
@@ -192,11 +198,17 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	}
 	switch t := obj.(type) {
 	case *v1alpha1.Job:
+		if err = validateVCJob(t); err != nil {
+			return nil, err
+		}
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},
 			JobInfo: agent.JobInfo{JobUID: string(t.UID), JobVersion: t.Status.Version,
 				JobCreationTimestamp: t.CreationTimestamp, JobNamespace: t.Namespace, JobName: t.Name},
 			jobPhase: string(t.Status.State.Phase), taskSpec: t.Spec.Tasks}
 	case *appsV1.Deployment:
+		if err = validateDeployment(t); err != nil {
+			return nil, err
+		}
 		model = &DeployModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[DeploymentType]},
 			containers: t.Spec.Template.Spec.Containers, replicas: *t.Spec.Replicas,
 			DeployInfo: agent.DeployInfo{DeployNamespace: t.Namespace, DeployName: t.Name,
@@ -206,6 +218,26 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	}
 
 	return model, nil
+}
+
+func validateVCJob(job *v1alpha1.Job) error {
+	// Tasks represents the number of pod with a train task
+	if len(job.Spec.Tasks) > maxNodeNum {
+		return errors.New("the number of Tasks in a train task is too large")
+	}
+	return nil
+}
+
+func validateDeployment(d *appsV1.Deployment) error {
+	// the number of container in one pod
+	if len(d.Spec.Template.Spec.Containers) > maxContainerNum {
+		return errors.New("the number of Containers in deployment is too large")
+	}
+	// pod num with a train task
+	if *d.Spec.Replicas > maxNodeNum {
+		return errors.New("the number of Replicas in a train task is too large")
+	}
+	return nil
 }
 
 // RanktableFactory : return the version type of ranktable according to your input parameters

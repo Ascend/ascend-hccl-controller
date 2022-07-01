@@ -23,6 +23,9 @@ const (
 
 	// BuildStatInterval 30 * time.Second
 	BuildStatInterval = 30 * time.Second
+
+	maxContainerNum = 2
+	maxNodeNum      = 256
 )
 
 type modelCommon struct {
