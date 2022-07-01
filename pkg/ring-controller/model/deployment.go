@@ -41,7 +41,7 @@ func (deploy *DeployModel) EventAdd(businessAgent *agent.BusinessAgent) error {
 	if err = rst.UnmarshalToRankTable(jobStartString); err != nil {
 		return err
 	}
-	hwlog.RunLog.Debug("jobStarting: ", jobStartString)
+	hwlog.RunLog.Debugf("jobStarting: %#v", jobStartString)
 
 	ranktable, replicasTotal, err := RanktableFactory(deploy, rst, agent.GetJSONVersion())
 	if err != nil {
