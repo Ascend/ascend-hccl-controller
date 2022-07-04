@@ -23,14 +23,12 @@
   roles:
     - role: mindx.k8s.kubevip
     - role: mindx.k8s.master
-    - role: mindx.k8s.autolabel
 
 # master_backup join k8s
 - hosts: master_backup
   gather_facts: False
   roles:
     - role: mindx.k8s.master_backup
-    - role: mindx.k8s.autolabel
 
 # worker join k8s
 - hosts: worker
