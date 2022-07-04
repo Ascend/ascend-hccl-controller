@@ -16,6 +16,8 @@ import (
 
 	"huawei.com/npu-exporter/hwlog"
 	"k8s.io/api/core/v1"
+
+	"hccl-controller/pkg/ring-controller/common"
 )
 
 // RankTabler interface to maintain properties
@@ -64,7 +66,7 @@ func CheckDeviceInfo(instance *Instance) bool {
 	if parsedIP := net.ParseIP(instance.ServerID); parsedIP == nil {
 		return false
 	}
-	if len(instance.Devices) == 0 {
+	if len(instance.Devices) == 0 || len(instance.Devices) > common.A800MaxChipNum {
 		return false
 	}
 	for _, item := range instance.Devices {
