@@ -2,7 +2,7 @@
   debug:
     msg: "**********start install MindX Toolbox********************"
 
-- name: set log_path for root
+- name: set arch for worker
   set_fact:
     arch: "{{ ansible_architecture }}"
 
@@ -13,7 +13,7 @@
     recurse: no
     file_type: file
     use_regex: yes
-    patterns: ".*toolbox.*{{ arch }}.zip"
+    patterns: ".*toolbox.*{{ arch }}.zip$"
   register: toolbox_outer_zip
 
 - name: message
@@ -21,6 +21,12 @@
     msg:
       - "can not find toolbox {{ arch }} package, toolbox install skipped"
   when: toolbox_outer_zip.matched == 0
+
+- name: absent outer_unarchive
+  file:
+    path: "{{ toolbox_dir }}/outer_unarchive"
+    state: absent
+  when: toolbox_outer_zip.matched > 0
 
 - name: create directory
   file:
@@ -45,7 +51,7 @@
     recurse: no
     file_type: file
     use_regex: yes
-    patterns: ".*toolbox.*{{ arch }}.zip"
+    patterns: ".*toolbox.*{{ arch }}.zip$"
   register: toolbox_inner_zip
   when: toolbox_outer_zip.matched > 0
 
@@ -70,7 +76,7 @@
     recurse: no
     file_type: file
     use_regex: yes
-    patterns: ".*toolbox.*{{ arch }}.sh"
+    patterns: ".*toolbox.*{{ arch }}.sh$"
   register: toolbox_sh_file
   when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0
 

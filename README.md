@@ -36,6 +36,8 @@
 | A800-3000      |            |
 | A800-3010      |            |
 
+请先安装NPU硬件对应的驱动和固件，才能构建昇腾NPU的训练和推理任务。安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)
+
 ## 下载本工具
 
 本工具只支持root用户，下载地址：[MindXDL-deploy: MindX DL platform deployment](https://gitee.com/ascend/mindxdl-deploy)。2种下载方式：
@@ -62,9 +64,9 @@ resources.tar.gz
 在工具目录中执行：
 
 ```bash
-root@master:~/mindxdl-deployer# bash install_ansible.sh
+root@master:~/ascend-hccl-controller# bash install_ansible.sh
 
-root@master:~/mindxdl-deployer# ansible --version
+root@master:~/ascend-hccl-controller# ansible --version
 config file = None
 configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
 ansible python module location = /usr/local/lib/python3.6/dist-packages/ansible
@@ -227,7 +229,7 @@ MINDX_GROUP_ID: 9000
 在工具目录中执行：
 
 ```bash
-root@master:~/mindxdl-deployer# ansible -i inventory_file all -m ping
+root@master:~/ascend-hccl-controller# ansible -i inventory_file all -m ping
 
 localhost | SUCCESS => {
     "ansible_facts": {
@@ -250,7 +252,7 @@ worker1_ipaddres | SUCCESS => {
 各个节点的时间应保持同步，不然可能会出现不可预知异常。手动将各个节点的时间设置为一致，可参考执行如下命令，'2022-06-01 08:00:00'请改成当前实际时间
 
 ```bash
-root@master:~/mindxdl-deployer# ansible -i inventory_file all -m shell -a "date -s '2022-06-01 08:00:00'; hwclock -w"
+root@master:~/ascend-hccl-controller# ansible -i inventory_file all -m shell -a "date -s '2022-06-01 08:00:00'; hwclock -w"
 ```
 
 ### <a name="resources_no_copy">步骤5：执行安装</a>
@@ -258,7 +260,7 @@ root@master:~/mindxdl-deployer# ansible -i inventory_file all -m shell -a "date 
 在工具目录中执行：
 
 ```bash
-root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
+root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file all.yaml
 ```
 
 注：
@@ -270,7 +272,7 @@ root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file all.yaml
 
 2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件证书存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必也清空该目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常
 
-3. 如果docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
+3. 如果某节点docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
 
 4. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的/root/resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e resources_no_copy=true`参数，避免重复执行耗时的~/resources目录打包、分发操作
 
@@ -313,16 +315,16 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 
 1. 手动执行kubectl命令时，需取消http(s)_proxy系统网络代理配置，否则会连接报错或一直卡死
 
-### 步骤7：安装MindX DL平台组件
+### 步骤7：安装MindX DL平台组件和基础组件
 
 1. 在~/resources/目录下创建mindxdl目录。如果该目录已存在，请确保该目录下为空
-   
+
    ```bash
       mkdir -p ~/resources/mindxdl
    ```
 
-2. 将MindX DL平台组件放到~/resource/mindxdl目录中
-   
+2. 将MindX DL平台组件和基础组件放到~/resource/mindxdl目录中。只需要放master节点CPU架构的包即可
+
    ```bash
    ~/resources/
     `── mindxdl
@@ -334,34 +336,73 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/mindxdl-deployer# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
+   ```
+
+4. 如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
+
+   4.1 任意选择在某个异构的worker节点，将对应CPU架构的npu-exporter、device-plugin组件放到某个目录，比如/tmp/mindxdl；将本工具的tools/build_image.sh构建脚本也传到这个目录
+
+   ```bash
+   /tmp/
+    `── mindxdl
+      ├── build_image.sh
+      ├── Ascend-mindxdl-npu-exporter_{version}-{arch}.zip
+      ├── Ascend-mindxdl-device-plugin_{version}-{arch}.zip
+   ```
+
+   4.2 在该worker节点，执行如下命令，用来构建镜像并上传到harbor。\<harbor-ip\>和\<harbor-port\>分别为之前部署的harbor仓的ip和端口（端口默认为7443），\<*zip_file\>为上一步传上去的npu-exporter或device-plugin的zip包路径
+   ```bash
+   root@worker-1:/tmp/mindxdl# bash build_image.sh --harbor-ip <harbor-ip> --harbor-port <harbor-port> <npu-exporter_zip_file>
+
+   root@worker-1:/tmp/mindxdl# bash build_image.sh --harbor-ip <harbor-ip> --harbor-port <harbor-port> <device-plugin_zip_file>
+   ```
+
+   4.3 回到master节点的本工具目录，执行如下命令，将构建的harbor镜像拉取到所有的worker节点。\<tag\>为镜像tag，可通过组件包内的yaml查询。跟上一步构建镜像的worker节点的架构不一致的其他worker节点，镜像会拉取失败，但无影响，因为镜像已存在
+   ```bash
+   root@master:~/ascend-hccl-controller# ansible worker -i inventory_file -m shell -a "docker pull <harbor-ip>:<harbor-port>/mindx/ascend-k8sdeviceplugin:<tag>"
+
+   root@master:~/ascend-hccl-controller# ansible worker -i inventory_file -m shell -a "docker pull <harbor-ip>:<harbor-port>/mindx/npu-exporter:<tag>"
    ```
 
 注：
 
 1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 只支持安装MindX DL平台组件，当前包括11个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager、alarm-manager）
+2. 只支持安装MindX DL平台组件，当前包括12个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager、alarm-manager）和4个基础组件（hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
 
-## 更新MindX DL平台组件
+3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从其他版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件和基础组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包。
 
-如果用户已完整执行过以上安装步骤，本工具支持单独更新MindX DL平台组件
+### 步骤8：安装MindX Toolbox
+
+1. 在~/resources/目录下创建mindx-toolbox目录。如果该目录已存在，请确保该目录下为空
+
+   ```bash
+      mkdir -p ~/resources/mindx-toolbox
+   ```
+
+2. 将MindX Toolbox包放到~/resource/mindx-toolbox目录中。需要放worker节点CPU架构的包
+
+   ```bash
+   ~/resources/
+    `── mindx-toolbox
+        ├── Ascend-mindxdl-toolbox_{version}-{arch}.zip
+         ....
+   ```
+
+3. 在工具目录中执行安装命令
+
+   ```bash
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/17.mindx-toolbox.yaml
+   ```
+
+## 更新MindX DL平台组件和基础组件
+
+如果用户已完整执行过以上安装步骤，本工具支持单独更新MindX DL平台组件和基础组件
 
 1. 查阅“步骤2：配置集群信息”的inventory文件和“步骤3：配置安装信息”的group_vars/all.yaml文件，确保这2个配置文件同上一次使用本工具时的配置完全一致
 
-2. 执行“步骤7：安装MindX DL平台组件”。该步骤可重复执行
-
-## 后续依赖软件安装
-
-完成安装MindX DL平台后，还需要完成相关依赖软件的安装，才能构建昇腾NPU的训练和推理任务
-
-| 软件名称         | 安装文档     |
-|:---------------:|:-----------:|
-| NPU的驱动和固件  | 请参见各硬件产品中驱动和固件安装升级指南获取对应的指导 | 
-| Ascend docker runtime | 请参见MindX 《MindX ToolBox用户指南》安装实用工具包“Ascend-mindx-toolbox_{version}_linux-{arch}.run” |
-| MindX DL基础组件 | 请参见MindX 《MindX DL用户指南》安装4个基础组件（Volcano、Ascend Device Plugin、NPU-Exporter、HCCL-Controller） |
-
-上述软件安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)
+2. 执行“步骤7：安装MindX DL平台组件和基础组件”。该步骤可重复执行
 
 # 详细说明
 
@@ -386,13 +427,14 @@ playbooks/
 ├── 13.kubeedge.yaml  # 安装kubeedge
 ├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor
 ├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor
-├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件
+├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件和基础组件
+├── 17.mindx-toolbox.yaml  # 安装或更新MindX Toolbox
 ```
 
 例如:
 
 1. 只分发软件包，则执行
-   
+
    ```bash
    ansible-playbook -i inventory_file playbooks/01.resource.yaml
    ```
@@ -400,7 +442,7 @@ playbooks/
    可在以上命令后加`-e resources_no_copy=true`参数，该参数作用请见<a href="#resources_no_copy">步骤5：执行安装注意事项第4点</a>
 
 2. 只安装k8s系统，则执行
-   
+
    ```bash
    ansible-playbook -i inventory_file playbooks/06.k8s.yaml
    ```
@@ -410,7 +452,9 @@ playbooks/
    kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
    ```
 
-3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml）。实际安装时可根据需要对组件灵活删减
+   除playbooks/06.k8s.yaml步骤外，其他步骤均可以重复执行
+
+3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml和17.mindx-toolbox.yaml）。实际安装时可根据需要对组件灵活删减
 
 # 高级配置
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 APP_PATH=""
-DEPLOY_PATH=""
 APP=""
 TAG=""
 ARCH=""
@@ -15,13 +14,12 @@ DEBUG="n"
 DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
-DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,edge-manager,image-manager,"\
-"label-manager,model-manager,task-manager,train-manager,user-manager,alarm-manager,hccl-controller,volcano"
+DL_COMPONENTS="npu-exporter,device-plugin"
 
 function print_usage()
 {
     echo "Usage:"
-    echo "$0 [options] file"
+    echo "$0 [options] zip_file (only for ${DL_COMPONENTS})"
     echo "options:"
     echo "    --help         print this message"
     echo "    --debug        enable debug"
@@ -81,7 +79,7 @@ function parse_args()
 function get_app_info()
 {
     unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
-    if [[ ${APP_PATH} =~ "device-plugin" ]]; then
+    if [[ ${APP_PATH} =~ "device-plugin" ]];then
         DEVICE_YAMLS=()
         if [[ $(kubectl get node -l accelerator=huawei-Ascend310 | wc -l) != 0 ]];then
             DEVICE_YAMLS[${#DEVICE_YAMLS[@]}]=$(find ${APP_PATH} -maxdepth 1 -name '*-v*.yaml' | grep "310-volcano")
@@ -143,10 +141,8 @@ function modify_dockerfile()
     if [[ "${base_img}" == "${HARBOR_HOST}"* ]];then
         return
     fi
-    if [[ "${base_img}" == "alpine"* ]] || [[ "${base_img}" == "ubuntu"* ]];then
+    if [[ "${base_img}" == "ubuntu"* ]];then
         sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/dockerhub/${image}_${ARCH}:${tag}#g" ${docker_file}
-    else
-        sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/${image}_${ARCH}:${tag}#g" ${docker_file}
     fi
 }
 
@@ -169,7 +165,6 @@ function build_image()
         return
     fi
 
-    cd ${DEPLOY_PATH}
     docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
     if [ $? != 0 ];then
         echo "docker build failed"
@@ -200,20 +195,14 @@ function build_image()
 
 function build_images()
 {
-    for docker_file in `find ${DEPLOY_PATH} -maxdepth 1 -type f -name "Docker*"`
+    cd ${APP_PATH}
+    for docker_file in `find . -maxdepth 1 -type f -name "Docker*"`
     do
         modify_dockerfile ${docker_file}
-    done
-    for docker_file in `find ${DEPLOY_PATH} -maxdepth 1 -type f -name "Docker*"`
-    do
         local file_name=$(basename $docker_file)
         echo "build image for $file_name:"
         if [ ${file_name} == "Dockerfile" ];then
             build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
-        elif [ ${file_name} == "Dockerfile-controller" ];then
-            build_image ${docker_file} "volcanosh/vc-controller-manager" ${ARCH} ${TAG}
-        elif [ ${file_name} == "Dockerfile-scheduler" ];then
-            build_image ${docker_file} "volcanosh/vc-scheduler" ${ARCH} ${TAG}
         fi
     done
 }
@@ -221,52 +210,7 @@ function build_images()
 function do_install()
 {
     export DOCKER_CLI_EXPERIMENTAL=enabled
-    [[ -d ${DEPLOY_PATH} ]] && rm -rf ${DEPLOY_PATH}.last && mv ${DEPLOY_PATH} ${DEPLOY_PATH}.last
-    mkdir -p -m 750 ${DEPLOY_PATH}
-    cp -rf ${APP_PATH}/* ${DEPLOY_PATH}/
-    sed -i "s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g" ${DEPLOY_PATH}/${YML_FILE}
-    sed -i "s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g" ${DEPLOY_PATH}/${YML_FILE}
-    if [[ ${APP_PATH} =~ "npu-exporter" ]]; then
-        sed -i "/args: /{s/$/ -enableHTTP=true /}" ${DEPLOY_PATH}/${YML_FILE}
-    fi
-
     build_images
-    if [ ${DEBUG} == "y" ];then
-        echo "sed -i \"s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g\" ${DEPLOY_PATH}/${YML_FILE}"
-        echo "sed -i \"s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g\" ${DEPLOY_PATH}/${YML_FILE}"
-        echo "sed -i \"/args: /{s/$/ -enableHTTP=true /}\" ${DEPLOY_PATH}/${YML_FILE}"
-        echo "kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}"
-        echo "kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}"
-    fi
-    if [ ${DRYRUN} == "y" ];then
-        return
-    fi
-
-    for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}')
-    do
-        docker pull ${image}
-        local is_platform_dl=$(check_components ${DL_PLATFORM_COMPONENTS} ${image})
-        if [[ ${is_platform_dl} == 1 ]] && \
-        [[ ! -z $(cat ../inventory_file | grep -A 1 "master_backup" | awk 'END {print}') ]]; then
-            ansible master_backup -i ../inventory_file -m shell -a "docker pull ${image}"
-        fi
-        if [[ ${is_platform_dl} == 0 ]] && \
-        [[ ! -z $(cat ../inventory_file | grep -A 1 "worker" | awk 'END {print}') ]]; then
-            ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
-        fi
-    done
-    [[ -d ${DEPLOY_PATH}.last ]] && kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}
-    kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}
-    if [[ ${APP_PATH} =~ "device-plugin" ]] && [[ ${#DEVICE_YAMLS[@]} > 1 ]]; then
-        for (( i=1;i<${#DEVICE_YAMLS[@]};i++ ))
-        do
-            local device_muti_yaml=$(basename ${DEVICE_YAMLS[i]})
-            sed -i "s#image: #image: ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/#g" ${DEPLOY_PATH}/${device_muti_yaml}
-            sed -i "s#imagePullPolicy: Never#imagePullPolicy: IfNotPresent#g" ${DEPLOY_PATH}/${device_muti_yaml}
-            [[ -d ${DEPLOY_PATH}.last ]] && kubectl delete -f ${DEPLOY_PATH}.last/${device_muti_yaml}
-            kubectl apply -f ${DEPLOY_PATH}/${device_muti_yaml}
-        done
-    fi
 }
 
 function check_components()
@@ -313,11 +257,15 @@ function pre_check()
         exit 1
     fi
     if [ -z ${HARBOR_HOST} ];then
-        echo "no harbor ip set, please set harbor by --harbor"
+        echo "no harbor ip set, please set harbor by --harbor-ip"
         exit 1
     fi
     if [ -z ${HARBOR_PORT} ];then
-        echo "no harbor port set, please set harbor by --harbor"
+        echo "no harbor port set, please set harbor by --harbor-port"
+        exit 1
+    fi
+    if [[ $(check_components ${DL_COMPONENTS} ${APP_PATH}) == 0 ]]; then
+        echo "only support build images for ${DL_COMPONENTS}"
         exit 1
     fi
 }
@@ -330,7 +278,6 @@ function main()
         unarchive_app
     fi
     get_app_info
-    DEPLOY_PATH=~/deploy_yamls/${APP}
     do_install
 }
 
