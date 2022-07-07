@@ -13,6 +13,8 @@
     - prometheus.yaml
     - node-exporter.yaml
     - grafana.yaml
+    - alertmanager.yaml
+    - kube-state-metrics.yaml
 
 - name: deploy yamls
   shell: kubectl apply -f {{ PROM_YAML_DIR }}/{{ item }}
@@ -25,3 +27,5 @@
     - prometheus.yaml
     - node-exporter.yaml
     - grafana.yaml
+    - alertmanager.yaml
+    - kube-state-metrics.yaml

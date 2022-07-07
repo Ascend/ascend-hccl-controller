@@ -34,6 +34,8 @@
     - "{{ PLATFORM_PATH }}/log/train-manager"
     - "{{ PLATFORM_PATH }}/log/user-manager"
     - "{{ PLATFORM_PATH }}/log/alarm-manager"
+    - "{{ PLATFORM_PATH }}/services"
+    - "{{ PLATFORM_PATH }}/services/prometheus"
 
 - name: create nfs path for image-manager log
   file:
@@ -42,6 +44,14 @@
     owner: root
     group: root
     mode: 0750
+
+- name: copy rule.yaml
+  copy:
+    src: "{{role_path}}/files/rule.yaml"
+    dest: "{{ PLATFORM_PATH }}/services/prometheus/rule.yaml"
+    owner: "{{ DL_USR }}"
+    group: "{{ DL_GRP }}"
+    mode: 0600
 
 - name: config nfs /etc/exports
   ansible.builtin.lineinfile:

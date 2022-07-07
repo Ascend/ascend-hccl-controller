@@ -93,6 +93,9 @@ spec:
           mountPath: /etc/timezone
         - name: localtime
           mountPath: /etc/localtime
+        - name: rule
+          mountPath: /rule
+          subPath: platform/services/prometheus
         resources:
           requests:
             cpu: 100m
@@ -100,6 +103,9 @@ spec:
           limits:
             cpu: 500m
             memory: 2500Mi
+        securityContext:
+          runAsUser: 9000
+          runAsGroup: 9000
       serviceAccountName: prometheus
       volumes:
       - name: data
@@ -113,6 +119,9 @@ spec:
       - name: localtime
         hostPath:
           path: /etc/localtime
+      - name: rule
+        persistentVolumeClaim:
+          claimName: storage-pvc
 
 ---
 apiVersion: v1
@@ -176,6 +185,22 @@ data:
         replacement: '${1}:9100'
         target_label: __address__
 
+    - job_name: "kubernetes-service-endpoint"
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scraped]
+        action: keep
+        regex: true
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: service_name
+
     - job_name: 'kubernetes-npu-exporter'
       kubernetes_sd_configs:
       - role: pod
@@ -187,3 +212,10 @@ data:
       - source_labels: [__meta_kubernetes_pod_node_name]
         target_label: job
         replacement: ${1}
+
+    rule_files:
+      - /rule/rule.yaml
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets: ['alertmanager-service.mindx-dl.svc.cluster.local:9093']
