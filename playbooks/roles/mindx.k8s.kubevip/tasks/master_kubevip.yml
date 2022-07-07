@@ -2,11 +2,11 @@
   debug:
     msg: "******************************start create kubevip on master******************************"
 
-- name: check KUBE_VIP and KUBE_INTERFACE
+- name: check kube_vip and kube_interface
   debug:
-    msg: "KUBE_VIP and KUBE_INTERFACE can not be empty in group_vars/all.yaml, please check"
+    msg: "kube_vip and kube_interface can not be empty in inventory_file, please check"
   failed_when: true
-  when: KUBE_VIP | length == 0 or KUBE_INTERFACE | length == 0
+  when:  kube_vip is not defined or kube_interface is not defined or kube_vip | length == 0 or kube_interface | length == 0
 
 - name: message
   debug:
@@ -15,21 +15,6 @@
   when:
     - "'master_backup' in groups"
     - "groups['master_backup'] | length == 1"
-
-- name: check k8s
-  shell: "kubectl cluster-info | grep 'is running at' | wc -l"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-  register: cluster_info
-
-- name: message
-  debug:
-    msg: "k8s is running already, please check"
-  failed_when: true
-  when: cluster_info.stdout != "0"
 
 - name: create /etc/kubernetes/manifests/
   file:
@@ -41,9 +26,17 @@
 - name: generate kube-vip.yaml
   shell: |
     docker run --network host --rm {{ REPO_URL }}{{ KUBE_VIP_IMAGE }}:{{ KVVERSION }} manifest pod \
-    --interface {{ KUBE_INTERFACE }} \
-    --address {{ KUBE_VIP }} \
+    --interface {{ kube_interface }} \
+    --address {{ kube_vip }} \
     --controlplane \
     --services \
+    --enableLoadBalancer \
     --arp \
     --leaderElection | tee /etc/kubernetes/manifests/kube-vip.yaml
+
+- name: modify kube-vip.yaml
+  ansible.builtin.lineinfile:
+    path: /etc/kubernetes/manifests/kube-vip.yaml
+    regexp: "^    image: {{ ORIGIN_KUBE_VIP_IMAGE }}:{{ KVVERSION }}$"
+    line: "    image: {{ REPO_URL }}{{ KUBE_VIP_IMAGE }}:{{ KVVERSION }}"
+    state: present

@@ -13,7 +13,7 @@
 | mysql      | 安装在k8s集群中，关系型数据库系统 |
 | redis      | 安装在k8s集群中，非关系型数据库系统 |
 | kubeedge   | 安装在k8s集群中，使能边缘计算的平台 |
-| prometheus + grafana + node-exporter | 安装在k8s集群中，资源监控组件      |
+| prometheus + grafana + node-exporter + alertmanager + kube-state-metrics | 安装在k8s集群中，资源监控组件      |
 
 ## 环境要求
 
@@ -40,11 +40,11 @@
 
 ## 下载本工具
 
-本工具只支持root用户，下载地址：[MindXDL-deploy: MindX DL platform deployment](https://gitee.com/ascend/mindxdl-deploy)。2种下载方式：
+本工具只支持root用户，下载地址：[Ascend/ascend-hccl-controller](https://gitee.com/ascend/ascend-hccl-controller/tree/mindxdl-deploy/)。2种下载方式：
 
-1. 使用git clone
+1. 使用git clone，切换到mindxdl-deploy分支
 
-2. 下载master分支的[zip文件](https://gitee.com/ascend/mindxdl-deploy/repository/archive/master.zip)
+2. 下载mindxdl-deploy分支的[zip文件](https://gitee.com/ascend/ascend-hccl-controller/repository/archive/mindxdl-deploy.zip)
 
 然后联系工程师取得开源软件的resources.tar.gz离线安装包，将离线安装包解压在/root目录下。按如下方式放置
 
@@ -91,12 +91,12 @@ ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装�
 
 3. master节点ip，只能为本机localhost，不可更改
 
-4. master_backup节点ip。默认无，即为单master集群。如需部署master高可用集群，这里至少需要配置2个或2个以上的节点ip，不可包括master节点，即不可包括localhost。master_backup节点需要与master节点的系统架构一致
+4. work节点ip。默认无，即为无worker节点集群。可更改为其他服务器ip。如果这里包括master或master_backup组的ip，即把该ip的节点同时作为master和worker节点
 
-5. work节点ip。默认无，即为无worker节点集群。可更改为其他服务器ip
+5. master_backup节点ip。默认无，即为单master集群。如需部署master高可用集群，这里至少需要配置2个或2个以上的节点ip(建议这里为偶数，因为k8s奇数台控制平面节点有利于机器故障或网络分区时进行重新选主）。不可包括master节点，即不可包括localhost。master_backup节点需要与master节点的系统架构一致
 
 
-```bash
+```ini
 [harbor]
 localhost ansible_connection=local
 
@@ -106,26 +106,43 @@ localhost ansible_connection=local
 [master]
 localhost ansible_connection=local
 
-[master_backup]
-
 [worker]
 
+[master_backup]
+
+# 这个默认配置，即把本机部署成一个单master节点的k8s集群，而且无worker节点
 ```
 
-注意：k8s要求集群内节点的hostname不一样，因此建议执行安装前设置所有设备使用不同的hostname。如果未统一设置且存在相同hostname的设备，那么可在inventory文件中设置set_hostname变量，安装过程将自动设置设备的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。例如：
+注意：
+
+1. k8s要求集群内节点(master、worker、master_backup）的hostname不一样，因此建议执行安装前设置所有设备使用不同的hostname。如果未统一设置且存在相同hostname的设备，那么可在inventory文件中设置set_hostname主机变量，安装过程将自动设置设备的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。例如：
+
+2. 在部署master高可用集群时，必须给[master]和[master_backup]的设备设置kube_interface主机变量，以及增加一个[all:vars]的kube_vip主机组变量。kube_interface为各自节点实际使用的ip对应的网卡名称，可通过`ip a`查询，如"enp125s0f0"。kube_vip需跟k8s集群节点ip在同一子网，且为闲置、未被他人使用的ip，请联系网络管理员获取。
 
 ```ini
-[master]
+[harbor]
 localhost ansible_connection=local
 
-[master_backup]
-master_backup1_ipaddress  set_hostname="master-backup-1"
-master_backup2_ipaddress  set_hostname="master-backup-2"
+[nfs_server]
+localhost ansible_connection=local
+
+[master]
+localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f0"
 
 [worker]
-worker1_ipaddress  set_hostname="worker-1"
-worker2_ipaddress  set_hostname="worker-2"
-worker3_ipaddress
+192.0.2.50  set_hostname="worker-1"
+192.0.2.51  set_hostname="worker-2"
+192.0.2.52  set_hostname="worker-3"
+
+[master_backup]
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f0"
+192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f0"
+
+[all:vars]
+kube_vip="192.0.4.200"
+
+# 这个配置，即部署一个3 master高可用k8s集群，而且有3个worker节点
+# 以上192.0.*.*等ip仅为示例，请修改为实际规划的ip地址
 ```
 
 inventory文件配置详细可参考[[How to build your inventory &mdash; Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)]
@@ -163,11 +180,6 @@ CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_KEY: ""
 
-# kube-vip ip address, can not be empty if [master_backup] is not empty
-KUBE_VIP: ""
-# kube-vip interface, can not be empty if [master_backup] is not empty
-KUBE_INTERFACE: ""
-
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
 # ip address for api-server
@@ -178,6 +190,9 @@ MINDX_USER: hwMindX
 MINDX_USER_ID: 9000
 MINDX_GROUP: hwMindX
 MINDX_GROUP_ID: 9000
+
+#HwHiAiUser group
+HIAI_GROUP: HwHiAiUser
 ```
 
 其中中配置项详细为：
@@ -197,14 +212,13 @@ MINDX_GROUP_ID: 9000
 | CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。一般为admin  |
 | CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。可在cephfs monitor节点通过`ceph auth get-key client.admin`查询。**安装完成后应立即删除**  |
 | CEPHFS_REQUEST_STORAGE| cephfs集群分配的存储空间，*"STORAGE_TYPE"设置为"CEPHFS"时不可为"0Gi"，必须配置*。  |
-| KUBE_VIP          | *inventory_file中[master_backup]有设置节点ip时不可为空，必须配置*           |
-| KUBE_INTERFACE    | *inventory_file中[master_backup]有设置节点ip时不可为空，必须配置*           |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
 | K8S_API_SERVER_IP | K8s的api server监听地址，多网卡场景下*建议配置*    |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
 | MINDX_USER_ID     | mindx dl组件默认运行用户id                   |
 | MINDX_GROUP       | mindx dl组件默认运行用户组                    |
 | MINDX_GROUP_ID    | mindx dl组件默认运行用户组id                  |
+| HIAI_GROUP        | 驱动默认运行用户组                    |
 
 注：
 
@@ -219,8 +233,6 @@ MINDX_GROUP_ID: 9000
    - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"这4个配置项填写正确。
 
 4. 使用cephfs方案时，需要手动挂载cephfs并在挂载目录下创建STORAGE_PATH（默认为data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_ceph_dir.sh。
-
-5. 在部署master高可用集群时，即在inventory_file中[master_backup]有设置节点ip时，即需要设置KUBE_VIP和KUBE_INTERFACE。KUBE_VIP需跟k8s集群节点ip在同一子网，且为闲置、未被他人使用的ip，确认无法ping通后再使用，请联系网络管理员获取。KUBE_INTERFACE为当前master节点实际使用的ip对应的网卡名称，可通过`ip a`查询。
 
 ### 步骤4：检查集群状态
 
@@ -303,7 +315,9 @@ kube-system   kube-controller-manager-node-10-0-2-15     1/1     Running   5    
 kube-system   kube-proxy-g65rn                           1/1     Running   1          19h
 kube-system   kube-proxy-vqzb7                           1/1     Running   0          19h
 kube-system   kube-scheduler-node-10-0-2-15              1/1     Running   4          19h
+mindx-dl      alertmanager-5675466341-45789              1/1     Running   1          19h
 mindx-dl      grafana-core-58664d599b-4d8s8              1/1     Running   1          19h
+mindx-dl      kube-state-metrics-592645991b-2f7s5        1/1     Running   1          19h
 mindx-dl      mysql-55569fc484-bb6kw                     1/1     Running   1          19h
 mindx-dl      node-exporter-ds5f5                        1/1     Running   0          19h
 mindx-dl      node-exporter-s5j9s                        1/1     Running   1          19h
@@ -339,7 +353,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
    root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
    ```
 
-4. 如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
+4. （可选）如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
 
    4.1 任意选择在某个异构的worker节点，将对应CPU架构的npu-exporter、device-plugin组件放到某个目录，比如/tmp/mindxdl；将本工具的tools/build_image.sh构建脚本也传到这个目录
 
@@ -390,7 +404,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
          ....
    ```
 
-3. 在工具目录中执行安装命令
+3. 在工具目录中执行安装命令。MindX Toolbox中的Ascend-Docker-Runtime即可安装到各个worker节点
 
    ```bash
    root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/17.mindx-toolbox.yaml
@@ -412,21 +426,21 @@ playbooks目录下有很多文件，其中每个yaml文件对应一个组件，�
 
 ```bash
 playbooks/
-├── 01.resource.yaml  # 分发/root/resources目录
+├── 01.resource.yaml  # 分发/root/resources目录（耗时较长）
 ├── 02.basic.yaml  # 创建MindX DL所需的用户、日志目录等基础操作
 ├── 03.docker.yaml  # 安装docker
 ├── 04.harbor.yaml  # 安装harbor并登录
-├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor
+├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor（耗时较长）
 ├── 06.k8s.yaml  # 安装k8s系统
 ├── 07.nfs.yaml  # 安装nfs并创建nfs的pv。当"STORAGE_TYPE"设置为"CEPHFS"时，此步骤会自动跳过
 ├── 08.cephfs.yaml  # 创建cephfs的pv、secret。当"STORAGE_TYPE"设置为"NFS"时，此步骤会自动跳过
 ├── 09.pvc.yaml  # 创建pvc
 ├── 10.mysql.yaml  # 安装mysql
 ├── 11.redis.yaml  # 安装redis
-├── 12.prometheus.yaml  # 安装prometheus、grafana、node-exporter
+├── 12.prometheus.yaml  # 安装prometheus、grafana、node-exporter、alertmanager、kube-state-metrics
 ├── 13.kubeedge.yaml  # 安装kubeedge
-├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor
-├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor
+├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor（耗时较长）
+├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor（耗时较长）
 ├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件和基础组件
 ├── 17.mindx-toolbox.yaml  # 安装或更新MindX Toolbox
 ```
@@ -452,9 +466,11 @@ playbooks/
    kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
    ```
 
-   除playbooks/06.k8s.yaml步骤外，其他步骤均可以重复执行
+   由于ansible的幂等性，除playbooks/06.k8s.yaml步骤外，其他步骤均可以重复执行
 
 3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml和17.mindx-toolbox.yaml）。实际安装时可根据需要对组件灵活删减
+
+   如果需要重新部署DL平台，手动清除k8s系统及DL平台残留的mysql数据库文件后，只需分别执行06~13、16这些子任务（这些组件都是安装在k8s中的）即可，不必执行耗时的软件包分发、镜像推送操作
 
 # 高级配置
 

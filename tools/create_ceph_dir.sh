@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -o errexit
 
-# 事前准备：创建cephfs的挂载目录，并手动挂载cephfs存储集群到该目录。<CEPHFS_KEY_BASE64>可在cephfs monitor节点通过`ceph auth get-key client.admin | base64`查询
+# 事前准备：创建cephfs的挂载目录，并手动挂载cephfs存储集群到该目录。<CEPHFS_USER>一般为admin，<CEPHFS_KEY>可在cephfs monitor节点通过`ceph auth get-key client.admin`查询
 
 # mkdir <cephfs的挂载目录>
-# mount -t ceph <CEPHFS_IP>:<CEPHFS_PORT>:/ <cephfs的挂载目录> -o name=<CEPHFS_USER>,secret=<CEPHFS_KEY_BASE64>
+# mount -t ceph <CEPHFS_IP>:<CEPHFS_PORT>:/ <cephfs的挂载目录> -o name=<CEPHFS_USER>,secret=<CEPHFS_KEY>
 # cd <cephfs的挂载目录>
 
 # 将本文件create_ceph_dir.sh和本工具目录的playbooks/roles/mindx.nfs.server/files/rule.yaml文件拷贝到<cephfs的挂载目录>

@@ -113,6 +113,7 @@
   gather_facts: False
   roles:
     - role: mindx.k8s.master_backup
+    - role: mindx.k8s.kubevip
 
 # worker join k8s
 - hosts: worker

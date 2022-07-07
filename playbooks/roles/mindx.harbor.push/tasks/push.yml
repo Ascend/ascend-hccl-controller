@@ -21,6 +21,10 @@
     docker manifest annotate {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}} {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{orig_name}} --os linux --arch {{arch}}
     docker manifest push {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}}
   environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
     DOCKER_CLI_EXPERIMENTAL: enabled
 
 - name: query mysql pod

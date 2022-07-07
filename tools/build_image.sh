@@ -106,7 +106,7 @@ function get_app_info()
     YML_DIR=$(dirname $YML_PATH)
     YML_FILE=$(basename $YML_PATH)
     APP=$(echo $YML_FILE | cut -d"-" -f1)
-    TAG=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f3)
+    TAG=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f3 | tr -d "\r")
     local tmp=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f2)
     IMAGE=$(echo ${tmp} | xargs echo -n)
     ## get executable arch
