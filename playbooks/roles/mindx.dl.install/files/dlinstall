@@ -108,7 +108,7 @@ function get_app_info()
     YML_DIR=$(dirname $YML_PATH)
     YML_FILE=$(basename $YML_PATH)
     APP=$(echo $YML_FILE | cut -d"-" -f1)
-    TAG=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f3)
+    TAG=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f3 | tr -d "\r")
     local tmp=$(grep "image: " $YML_PATH  | head -n1 | cut -d":" -f2)
     IMAGE=$(echo ${tmp} | xargs echo -n)
     ## get executable arch
@@ -242,7 +242,7 @@ function do_install()
         return
     fi
 
-    for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}')
+    for image in $(cat ${DEPLOY_PATH}/${YML_FILE} | grep 'image: ' | awk -F'image: ' '{print $2}' | tr -d "\r")
     do
         docker pull ${image}
         local is_platform_dl=$(check_components ${DL_PLATFORM_COMPONENTS} ${image})

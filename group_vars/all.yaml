@@ -26,11 +26,6 @@ CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_KEY: ""
 
-# kube-vip ip address, can not be empty if [master_backup] is not empty
-KUBE_VIP: ""
-# kube-vip interface, can not be empty if [master_backup] is not empty
-KUBE_INTERFACE: ""
-
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
 # ip address for api-server

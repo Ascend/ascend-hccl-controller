@@ -35,6 +35,10 @@
     {{REPO_URL}}mysql/mysql-dl_{{ARCH}}:8.0.26 --os linux --arch {{ARCH}}
     docker manifest push {{REPO_URL}}mysql/mysql-dl:8.0.26
   environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
     DOCKER_CLI_EXPERIMENTAL: enabled
 
 - name: check namespace

@@ -43,7 +43,7 @@
 
 - name: set control-plane-endpoint
   set_fact:
-    control_plane_cmd: '--control-plane-endpoint "{{ KUBE_VIP }}:6443" --upload-certs'
+    control_plane_cmd: '--control-plane-endpoint "{{ kube_vip }}:6443" --upload-certs'
   when:
     - "'master_backup' in groups"
     - "groups['master_backup'] | length != 0"
