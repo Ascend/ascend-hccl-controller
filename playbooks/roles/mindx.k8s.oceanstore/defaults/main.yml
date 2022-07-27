@@ -1,0 +1,6 @@
+# defaults file for minx.k8s.oceanstore
+OCEANSTORE_YAML_DIR: "~/deploy_yamls/oceanstore"
+
+DL_CAP: "{{ STORAGE_CAPACITY }}"
+
+DL_PATH: "{{ STORAGE_PATH }}"

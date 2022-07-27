@@ -34,7 +34,7 @@
     group: root
     mode: 0755
 
-- name: install haveged
+- name: install haveged for ubuntu
   shell: dpkg --force-all -i {{ haveged_dir }}/*.deb
   environment:
     DEBIAN_FRONTEND: noninteractive
@@ -42,3 +42,9 @@
   when:
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
+
+- name: install haveged for centos
+  shell: rpm -ivh --force --nodeps --replacepkgs {{ haveged_dir }}/*.rpm
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'

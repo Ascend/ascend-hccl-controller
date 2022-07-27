@@ -2,28 +2,6 @@
   debug:
     msg: "**********start install MindX DL********************"
 
-- name: check namespace
-  shell: "kubectl get namespace | awk '$1 ~ /^{{ item }}$/ {print $1}'"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-  register: namespace_result
-  changed_when: false
-  loop:
-    - edge-app
-
-- name: create namespace
-  shell: "kubectl create namespace {{ item.item }}"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-  when: item.stdout == ""
-  loop: "{{ namespace_result.results }}"
-
 - name: create image-pull-secret
   shell: |
     kubectl delete secret --namespace={{ item }} image-pull-secret
@@ -54,7 +32,6 @@
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-user-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-data-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-dataset-manager*.zip"
-    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-edge-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-image-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-label-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-model-manager*.zip"

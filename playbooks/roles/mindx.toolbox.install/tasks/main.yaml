@@ -92,3 +92,9 @@
   register: toolbox_result
   failed_when: "toolbox_result.rc != 0 and 'already installed' not in toolbox_result.stdout"
   when: toolbox_outer_zip.matched > 0 and toolbox_inner_zip.matched > 0 and toolbox_sh_file.matched > 0
+
+- name: "restart docker"
+  systemd:
+    name: "docker"
+    enabled: yes
+    state: restarted

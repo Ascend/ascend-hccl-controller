@@ -1,3 +1,20 @@
+- name: message
+  debug:
+    msg: "no redis password is set, please check"
+  failed_when: true
+  when: REDIS_PASSWORD | length == 0
+
+- name: create secret for redis
+  shell: |
+    kubectl delete secret --namespace={{ REDIS_NAMESPACE }} redis-config-secret redis-secret-apigw --ignore-not-found=true
+    kubectl create secret --namespace={{ REDIS_NAMESPACE }} generic redis-config-secret --from-literal=redis-config="requirepass {{ REDIS_PASSWORD }}"
+    kubectl create secret --namespace={{ REDIS_NAMESPACE }} generic redis-secret-apigw --from-literal="connection-path={{ REDIS_PASSWORD }}@redis:6379"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
 - name: create yaml directory
   file:
     path: "{{ REDIS_YAML_DIR }}"

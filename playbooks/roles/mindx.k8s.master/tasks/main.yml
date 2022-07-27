@@ -48,6 +48,18 @@
     - "'master_backup' in groups"
     - "groups['master_backup'] | length != 0"
 
+# - name: modify /etc/sysctl.conf iptables
+#   ansible.builtin.lineinfile:
+#     path: /etc/sysctl.conf
+#     line: net.bridge.bridge-nf-call-iptables = 1
+#     state: present
+
+# - name: set bridge-nf-call-iptables 1
+#   shell: echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+#   when:
+#     - OS_ID == 'centos'
+#     - OS_VERSION_ID == '7'
+
 - name: init cluster by kubeadm init
   shell: >
     kubeadm init

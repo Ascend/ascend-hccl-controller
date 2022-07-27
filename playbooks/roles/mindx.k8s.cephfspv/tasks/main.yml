@@ -1,4 +1,4 @@
-- name: check HARBOR_PASSWORD and MYSQL_PASSWORD
+- name: check CEPHFS
   debug:
     msg:  CEPHFS_IP and CEPHFS_PORT and CEPHFS_USER and CEPHFS_KEY can not be empty in group_vars/all.yaml if "STORAGE_TYPE" is "CEPHFS", please check"
   failed_when: true

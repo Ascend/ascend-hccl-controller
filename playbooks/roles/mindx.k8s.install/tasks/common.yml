@@ -66,3 +66,12 @@
     dest: /usr/bin
     mode: 0750
     remote_src: yes
+
+- name: "stopped firewalld"
+  systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'

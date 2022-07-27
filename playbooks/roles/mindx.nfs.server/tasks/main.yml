@@ -2,14 +2,24 @@
   debug:
     msg: "******************************start install nfs server******************************"
 
-- name: install nfs server
+- name: install nfs server for ubuntu
   shell: |
-      dpkg --force-all -i {{ client_deb }}/*.deb
-      dpkg --force-all -i {{ server_deb }}/*.deb
+      dpkg --force-all -i {{ client_pkg }}/*.deb
+      dpkg --force-all -i {{ server_pkg }}/*.deb
   environment:
     DEBIAN_FRONTEND: noninteractive
     DEBIAN_PRIORITY: critical
-  when: OS_ID == 'ubuntu'
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- name: install nfs server for centos
+  shell: |
+      rpm -ivh --force --nodeps --replacepkgs {{ client_pkg }}/*.rpm
+      rpm -ivh --force --nodeps --replacepkgs {{ server_pkg }}/*.rpm
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
 
 - name: create nfs path
   file:
@@ -24,6 +34,7 @@
     - "{{ PLATFORM_PATH }}/kmc"
     - "{{ PLATFORM_PATH }}/log"
     - "{{ PLATFORM_PATH }}/log/apigw"
+    - "{{ PLATFORM_PATH }}/log/apigw-business"
     - "{{ PLATFORM_PATH }}/log/cluster-manager"
     - "{{ PLATFORM_PATH }}/log/data-manager"
     - "{{ PLATFORM_PATH }}/log/dataset-manager"
