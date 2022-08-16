@@ -205,3 +205,21 @@ func TestVCJobWorkerStatistic(t *testing.T) {
 		})
 	})
 }
+
+// TestValidateRank validate rank range
+func TestValidateRank(t *testing.T) {
+	convey.Convey("test validate rank", t, func() {
+		convey.Convey("invalid rank too small", func() {
+			err := validate(-1)
+			convey.So(err, convey.ShouldBeError)
+		})
+		convey.Convey("invalid rank too large", func() {
+			err := validate(maxRankIndex + 1)
+			convey.So(err, convey.ShouldBeError)
+		})
+		convey.Convey("correct rank", func() {
+			err := validate(20)
+			convey.So(err, convey.ShouldBeNil)
+		})
+	})
+}
