@@ -218,7 +218,7 @@ func TestValidateRank(t *testing.T) {
 			convey.So(err, convey.ShouldBeError)
 		})
 		convey.Convey("correct rank", func() {
-			err := validate(20)
+			err := validate(1)
 			convey.So(err, convey.ShouldBeNil)
 		})
 	})
