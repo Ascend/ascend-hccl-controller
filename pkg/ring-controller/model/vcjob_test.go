@@ -352,3 +352,38 @@ func TestVCJobModelGenerateGrouplist(t *testing.T) {
 		})
 	})
 }
+
+// TestValidateDeployment validate resources in deployment
+func TestValidateDeployment(t *testing.T) {
+	convey.Convey("test validateDeployment", t, func() {
+		convey.Convey("container num exceed 2", func() {
+			d := new(appsV1.Deployment)
+			d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{})
+			d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{})
+			d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, corev1.Container{})
+			err := validateDeployment(d)
+			convey.So(err, convey.ShouldBeError)
+		})
+		convey.Convey("replicas exceed 256", func() {
+			d := appsV1.Deployment{}
+			r := int32(maxNodeNum + 1)
+			d.Spec.Replicas = &r
+			err := validateDeployment(&d)
+			convey.So(err, convey.ShouldBeError)
+		})
+	})
+}
+
+// TestValidateVCJob validate resources in vcjob
+func TestValidateVCJob(t *testing.T) {
+	convey.Convey("test validateVCJob", t, func() {
+		convey.Convey("vcjob tasks num exceed 256", func() {
+			j := v1alpha1.Job{}
+			for i := 0; i < maxNodeNum+1; i++ {
+				j.Spec.Tasks = append(j.Spec.Tasks, v1alpha1.TaskSpec{})
+			}
+			err := validateVCJob(&j)
+			convey.So(err, convey.ShouldBeError)
+		})
+	})
+}
