@@ -26,7 +26,7 @@ import (
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
 	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	ranktablev2 "hccl-controller/pkg/ring-controller/ranktable/v2"
+	"hccl-controller/pkg/ring-controller/ranktable/v2"
 )
 
 // ResourceEventHandler to define same func, controller to use this function to finish some thing.
@@ -252,7 +252,7 @@ func RanktableFactory(model ResourceEventHandler, rst ranktablev1.RankTableStatu
 		ranktable = &ranktablev1.RankTable{RankTableStatus: ranktablev1.RankTableStatus{Status: rst.Status},
 			GroupCount: model.GetReplicas(), GroupList: groupList}
 	} else {
-		ranktable = &ranktablev2.RankTable{ServerCount: "0", ServerList: []*ranktablev2.Server(nil),
+		ranktable = &v2.RankTable{ServerCount: "0", ServerList: []*v2.Server(nil),
 			RankTableStatus: ranktablev1.RankTableStatus{Status: rst.Status}, Version: "1.0"}
 	}
 	return ranktable, replicasTotal, nil

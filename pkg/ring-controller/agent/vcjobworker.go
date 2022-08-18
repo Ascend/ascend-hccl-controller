@@ -183,7 +183,7 @@ func (b *WorkerInfo) tableConstructionFinished() bool {
 
 func (b *WorkerInfo) handleAddUpdateEvent(podInfo *podIdentifier, pod *apiCoreV1.Pod) error {
 	hwlog.RunLog.Debugf("current addUpdate pod is %s", podInfo)
-	// because this annotation is already used to filter pods in previous step (podExist - scenario C)
+	// because this annotation is already used to filter pods in previous step scenario check C
 	// it can be used to identify if pod use chip here
 	deviceInfo, exist := pod.Annotations[PodDeviceKey]
 	if !exist {

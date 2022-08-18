@@ -135,7 +135,7 @@ type podIdentifier struct {
 	eventType string
 }
 
-// VCJobWorker controller for each volcano job, list/watch corresponding pods and build configmap (rank table)
+// VCJobWorker controller for each volcano job, list/watch corresponding pods and build configmap rank table
 type VCJobWorker struct {
 	// WorkerInfo: normal Worker info
 	WorkerInfo
