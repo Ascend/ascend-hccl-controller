@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -32,7 +32,7 @@ import (
 
 // NewEventController returns a new sample controller
 func NewEventController(kubeclientset kubernetes.Interface, jobclientset versioned.Interface, config *agent.Config,
-	informerInfo InformerInfo, stopCh <-chan struct{}) *EventController {
+	informerInfo InformerInfo, stopCh <-chan struct{}) (*EventController, error) {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
@@ -44,7 +44,7 @@ func NewEventController(kubeclientset kubernetes.Interface, jobclientset version
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
 	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
-		hwlog.RunLog.Fatalf("Error creating business agent: %s", err.Error())
+		return nil, fmt.Errorf("error creating business agent: %s", err.Error())
 	}
 	c := &EventController{
 		kubeclientset: kubeclientset,
@@ -57,7 +57,7 @@ func NewEventController(kubeclientset kubernetes.Interface, jobclientset version
 		cacheIndexers: informerInfo.CacheIndexers,
 	}
 	informerInfo.addEventHandle(c)
-	return c
+	return c, nil
 }
 
 // Run will set up the event handlers for types we are interested in, as well

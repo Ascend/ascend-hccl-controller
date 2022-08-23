@@ -3,10 +3,12 @@ module hccl-controller
 go 1.14
 
 require (
-	github.com/agiledragon/gomonkey/v2 v2.2.0
-	github.com/smartystreets/goconvey v1.6.4
+	github.com/agiledragon/gomonkey/v2 v2.8.0
+	github.com/smartystreets/goconvey v1.7.2
 	github.com/stretchr/testify v1.7.0
-	huawei.com/npu-exporter v0.2.12
+	huawei.com/mindx/common/hwlog v0.0.0
+	huawei.com/mindx/common/k8stool v0.0.0
+	huawei.com/mindx/common/utils v0.0.0
 	k8s.io/api v0.19.11
 	k8s.io/apimachinery v0.19.11
 	k8s.io/client-go v0.19.11
@@ -15,31 +17,14 @@ require (
 
 replace (
 	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
-	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
-	huawei.com/kmc => codehub-dg-y.huawei.com/it-edge-native/edge-native-core/coastguard.git v1.0.6
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.2.12
+	huawei.com/mindx/common/hwlog => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/hwlog v0.0.2
+	huawei.com/mindx/common/k8stool => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/k8stool v0.0.2
+	huawei.com/mindx/common/kmc => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/kmc v0.0.5
+	huawei.com/mindx/common/utils => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.0.2
 	k8s.io/api v0.0.0 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
 	k8s.io/api v0.19.11 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4
-	k8s.io/apiextensions-apiserver v0.0.0 => k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery v0.0.0 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/apimachinery v1.19.4-h4
 	k8s.io/apimachinery v0.19.11 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/apimachinery v1.19.4-h4
-	k8s.io/apiserver => k8s.io/apiserver v0.19.4
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.4
 	k8s.io/client-go v0.0.0 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/client-go v1.19.4-h4
 	k8s.io/client-go v0.19.11 => codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/client-go v1.19.4-h4
-	k8s.io/cloud-provider v0.0.0 => k8s.io/cloud-provider v0.19.4
-	k8s.io/cluster-bootstrap v0.0.0 => k8s.io/cluster-bootstrap v0.19.4
-	k8s.io/code-generator v0.0.0 => k8s.io/code-generator v0.19.4
-	k8s.io/component-base v0.0.0 => k8s.io/component-base v0.19.4
-	k8s.io/cri-api v0.0.0 => k8s.io/cri-api v0.19.4
-	k8s.io/csi-translation-lib v0.0.0 => k8s.io/csi-translation-lib v0.19.4
-	k8s.io/kube-aggregator v0.0.0 => k8s.io/kube-aggregator v0.19.4
-	k8s.io/kube-controller-manager v0.0.0 => k8s.io/kube-controller-manager v0.19.4
-	k8s.io/kube-proxy v0.0.0 => k8s.io/kube-proxy v0.19.4
-	k8s.io/kube-scheduler v0.0.0 => k8s.io/kube-scheduler v0.19.4
-	k8s.io/kubectl v0.0.0 => k8s.io/kubectl v0.19.4
-	k8s.io/kubelet v0.0.0 => k8s.io/kubelet v0.19.4
-	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.19.4
-	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.19.4
-	k8s.io/sample-apiserver v0.0.0 => k8s.io/sample-apiserver v0.19.4
 )

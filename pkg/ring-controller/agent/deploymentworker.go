@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 
 	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
