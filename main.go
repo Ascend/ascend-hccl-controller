@@ -16,6 +16,7 @@ import (
 	"huawei.com/mindx/common/hwlog"
 	"huawei.com/mindx/common/k8stool"
 	"huawei.com/mindx/common/utils"
+	"huawei.com/mindx/common/x509"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -45,12 +46,13 @@ var (
 )
 
 const (
-	dryRun             = false
-	displayStatistic   = false
-	cmCheckInterval    = 2
-	cmCheckTimeout     = 10
-	defaultLogFileName = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
-	defaultKubeConfig  = "/etc/mindx-dl/hccl-controller/.config/config6"
+	dryRun               = false
+	displayStatistic     = false
+	cmCheckInterval      = 2
+	cmCheckTimeout       = 10
+	defaultLogFileName   = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
+	defaultKubeConfig    = "/etc/mindx-dl/hccl-controller/.config/config6"
+	defaultKubeConfigBkp = "/etc/mindx-dl/hccl-controller/.config6"
 )
 
 func main() {
@@ -96,7 +98,15 @@ func main() {
 }
 
 func getClient() (*kubernetes.Clientset, *versioned.Clientset, error) {
-	if KubeConfig == "" && utils.IsExist(defaultKubeConfig) {
+	if KubeConfig == "" || KubeConfig == defaultKubeConfig {
+		cfgInstance, err := x509.NewBKPInstance(nil, defaultKubeConfig, defaultKubeConfigBkp)
+		if err != nil {
+			return nil, nil, err
+		}
+		cfgBytes, err := cfgInstance.ReadFromDisk(utils.FileMode, true)
+		if err != nil || cfgBytes == nil {
+			return nil, nil, errors.New("no kubeConfig file Found")
+		}
 		KubeConfig = defaultKubeConfig
 	}
 	cfg, err := getK8sConfig()
