@@ -7,9 +7,10 @@
 package testtool
 
 import (
+	"context"
 	"fmt"
 
-	"huawei.com/npu-exporter/hwlog"
+	"huawei.com/mindx/common/hwlog"
 )
 
 // this is for llt
@@ -17,8 +18,7 @@ func init() {
 	config := hwlog.LogConfig{
 		OnlyToStdout: true,
 	}
-	stopCh := make(chan struct{})
-	if err := hwlog.InitRunLogger(&config, stopCh); err != nil {
+	if err := hwlog.InitRunLogger(&config, context.Background()); err != nil {
 		fmt.Printf("%v", err)
 	}
 }

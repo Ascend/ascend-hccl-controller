@@ -7,13 +7,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"time"
 
-	"huawei.com/npu-exporter/hwlog"
-	"huawei.com/npu-exporter/utils"
+	"huawei.com/mindx/common/hwlog"
+	"huawei.com/mindx/common/k8stool"
+	"huawei.com/mindx/common/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -57,53 +59,59 @@ func main() {
 		fmt.Printf("HCCL-Controller version: %s \n", BuildVersion)
 		return
 	}
-	stopLogCh := make(chan struct{})
-	defer close(stopLogCh)
-	if err := initHwLogger(stopLogCh); err != nil {
+	if err := initHwLogger(); err != nil {
 		fmt.Printf("%v", err)
 		return
 	}
 	hwlog.RunLog.Infof("hccl controller starting and the version is %s", BuildVersion)
-	if hcclVersion != "v1" && hcclVersion != "v2" {
-		hwlog.RunLog.Fatalf("invalid json version value, should be v1/v2")
+	if err := validate(); err != nil {
+		hwlog.RunLog.Error(err)
+		return
 	}
-	agent.SetJSONVersion(hcclVersion)
-	validateParallelism()
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-	if KubeConfig == "" && utils.IsExists(defaultKubeConfig) {
-		KubeConfig = defaultKubeConfig
-	}
-	cfg, err := getK8sConfig()
+	kubeClient, jobClient, err := getClient()
 	if err != nil {
 		hwlog.RunLog.Error(err)
 		return
 	}
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		hwlog.RunLog.Fatalf("Error building kubernetes clientset: %s", err.Error())
-	}
-	jobClient, err := versioned.NewForConfig(cfg)
-	if err != nil {
-		hwlog.RunLog.Fatalf("Error building job clientset: %s", err.Error())
-	}
-
 	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
-
-	control := controller.NewEventController(kubeClient, jobClient, newConfig(),
+	control, err := controller.NewEventController(kubeClient, jobClient, newConfig(),
 		controller.InformerInfo{JobInformer: jobInformer, DeployInformer: deploymentInformer,
 			CacheIndexers: cacheIndexer}, stopCh)
-
+	if err != nil {
+		hwlog.RunLog.Error(err)
+		return
+	}
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
 	if err = control.Run(jobParallelism, stopCh); err != nil {
-		hwlog.RunLog.Fatalf("Error running controller: %s", err.Error())
+		hwlog.RunLog.Errorf("Error running controller: %s", err.Error())
 	}
+}
+
+func getClient() (*kubernetes.Clientset, *versioned.Clientset, error) {
+	if KubeConfig == "" && utils.IsExist(defaultKubeConfig) {
+		KubeConfig = defaultKubeConfig
+	}
+	cfg, err := getK8sConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building kubernetes clientset: %s", err.Error())
+	}
+	jobClient, err := versioned.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building job clientset: %s", err.Error())
+	}
+	return kubeClient, jobClient, nil
 }
 
 func newConfig() *agent.Config {
@@ -156,23 +164,27 @@ func init() {
 
 }
 
-func initHwLogger(stopCh chan struct{}) error {
-	if err := hwlog.InitRunLogger(hwLogConfig, stopCh); err != nil {
+func initHwLogger() error {
+	if err := hwlog.InitRunLogger(hwLogConfig, context.Background()); err != nil {
 		return fmt.Errorf("hwlog init failed, error is %v", err)
 	}
-
 	return nil
 }
 
-func validateParallelism() {
+func validate() error {
+	if hcclVersion != "v1" && hcclVersion != "v2" {
+		return errors.New("invalid json version value, should be v1/v2")
+	}
+	agent.SetJSONVersion(hcclVersion)
 	// check the validity of input parameters jobParallelism
 	if jobParallelism <= 0 || jobParallelism > common.MaxJobParallelism {
-		hwlog.RunLog.Fatalf("Error parsing parameters: job parallelism should be range [1, 32].")
+		return errors.New("error parsing parameters: job parallelism should be range [1, 32]")
 	}
 	// check the validity of input parameters podParallelism
 	if podParallelism <= 0 || podParallelism > common.MaxPodParallelism {
-		hwlog.RunLog.Fatalf("Error parsing parameters: pod parallelism should be range [1, 32].")
+		return errors.New("error parsing parameters: pod parallelism should be range [1, 32]")
 	}
+	return nil
 }
 
 func getK8sConfig() (*rest.Config, error) {
@@ -180,9 +192,9 @@ func getK8sConfig() (*rest.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg, err := utils.BuildConfigFromFlags("", path)
+	cfg, err := k8stool.BuildConfigFromFlags("", path)
 	if err != nil {
-		return nil, errors.New("error building kubeconfig")
+		return nil, err
 	}
 
 	return cfg, nil

@@ -151,8 +151,12 @@ func newFakeController() *EventController {
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
-	return NewEventController(kube, volcano, config, InformerInfo{JobInformer: jobInformer,
+	c, err := NewEventController(kube, volcano, config, InformerInfo{JobInformer: jobInformer,
 		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, make(chan struct{}))
+	if err != nil {
+		return nil
+	}
+	return c
 }
 
 func newTestConfig() *agent.Config {
