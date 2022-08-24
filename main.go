@@ -98,7 +98,7 @@ func main() {
 }
 
 func getClient() (*kubernetes.Clientset, *versioned.Clientset, error) {
-	if KubeConfig == "" || KubeConfig == defaultKubeConfig {
+	if KubeConfig == "" && (utils.IsExist(defaultKubeConfig) || utils.IsExist(defaultKubeConfigBkp)) {
 		cfgInstance, err := x509.NewBKPInstance(nil, defaultKubeConfig, defaultKubeConfigBkp)
 		if err != nil {
 			return nil, nil, err
