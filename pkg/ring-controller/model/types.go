@@ -30,6 +30,8 @@ const (
 	VCJobType = "vcjob"
 	// DeploymentType To determine the type of listening：deployment.
 	DeploymentType = "deployment"
+	// K8sJobType To determine the type of listening：job.
+	K8sJobType = "job"
 
 	// BuildStatInterval 1 * time.Minute
 	BuildStatInterval = 30 * time.Second
@@ -52,6 +54,14 @@ type VCJobModel struct {
 type DeployModel struct {
 	modelCommon
 	agent.DeployInfo
+	replicas   int32
+	containers []apiCorev1.Container
+}
+
+// K8sJobModel : to handle k8s job type
+type K8sJobModel struct {
+	modelCommon
+	agent.K8sJobInfo
 	replicas   int32
 	containers []apiCorev1.Container
 }

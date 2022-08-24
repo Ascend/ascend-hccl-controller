@@ -315,6 +315,11 @@ func getWorkName(labels map[string]string) string {
 	if label, ok := labels[DeploymentNameKey]; ok {
 		return label
 	}
+
+	if label, ok := labels[K8sJobNameKey]; ok {
+		return label
+	}
+
 	return ""
 }
 

@@ -20,22 +20,24 @@ package main
 import (
 	"flag"
 	"fmt"
-	"hccl-controller/pkg/hwlog"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/model"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
 	"os"
+	"syscall"
 	"time"
 
-	"hccl-controller/pkg/resource-controller/signals"
-	"hccl-controller/pkg/ring-controller/controller"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	cinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
+
+	"hccl-controller/pkg/hwlog"
+	"hccl-controller/pkg/resource-controller/signals"
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/controller"
+	"hccl-controller/pkg/ring-controller/model"
 )
 
 var (
@@ -51,9 +53,13 @@ var (
 const (
 	dryRun             = false
 	displayStatistic   = false
+	kubeEnvMaxLength   = 253
 	cmCheckInterval    = 2
 	cmCheckTimeout     = 10
+	rootUID            = 0
+	rootGID            = 0
 	defaultLogFileName = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
+	kubeCfgEnvKey      = "KUBECONFIG"
 )
 
 func main() {
@@ -80,7 +86,8 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	cfgPath := getK8SCfg()
+	cfg, err := clientcmd.BuildConfigFromFlags("", cfgPath)
 	if err != nil {
 		hwlog.Fatalf("Error building kubeconfig")
 	}
@@ -98,12 +105,22 @@ func main() {
 	config := newConifg()
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
+	k8sJobInformer := deploymentFactory.Batch().V1().Jobs()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
 	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
+	cacheIndexer[model.K8sJobType] = k8sJobInformer.Informer().GetIndexer()
 
-	control := controller.NewController(kubeClient, jobClient, config, controller.InformerInfo{JobInformer: jobInformer,
-		DeployInformer: deploymentInformer, CacheIndexers: cacheIndexer}, stopCh)
+	control := controller.NewController(
+		kubeClient,
+		jobClient,
+		config,
+		controller.InformerInfo{
+			JobInformer:    jobInformer,
+			DeployInformer: deploymentInformer,
+			K8sJobInformer: k8sJobInformer,
+			CacheIndexers:  cacheIndexer},
+		stopCh)
 
 	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
@@ -164,4 +181,28 @@ func initHwLogger(stopCh chan struct{}) {
 		fmt.Printf("hwlog init failed, error is %v", err)
 		os.Exit(-1)
 	}
+}
+
+func getK8SCfg() string {
+	kubeConfig := os.Getenv(kubeCfgEnvKey)
+	if err := checkKubeConfig(kubeConfig); err != nil {
+		hwlog.Errorf("check kube config failed: %v", err)
+		return ""
+	}
+	return kubeConfig
+}
+
+func checkKubeConfig(kubeConfig string) error {
+	if len(kubeConfig) > kubeEnvMaxLength {
+		return fmt.Errorf("kube config length %d is bigger than %d", len(kubeConfig), kubeEnvMaxLength)
+	}
+	kubeConfigPathInfo, err := os.Stat(kubeConfig)
+	if err != nil || os.IsNotExist(err) {
+		return nil
+	}
+	stat, ok := kubeConfigPathInfo.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != rootUID || stat.Gid != rootGID {
+		return fmt.Errorf("non-root owner group of the path")
+	}
+	return nil
 }

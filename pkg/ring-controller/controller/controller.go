@@ -60,6 +60,7 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 		jobclientset:  jobclientset,
 		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
 		deploySynced:  informerInfo.DeployInformer.Informer().HasSynced,
+		k8sJobSynced:  informerInfo.K8sJobInformer.Informer().HasSynced,
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
 		recorder:      recorder,
 		agent:         agents,
@@ -80,7 +81,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	hwlog.Debug("Waiting for informer caches to sync")
-	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced)
+	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced, c.k8sJobSynced)
 	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
@@ -230,6 +231,7 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 	}
 	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.K8sJobInformer.Informer().AddEventHandler(eventHandlerFunc)
 }
 
 // splitKeyFunc to splite key by format namespace,jobname,eventType
