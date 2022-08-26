@@ -10,9 +10,12 @@ HARBOR_PASSWORD: ""
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
 
-# select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
+# password for redis, can not be empty, delete immediately after finished
+REDIS_PASSWORD: ""
+
+# select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
-# mindx-dl platform storage path on "NFS" or "CEPHFS", default to /data/atlas_dls
+# mindx-dl platform storage path on "NFS" or "CEPHFS" or "OCEANSTORE", default to /data/atlas_dls
 STORAGE_PATH: "/data/atlas_dls"
 # storage capatity, default to "5120Gi", i.e. 5Ti
 STORAGE_CAPACITY: "5120Gi"

@@ -12,9 +12,17 @@
     MASTER_WORKER_IP: "{{ play_hosts }}"
     cacheable: yes
 
-- name: install nfs client
-  shell: dpkg --force-all -i {{ client_deb }}/*.deb
+- name: install nfs client for ubuntu
+  shell: dpkg --force-all -i {{ client_pkg }}/*.deb
   environment:
     DEBIAN_FRONTEND: noninteractive
     DEBIAN_PRIORITY: critical
-  when: OS_ID == 'ubuntu'
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- name: install nfs client for centos
+  shell: rpm -ivh --force --nodeps --replacepkgs {{ client_pkg }}/*.rpm
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'

@@ -1,16 +1,16 @@
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: redis-config
-  namespace: {{ REDIS_NAMESPACE }}
-data:
-  redis-config: |
-    maxmemory 4mb
-    maxmemory-policy allkeys-lru
-    daemonize no
-    protected-mode no
-
+# ---
+# kind: Secret
+# apiVersion: v1
+# metadata:
+#   name: redis-config-secret
+#   namespace: {{ REDIS_NAMESPACE }}
+# stringData:
+#   redis-config: |
+#     maxmemory 4mb
+#     maxmemory-policy allkeys-lru
+#     daemonize no
+#     protected-mode no
+#     requirepass {{ REDIS_PASSWORD }}
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -60,8 +60,8 @@ spec:
         - name: data
           emptyDir: {}
         - name: config
-          configMap:
-            name: redis-config
+          secret:
+            secretName: redis-config-secret
             items:
             - key: redis-config
               path: redis.conf

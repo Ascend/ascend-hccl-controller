@@ -4,39 +4,41 @@
 
 本文主要介绍如何使用ansible安装mindxdl所需开源软件安装。其中包含如下开源软件
 
-| 软件名        | 备注                    |
-| ---------- | -------------------------|
-| docker     | 集群中所有节点都需要安装   |
-| harbor     | 容器镜像仓                |
-| kubernetes | k8s平台                  |
-| nfs        | nfs存储系统              |
-| mysql      | 安装在k8s集群中，关系型数据库系统 |
-| redis      | 安装在k8s集群中，非关系型数据库系统 |
-| kubeedge   | 安装在k8s集群中，使能边缘计算的平台 |
-| prometheus + grafana + node-exporter + alertmanager + kube-state-metrics | 安装在k8s集群中，资源监控组件      |
+| 软件名      |    版本   | 备注                    |
+| ---------- | ----------| ------------------------|
+| python3    | 3.6       | ansible会安装到python3，本机节点安装|
+| ansible    | 2.11.6    | 任务编排的自动化平台，本机节点安装   |
+| docker     | 19.03     | 集群中所有节点都需要安装   |
+| harbor     | 2.3.3     | 容器镜像仓                |
+| kubernetes | 1.19.16   | k8s平台                  |
+| nfs        | 1.3       | nfs存储系统               |
+| mysql      | 8.0.26    | 安装在k8s集群中，关系型数据库系统 |
+| redis      | 5.0.14    | 安装在k8s集群中，非关系型数据库系统 |
+| prometheus + grafana + node-exporter + alertmanager + kube-state-metrics | 2.29.2 + 7.5.5 + 1.2.2 + 0.24.0 + 2.3.0 | 安装在k8s集群中，资源监控组件      |
 
 ## 环境要求
 
 ### 支持的操作系统说明
 
-| 操作系统   | 版本   | CPU架构 |
-|:------:|:---------:|:-------:|
-| Ubuntu | 18.04.1/5 | aarch64 |
-| Ubuntu | 18.04.1/5 | x86_64  |
+| 操作系统|    版本   | CPU架构 | 备注         |
+|:------:|:---------:|:-------:|:-----------:|
+| Ubuntu | 18.04     | aarch64 |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
+| Ubuntu | 18.04     | x86_64  |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
+| Centos | 7.6       | aarch64 |安装到【SOFTWARE SELECTION】这一步时建议勾选”Debugging Tools、Compatibility Libraries、Development Toos"附件组件|
 
 根目录的磁盘空间利用率高于85%会触发Kubelet的镜像垃圾回收机制，将导致服务不可用。请确保根目录有足够的磁盘空间，建议大于1 TB
 
-### 支持的硬件形态说明
+### 支持的硬件形态说明（worker节点）
 
 | 中心推理硬件    | 中心训练硬件|
 |:--------------:|:----------:|
-| A300-3000      | A300T-9000 |
-| A300-3010      | A800-9000  |
-| Atlas 300I Pro | A800-9010  |
-| A800-3000      |            |
-| A800-3010      |            |
+| A300-3000      | A800-9000  |
+| A300-3010      | A800-9010  |
+| Atlas 300I Pro |            |
 
-请先安装NPU硬件对应的驱动和固件，才能构建昇腾NPU的训练和推理任务。安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)
+请在worker节点先安装NPU硬件对应的驱动和固件，才能构建昇腾NPU的训练和推理任务。安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)。NPU驱动和固件、MindX DL平台组件和基础组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
+
+master节点无需为NPU插卡环境，普通服务器即可
 
 ## 下载本工具
 
@@ -77,7 +79,7 @@ jinja version = 3.0.1
 libyaml = True
 ```
 
-ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装完成后执行ansible --version查看ansible是否安装成功
+ansible默认安装在python3（Ubuntu系统自带：python3.6.9，Centos：python3.6.8）中，安装完成后执行ansible --version查看ansible是否安装成功
 
 注意：如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
 
@@ -147,6 +149,14 @@ kube_vip="192.0.4.200"
 
 inventory文件配置详细可参考[[How to build your inventory &mdash; Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)]
 
+由于centos7.6自带python2.7，没有python3，而ansible对centos7.6的支持和适配有限。如果远程设备为centos7.6 arm，则需在inventory文件显式配置[all:vars]的主机组变量ansible_python_interpreter=/usr/bin/python2.7；
+```ini
+...
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python2.7
+```
+
 ### 步骤3：配置安装信息
 
 在group_vars目录中的all.yaml文件
@@ -163,6 +173,9 @@ HARBOR_PASSWORD: ""
 
 # password for mysql, can not be empty, delete immediately after finished
 MYSQL_PASSWORD: ""
+
+# password for redis, can not be empty, delete immediately after finished
+REDIS_PASSWORD: ""
 
 # select "NFS" or "CEPHFS" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
@@ -204,6 +217,7 @@ HIAI_GROUP: HwHiAiUser
 | HARBOR_PATH       | Harbor的安装路径，默认为/data/harbor                   |
 | HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
 | MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
+| REDIS_PASSWORD    | redis的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
 | STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"           |
 | STORAGE_PATH      | 存储的共享路径，默认为/data/atlas_dls   |
 | STORAGE_CAPACITY  | 存储的共享容量，默认为5Ti   |
@@ -211,7 +225,6 @@ HIAI_GROUP: HwHiAiUser
 | CEPHFS_PORT       | cephfs集群的port，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
 | CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。一般为admin  |
 | CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。可在cephfs monitor节点通过`ceph auth get-key client.admin`查询。**安装完成后应立即删除**  |
-| CEPHFS_REQUEST_STORAGE| cephfs集群分配的存储空间，*"STORAGE_TYPE"设置为"CEPHFS"时不可为"0Gi"，必须配置*。  |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
 | K8S_API_SERVER_IP | K8s的api server监听地址，多网卡场景下*建议配置*    |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
@@ -226,13 +239,15 @@ HIAI_GROUP: HwHiAiUser
 
 2. 默认暴露30306 NodePort端口，供用户调试mysql使用。
 
-3. 本工具支持使用nfs和cephfs 2种存储方案，默认选用nfs方案。用户可通过设置"STORAGE_TYPE"为"CEPHFS"选用cephfs方案。
+3. 本工具支持使用nfs、cephfs、oceanstore 3种存储方案，默认选用nfs方案。
 
    - 3.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认【步骤2：配置集群信息】inventory的"nfs_server"配置正确。
 
    - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"这4个配置项填写正确。
 
-4. 使用cephfs方案时，需要手动挂载cephfs并在挂载目录下创建STORAGE_PATH（默认为data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_ceph_dir.sh。
+   - 3.3 当"STORAGE_TYPE"配置项为"OCEANSTORE"时，请提前准备好oceanstore集群。
+
+4. 使用cephfs或oceanstore方案时，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
 
 ### 步骤4：检查集群状态
 
@@ -282,7 +297,33 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file all.yam
    kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
    ```
 
-2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件证书存放在外部存储nfs和cephfs目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必也清空该目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常
+2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储nfs或cephfs或oceanstore目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件kmc证书存放在外部存储目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必清空这2个目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常。详细目录见下。
+
+外部存储中的MindX DL平台目录结构
+   ```bash
+   |── atlas_dls  # 平台总目录
+      |── platform  # 平台组件相关目录
+         ├── kmc  # DL组件的kmc证书目录
+            |── alarm-manager
+            |── apigw
+            ...
+         ├── log  # DL组件的log目录
+            |── alarm-manager
+            |── apigw
+            ...
+         ├── mysql  # mysql的安装目录
+         ├── services  # DL组件的私有配置目录
+      |── group1  # 平台组织id1
+         |── user1  # 平台用户id1
+         |── user2  # 平台用户id2
+         ...
+      |── group2  # 平台组织id2
+         |── user3  # 平台用户id3
+         |── user4  # 平台用户id4
+         |── user5  # 平台用户id5
+         ...
+      ...
+   ```
 
 3. 如果某节点docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
 
@@ -350,7 +391,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/15.mindxdl.yaml
    ```
 
 4. （可选）如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
@@ -385,7 +426,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 
 2. 只支持安装MindX DL平台组件，当前包括12个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager、alarm-manager）和4个基础组件（hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
 
-3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从其他版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件和基础组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包。
+3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从其他版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件和基础组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 
 ### 步骤8：安装MindX Toolbox
 
@@ -407,7 +448,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令。MindX Toolbox中的Ascend-Docker-Runtime即可安装到各个worker节点
 
    ```bash
-   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/17.mindx-toolbox.yaml
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindx-toolbox.yaml
    ```
 
 ## 更新MindX DL平台组件和基础组件
@@ -417,6 +458,10 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 1. 查阅“步骤2：配置集群信息”的inventory文件和“步骤3：配置安装信息”的group_vars/all.yaml文件，确保这2个配置文件同上一次使用本工具时的配置完全一致
 
 2. 执行“步骤7：安装MindX DL平台组件和基础组件”。该步骤可重复执行
+
+## 安装后操作
+
+如果worker节点中包含中心训练硬件时，需要配置device的网卡IP。具体操作参考[[配置device的网卡IP](https://support.huawei.com/enterprise/zh/doc/EDOC1100234042/5a225af5)]
 
 # 详细说明
 
@@ -432,13 +477,13 @@ playbooks/
 ├── 04.harbor.yaml  # 安装harbor并登录
 ├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor（耗时较长）
 ├── 06.k8s.yaml  # 安装k8s系统
-├── 07.nfs.yaml  # 安装nfs并创建nfs的pv。当"STORAGE_TYPE"设置为"CEPHFS"时，此步骤会自动跳过
-├── 08.cephfs.yaml  # 创建cephfs的pv、secret。当"STORAGE_TYPE"设置为"NFS"时，此步骤会自动跳过
-├── 09.pvc.yaml  # 创建pvc
-├── 10.mysql.yaml  # 安装mysql
-├── 11.redis.yaml  # 安装redis
-├── 12.prometheus.yaml  # 安装prometheus、grafana、node-exporter、alertmanager、kube-state-metrics
-├── 13.kubeedge.yaml  # 安装kubeedge
+├── 07.nfs.yaml  # 安装nfs并创建nfs的pv。当"STORAGE_TYPE"设置不为"NFS"时，此步骤会自动跳过
+├── 08.cephfs.yaml  # 创建cephfs的pv、secret。当"STORAGE_TYPE"设置不为"CEPHFS"时，此步骤会自动跳过
+├── 09.oceanstore.yaml  # 创建oceanstore的pv（hostpath方式)。当"STORAGE_TYPE"设置不为"OCEANSTORE"时，此步骤会自动跳过
+├── 10.pvc.yaml  # 创建pvc
+├── 11.mysql.yaml  # 安装mysql
+├── 12.redis.yaml  # 安装redis
+├── 13.prometheus.yaml  # 安装prometheus、grafana、node-exporter、alertmanager、kube-state-metrics
 ├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor（耗时较长）
 ├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor（耗时较长）
 ├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件和基础组件
@@ -470,7 +515,7 @@ playbooks/
 
 3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml和17.mindx-toolbox.yaml）。实际安装时可根据需要对组件灵活删减
 
-   如果需要重新部署DL平台，手动清除k8s系统及DL平台残留的mysql数据库文件后，只需分别执行06~13、16这些子任务（这些组件都是安装在k8s中的）即可，不必执行耗时的软件包分发、镜像推送操作
+   如果需要重新部署DL平台，手动清除k8s系统及DL平台残留的mysql数据库文件和组件证书文件后，只需分别依次执行06~16这些子任务（这些子任务都跟k8s相关）即可，不必执行01~05、17这些子任务
 
 # 高级配置
 
@@ -505,3 +550,7 @@ playbooks/
 1. Q: 某个节点的calico-node-**出现READY “0/1”，`kubectl describe pod calico-node-**(master的calico-node)`时有报错信息“calico/node is not ready: BIRD is not ready: BGP not established with \<ip\>”
 
 - A: 可能是该节点的交换分区被打开了（swap on，可通过`free`查询)，kubelet日志报错“failed to run Kubelet: running with swap on is not supported, please disable swap”，导致该节点calico访问失败。解决方案是禁用swap（执行`swapoff -a`）
+
+2. Q: 安装某组件时报错，报错信息中包含访问harbor镜像仓失败等字样
+
+- A: harbor镜像仓会管理安装过程中的所有镜像。首先可能是某节点docker.service配置了代理，具体请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>。其次可能是harbor服务异常，可在harbor主机上执行`docker ps | grep goharbor`，如果不是存在9个容器且均为up状态，可执行`systemctl restart harbor`重启harbor服务。如果重启harbor服务后harbor服务仍然异常，建议直接重装harbor（执行04.harbor.yaml子任务）

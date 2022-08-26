@@ -13,6 +13,7 @@
           - linux_x86_64
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
+          - centos_7_aarch64
 
 # copy nfs resources to nfs_server host
 - hosts:
@@ -24,6 +25,7 @@
         resource_list:
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
+          - centos_7_aarch64
 
 # copy harbor install package to harbor host
 - hosts: harbor
@@ -152,14 +154,13 @@
         pvc_name: storage-pvc
         capacity: "{{ DL_CAP }}"
 
-# mysql、redis、prom、kubeedge
+# mysql、redis、prom
 - hosts: master
   gather_facts: False
   roles:
     - role: mindx.mysql
     - role: mindx.redis
     - role: mindx.k8s.prom
-    - role: mindx.kubeedge
 
 # push inner-images to harbor
 - hosts: master

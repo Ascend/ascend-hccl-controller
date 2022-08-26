@@ -1,5 +1,0 @@
-- name: install sys
-  shell: dpkg --force-all -i {{ sys_dir }}/*.deb
-  environment:
-    DEBIAN_FRONTEND: noninteractive
-    DEBIAN_PRIORITY: critical

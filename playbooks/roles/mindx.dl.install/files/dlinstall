@@ -15,7 +15,7 @@ DEBUG="n"
 DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
-DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,edge-manager,image-manager,"\
+DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,image-manager,"\
 "label-manager,model-manager,task-manager,train-manager,user-manager,alarm-manager,hccl-controller,volcano"
 
 function print_usage()
@@ -170,7 +170,14 @@ function build_image()
     fi
 
     cd ${DEPLOY_PATH}
-    docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    if [[ ${name} == apigw-business ]]; then
+        docker build . --build-arg CONF_PATH=business -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    elif [[ ${name} == apigw ]]; then
+        docker build . --build-arg CONF_PATH=manager -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    else
+        docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
+    fi
+
     if [ $? != 0 ];then
         echo "docker build failed"
         exit 1
@@ -209,7 +216,12 @@ function build_images()
         local file_name=$(basename $docker_file)
         echo "build image for $file_name:"
         if [ ${file_name} == "Dockerfile" ];then
-            build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
+            if [[ ${IMAGE} == apigw ]]; then
+                build_image ${docker_file} apigw-business ${ARCH} ${TAG}
+                build_image ${docker_file} apigw ${ARCH} ${TAG}
+            else
+                build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
+            fi
         elif [ ${file_name} == "Dockerfile-controller" ];then
             build_image ${docker_file} "volcanosh/vc-controller-manager" ${ARCH} ${TAG}
         elif [ ${file_name} == "Dockerfile-scheduler" ];then
@@ -246,12 +258,10 @@ function do_install()
     do
         docker pull ${image}
         local is_platform_dl=$(check_components ${DL_PLATFORM_COMPONENTS} ${image})
-        if [[ ${is_platform_dl} == 1 ]] && \
-        [[ ! -z $(cat ../inventory_file | grep -A 1 "master_backup" | awk 'END {print}') ]]; then
+        if [[ ${is_platform_dl} == 1 ]]; then
             ansible master_backup -i ../inventory_file -m shell -a "docker pull ${image}"
         fi
-        if [[ ${is_platform_dl} == 0 ]] && \
-        [[ ! -z $(cat ../inventory_file | grep -A 1 "worker" | awk 'END {print}') ]]; then
+        if [[ ${is_platform_dl} == 0 ]]; then
             ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
         fi
     done

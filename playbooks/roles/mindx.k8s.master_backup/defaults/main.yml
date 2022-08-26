@@ -1,7 +1,3 @@
-# defaults file for ascend.docker
-resource_dir: "~/resources"
+# defaults file for mindx.k8s.master
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
-
-pkg_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/docker"
-cgroup_driver: systemd

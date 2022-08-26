@@ -1,7 +1,47 @@
-- include_tasks: ubuntu_18.04.yml
+- name: install docker-ce for ubuntu
+  shell: dpkg --force-all -i {{ pkg_dir }}/*.deb
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_PRIORITY: critical
   when:
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
+
+- name: install docker-ce for centos
+  shell: rpm -ivh --force --nodeps --replacepkgs {{ pkg_dir }}/*.rpm
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
+
+- name: restart docker
+  shell: systemctl restart docker
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
+
+# - name: modify /etc/sysctl.conf iptables
+#   ansible.builtin.lineinfile:
+#     path: /etc/sysctl.conf
+#     line: net.bridge.bridge-nf-call-iptables = 1
+#     state: present
+#   when:
+#     - OS_ID == 'centos'
+#     - OS_VERSION_ID == '7'
+
+# - name: modify /etc/sysctl.conf ip6tables
+#   ansible.builtin.lineinfile:
+#     path: /etc/sysctl.conf
+#     line: net.bridge.bridge-nf-call-ip6tables = 1
+#     state: present
+#   when:
+#     - OS_ID == 'centos'
+#     - OS_VERSION_ID == '7'
+
+# - name: sysctl -p
+#   shell: sysctl -p
+#   when:
+#     - OS_ID == 'centos'
+#     - OS_VERSION_ID == '7'
 
 - name: config docker
   template:
@@ -9,7 +49,7 @@
     dest: "/etc/docker/daemon.json"
     mode: 0600
 
-- name: "restart docker"
+- name: restart docker
   systemd:
     name: "docker"
     enabled: true

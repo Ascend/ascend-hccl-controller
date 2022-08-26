@@ -1,10 +1,10 @@
 # defaults file for mindx.nfs.server
 resource_dir: "~/resources"
-OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
+OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 
-client_deb: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsclient"
-server_deb: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsserver"
+client_pkg: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsclient"
+server_pkg: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsserver"
 
 DL_USR: "{{ MINDX_USER }}"
 DL_GRP: "{{ MINDX_GROUP }}"
