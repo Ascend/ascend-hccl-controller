@@ -1,0 +1,13 @@
+- name: message
+  debug:
+    msg: "*************************start add ceph host***************************"
+
+- name: ssh-copy-id ceph.pub
+  local_action:
+    module: shell
+    cmd: ssh-copy-id -f -i /etc/ceph/ceph.pub root@{{ ansible_default_ipv4.address }}
+
+- name: ceph orch host add
+  local_action:
+    module: shell
+    cmd: ceph orch host add {{ ansible_hostname }} {{ ansible_default_ipv4.address }} --labels _admin

@@ -1,0 +1,28 @@
+- name: docker load -i {{image}}
+  shell: "docker load -i {{ image }}"
+  register: load_result
+
+- name: analyze image
+  set_fact:
+    manifest_name: '{{ (line.split(":")[1] | trim).split("_")[:-1] | join("_") }}'
+    arch: '{{ ((line.split(":")[1] | trim).split("_")[-1]) }}'
+    orig_name: '{{line.split(":")[1:] | join(":") | trim }}'
+    tag: '{{ line.split(":")[-1] | trim }}'
+  with_items: "{{ load_result.stdout_lines }}"
+  when: '"Loaded image" in line'
+  loop_control:
+    loop_var: line
+
+- name: create manifest and push {{orig_name}} to harbor
+  shell: |
+    docker tag {{orig_name}} {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{orig_name}}
+    docker push {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{orig_name}}
+    docker manifest create {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}} {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{orig_name}} -a
+    docker manifest annotate {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}} {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{orig_name}} --os linux --arch {{arch}}
+    docker manifest push {{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{manifest_name}}:{{tag}}
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+    DOCKER_CLI_EXPERIMENTAL: enabled

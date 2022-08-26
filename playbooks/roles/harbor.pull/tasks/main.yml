@@ -1,0 +1,11 @@
+- name: message
+  debug:
+    msg: "******************************docker pull images******************************"
+
+- name: localhost rename image
+  include_tasks: localhost_rename.yml
+  when: ansible_connection == "local"
+
+- name: otherhost pull and rename image 
+  include_tasks: otherhost_pull.yml
+  when: ansible_connection != "local"

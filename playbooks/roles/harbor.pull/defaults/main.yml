@@ -1,0 +1,3 @@
+ARCH: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+HARBOR_URL: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/"
+REPO_URL: "{{ HARBOR_URL if HARBOR_IP != '' else '' }}"

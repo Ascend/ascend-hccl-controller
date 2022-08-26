@@ -1,0 +1,18 @@
+---
+- hosts:
+    - harbor
+    - ceph_localhost
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+
+# push open source images to harbor
+- hosts: ceph_localhost
+  gather_facts: False
+  roles:
+    - role: harbor.push
+      vars:
+        project_list:
+          - quay.io
+        project_public: "true"
+        images_dir: images

@@ -1,0 +1,56 @@
+- name: install docker-compose
+  copy:
+    src: "{{ resource_dir }}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/docker-compose/docker-compose"
+    dest: "/usr/bin/docker-compose"
+    mode: "0750"
+    remote_src: yes
+
+- name: create HARBOR_PATH
+  file:
+    path: "{{HARBOR_PATH}}"
+    state: directory
+    mode: 0750
+
+- name: find harbor-offline-installer-*.tgz
+  find:
+    paths: "{{ resource_dir }}"
+    recurse: no
+    file_type: file
+    patterns: "harbor-offline-installer-{{ harbor_flag }}*.tgz"
+  register: harbor
+
+- name: unarchive harbor
+  ansible.builtin.unarchive:
+    src: "{{ harbor.files[0].path }}"
+    dest: "{{ HARBOR_PATH }}"
+    remote_src: yes
+
+- name: set harbor.yml
+  template:
+    src: harbor.yml.j2
+    dest: "{{ HARBOR_PATH }}/harbor/harbor.yml"
+    mode: 0640
+
+- name: create certgen_harbor.sh
+  template:
+    src: certgen_harbor.sh
+    dest: "{{ HARBOR_PATH }}/certgen_harbor.sh"
+    mode: 0640
+
+- name: execute certgen_harbor.sh
+  shell : "bash {{ HARBOR_PATH }}/certgen_harbor.sh genCertAndKey harbor /data/cert"
+
+- name: execute harbor install.sh
+  shell: bash {{ HARBOR_PATH }}/harbor/install.sh
+
+- name: set harbor service
+  template:
+    src: harbor.service.j2
+    dest: /etc/systemd/system/harbor.service
+    mode: 0640
+
+- name: enable harbor
+  systemd:
+    name: "harbor"
+    enabled: true
+    state: started

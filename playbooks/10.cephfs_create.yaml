@@ -1,0 +1,6 @@
+---
+# cephfs create
+- hosts:
+    - ceph_localhost
+  roles:
+    - role: cephfs.create

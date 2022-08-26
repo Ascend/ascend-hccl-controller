@@ -1,0 +1,7 @@
+---
+# install ceph
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  roles:
+    - role: ceph.install

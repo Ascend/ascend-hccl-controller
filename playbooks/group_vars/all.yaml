@@ -1,0 +1,8 @@
+# harbor ip address
+HARBOR_HOST_IP: ""
+# harbor https port
+HARBOR_HTTPS_PORT: 7443
+# harbor install path
+HARBOR_PATH: /data/harbor
+# password for harbor, can not be empty, delete immediately after finished
+HARBOR_PASSWORD: ""

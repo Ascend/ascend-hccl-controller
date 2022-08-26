@@ -1,0 +1,22 @@
+---
+# distribute resources
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+    - harbor
+  roles:
+    - role: resource
+      vars:
+        resource_list:
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy harbor install package to harbor host
+- hosts: harbor
+  gather_facts: False
+  roles:
+    - role: resource
+      vars:
+        resource_list:
+          - harbor-offline-installer-v2.3.3.tgz
+          - harbor-offline-installer-aarch64-v2.3.3.tgz

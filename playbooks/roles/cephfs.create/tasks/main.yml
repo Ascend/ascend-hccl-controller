@@ -1,0 +1,9 @@
+- name: message
+  debug:
+    msg: "*************************start create cephfs***************************"
+
+- name: ceph orch apply osd
+  shell: ceph orch apply osd --all-available-devices
+
+- name: ceph fs volume create
+  shell: ceph fs volume create {{ ansible_hostname }}-cephfs

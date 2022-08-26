@@ -1,0 +1,7 @@
+# defaults file for ascend.docker
+resource_dir: "~/ceph_resources"
+harbor_flag: "{{ ansible_architecture if ansible_architecture == 'aarch64' else 'v' }}"
+HARBOR_CERT: "/data/cert/harbor.crt"
+HARBOR_KEY: "/data/cert/harbor.key"
+OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
+OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"

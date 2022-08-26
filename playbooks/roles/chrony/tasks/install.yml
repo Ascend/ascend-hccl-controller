@@ -1,0 +1,49 @@
+- name: set localhost_ip
+  set_fact:
+    localhost_ip: "{{ hostvars[groups['ceph_localhost'][0]]['ansible_default_ipv4']['address'] }}"
+    cacheable: yes
+
+- name: install chrony
+  shell: dpkg --force-all -i {{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/chrony/*.deb
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_PRIORITY: critical
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- name: config chrony
+  ansible.builtin.replace:
+    path: /etc/chrony/chrony.conf
+    regexp: '^pool (.*)$'
+    replace: '# pool \1'
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: "^allow"
+    line: "allow"
+    state: present
+  when: ansible_connection == "local"
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: "^local stratum"
+    line: "local stratum 10"
+    state: present
+  when: ansible_connection == "local"
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: "^server "
+    line: "server {{ localhost_ip }} iburst"
+    state: present
+  when: ansible_connection != "local"
+
+- name: "restart chrony"
+  systemd:
+    name: "chrony"
+    enabled: true
+    state: restarted
