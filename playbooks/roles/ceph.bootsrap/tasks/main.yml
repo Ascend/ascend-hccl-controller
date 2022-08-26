@@ -1,0 +1,11 @@
+- name: message
+  debug:
+    msg: "*************************start bootstrap ceph***************************"
+
+- name: init cluster by cephadm bootstrap
+  shell: cephadm --image {{ REPO_URL }}quay.io/ceph/ceph:v16 bootstrap --mon-ip {{ MONITOR_IP }}
+  register: init_result
+
+- name: message
+  debug:
+    msg: "{{ init_result }}"

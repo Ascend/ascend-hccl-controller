@@ -1,215 +1,282 @@
-# HCCL-Controller.ZH
--   [Controller介绍](#Controller介绍.md)
--   [HCCL-Controller](#HCCL-Controller.md)
--   [环境依赖](#环境依赖.md)
--   [目录结构](#目录结构.md)
--   [版本更新信息](#版本更新信息.md)
-<h2 id="Controller介绍.md">Controller介绍</h2>
+# ceph-deploy
 
--   一个Controller至少追踪一种类型的Kubernetes资源。这些对象有一个代表期望状态的指定字段。Controller负责确保其追踪的资源对象的当前状态接近期望状态。
--   Controller Manager就是集群内部的管理控制中心，由负责不同资源的多个Controller构成，共同负责集群内的节点、Pod等所有资源的管理。
--   Controller Manager主要提供了一个分发事件的能力，而不同的Controller只需要注册对应的Handler来等待接收和处理事件。
--   每种特定资源都有特定的Controller维护管理以保持预期状态。
+## 介绍
+ceph-deploy是一个使用ansible安装cephfs集群的工具，它的优势是在离线环境中部署，无需访问外部网络。
 
-**图 1**  Controller interaction process<a name="fig14783175555117"></a>  
-![](doc/images/Controller-interaction-process.png "Controller-interaction-process")
+本工具部署流程完全遵从ceph官方文档[链接](https://docs.ceph.com/en/pacific/)
 
-<h2 id="HCCL-Controller.md">HCCL-Controller</h2>
+## 软件架构
 
-HCCL-Controller是华为研发的一款用于NPU训练任务的组件，利用Kubernetes的informer机制，持续监控NPU训练任务及其Pod的各种事件，并读取Pod的NPU信息，生成对应的Configmap。该Configmap包含了NPU训练任务需要的hccl.json配置文件，方便NPU训练任务更好的协同和调度底层的昇腾910 AI处理器。
+本工具支持部署Pacific（16.2.9）版本的cephfs集群
 
-## HCCL-Controller整体流程<a name="section2078393613277"></a>
+本工具支持Ubuntu 18.04 aarch64、x86_64，支持cephfs集群中只包含某种架构，或两种架构混合的场景
 
-HCCL-Controller整体流程如[图1](#fig13227145124720)所示。
+| 操作系统   | 版本   | CPU架构 |
+|:------:|:---------:|:-------:|
+| Ubuntu | 18.04     | aarch64 |
+| Ubuntu | 18.04     | x86_64  |
 
-**图 1**  HCCL-Controller process<a name="fig13227145124720"></a>  
-![](doc/images/HCCL-Controller-process.png "HCCL-Controller-process")
+本工具会安装如下开源软件
 
-1.  Ascend Device Plugin通过list-and-watch接口，定时上报节点昇腾910 AI处理器DeviceID和健康状态。
+| 软件名      | 版本       | 备注                              |
+| ---------- | ---------- | ----------------------------------|
+| python3    | 3.6        | ansible会安装到python3，本机节点安装|
+| ansible    | 2.11.6     | 任务编排的自动化平台，本机节点安装   |
+| chrony     | 3.2        | 时间同步组件，所有节点安装          |
+| docker     | 19.03.9    | 应用容器引擎，所有节点安装          |
+| harbor     | 2.3.3      | 容器镜像仓，默认本机节点安装        |
+| ceph       | 16.2.9     | ceph cli组件，所有节点安装         |
 
-2.  Scheduler收到用户训练任务请求，创建Job和Configmap。使用Volacno调度器选择Job部署的节点。
+## 存储设备要求
 
-3.  Scheduler发送创建Pod信息到选中的节点Kubelet上。
+Ceph拒绝在不可用的设备上配置OSD，满足以下所有条件，则认为存储设备可用：
 
-4.  在被选择的节点上，Ascend Device Plugin会从Kubelet收到分配设备的请求，返回DeviceID、Volume、环境变量等信息给Kubelet，Kubelet分配资源给Pod。
+1.  该设备必须没有分区
+2.  该设备不得具有任何LVM状态
+3.  不得挂载该设备
+4.  该设备不得包含文件系统
+5.  该设备不得包含Ceph BlueStore OSD
+6.  该设备必须大于5 GB
 
-5.  Ascend Device Plugin修改该Pod的annotation字段，将分配给Pod的昇腾910 AI处理器网卡IP和DeviceID写入Pod的annotation。
+例如如下环境，通过`lsblk`命令查询，/dev/sda存在分区、挂载点和文件系统，ceph不会在/dev/sda上配置OSD；而/dev/sdb满足以上要求，是可用的存储设备
 
-6.  HCCL-Controller持续监控volcano job和Pod的变化，如果有新创建的Pod，HCCL-Controller会把Pod中annotation值取出，当volcano job的所有Pod信息获取完后，更新对应rings-config的Configmap。
-
-7.  Pod中容器训练任务持续查看Configmap的状态，发现状态为完成后，则可以从configmap中生成hccl.json文件。
-
-
-## HCCL-Controller业务规则<a name="section139091513611"></a>
-
-HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的组件，该组件为Atlas 800 训练服务器K8s集群专用组件。
-
--   <a name="li121021418717"></a>训练任务，Pod，ConfigMap需要设置ring-controller.atlas: ascend-910标签，HCCL-Controller通过该标签过滤，用于区分昇腾910场景和非昇腾910场景。
--   volcano job与configmap的对应方式：volcano job.yaml中volume（ascend-910-config）的configmap name，就是volcano job对应的configmap。
--   HCCL-Controller持续监控volcano job，pod和ConfigMap的变化（需携带[训练任务，Pod，ConfigMap](#li121021418717)中的标签），同一个训练任务的volcano job和ConfigMap通过volume（ascend-910-config）关联。如果有新创建的Pod，HCCL-Controller把Pod中的annotation（ascend.kubectl.kubernetes.io/ascend-910-configuration）的值取出，为volcano job创建数据缓存信息表，当volcano job的所有实例信息获取完整后，更新对应的rings-config的ConfigMap。
--   ConfigMap中rings-config的文件名默认为hccl.json，默认挂在路径为：“/user/serverid/devindex/config”。
-
-## 编译HCCL-Controller<a name="section124015514383"></a>
-
-1.  安装Go的编译环境和goporxy的配置。
-2.  执行以下命令，编译HCCL-Controller。
-
-    **cd build**
-
-    **bash build.sh**
-
-    编译生成的文件在源码根目录下的“output“目录，如[表1](#table1860618363516)所示。
-
-    **表 1**  编译生成的文件列表
-
-    <a name="table1860618363516"></a>
-    <table><thead align="left"><tr id="row1760620363510"><th class="cellrowborder" valign="top" width="50%" id="mcps1.2.3.1.1"><p id="p860763675120"><a name="p860763675120"></a><a name="p860763675120"></a>文件名</p>
-    </th>
-    <th class="cellrowborder" valign="top" width="50%" id="mcps1.2.3.1.2"><p id="p1860718366515"><a name="p1860718366515"></a><a name="p1860718366515"></a>说明</p>
-    </th>
-    </tr>
-    </thead>
-    <tbody><tr id="row14578104981510"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p853441825218"><a name="p853441825218"></a><a name="p853441825218"></a>hccl-controller</p>
-    </td>
-    <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p184741133135316"><a name="p184741133135316"></a><a name="p184741133135316"></a>HCCL-Controller二进制文件</p>
-    </td>
-    </tr>
-    <tr id="row1860733675117"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p13953943145215"><a name="p13953943145215"></a><a name="p13953943145215"></a>Dockerfile</p>
-    </td>
-    <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p119535431524"><a name="p119535431524"></a><a name="p119535431524"></a>HCCL-Controller镜像构建文本文件</p>
-    </td>
-    </tr>
-    <tr id="row11607103616516"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p12753640105215"><a name="p12753640105215"></a><a name="p12753640105215"></a>hccl-controller-<em id="i1047144135718"><a name="i1047144135718"></a><a name="i1047144135718"></a>{version}</em>.yaml</p>
-    </td>
-    <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p275310402527"><a name="p275310402527"></a><a name="p275310402527"></a>HCCL-Controller的启动配置文件</p>
-    </td>
-    </tr>
-    </tbody>
-    </table>
-
-    >![](doc/images/icon-note.gif) **说明：** 
-    >-   _\{__version__\}_：表示版本号，请根据实际写入。
-    >-   arm和x86的二进制依赖不同，需要在对应架构上进行编译。
-
-
-## 安装前准备<a name="section2739745153910"></a>
-
-需要先完成《[MindX DL用户指南](https://www.hiascend.com/software/mindx-dl)》“安装前准备”章节中除“准备软件包”章节之外的其他章节内容。
-
-请参考《[MindX DL用户指南](https://www.hiascend.com/software/mindx-dl)》中的“安装部署 \> 安装前准备”。
-
-## 安装HCCL-Controller<a name="section3436132203218"></a>
-
-请参考《[MindX DL用户指南](https://www.hiascend.com/software/mindx-dl)》中的“安装部署 \> 安装MindX DL \> 安装HCCL-Controller”。
-
-<h2 id="环境依赖.md">环境依赖</h2>
-
--   Kubernetes 1.16及以上
--   Go 1.13及以上
-
-<h2 id="目录结构.md">目录结构</h2>
-
-```
-hccl-controller                                              #hccl-controller 组件
-├── build                                                  #编译构建文件夹
-│   ├── build.sh
-│   ├── Dockerfile
-│   ├── hccl-controller.yaml
-│   ├── rbac.yaml
-│   └── test.sh
-├── doc
-│   └── images
-│       ├── Controller-interaction-process.png
-│       ├── HCCL-Controller-process.png
-│       ├── icon-caution.gif
-│       ├── icon-danger.gif
-│       ├── icon-note.gif
-│       ├── icon-notice.gif
-│       ├── icon-tip.gif
-│       └── icon-warning.gif
-├── go.mod
-├── go.sum
-├── main.go
-├── output
-├── pkg                                                    #源码文件
-│   ├── hwlog
-│   │   └── logger.go
-│   ├── resource-controller
-│   │   └── signals
-│   │       ├── signal.go
-│   │       ├── signal_posix.go
-│   │       └── signal_windows.go
-│   └── ring-controller
-│       ├── agent
-│       │   ├── businessagent.go
-│       │   ├── businessagent_test.go
-│       │   ├── deploymentworker.go
-│       │   ├── deploymentworker_test.go
-│       │   ├── types.go
-│       │   ├── vcjobworker.go
-│       │   └── vcjobworker_test.go
-│       ├── controller
-│       │   ├── controller.go
-│       │   ├── controller_test.go
-│       │   └── types.go
-│       ├── model
-│       │   ├── deployment.go
-│       │   ├── deployment_test.go
-│       │   ├── types.go
-│       │   ├── vcjob.go
-│       │   └── vcjob_test.go
-│       └── ranktable
-│           ├── v1
-│           │   ├── ranktable.go
-│           │   ├── ranktable_test.go
-│           │   └── types.go
-│           └── v2
-│               ├── ranktable.go
-│               ├── ranktable_test.go
-│               └── types.go
-├── README_EN.md
-└── README.md
+```bash
+root@ubuntu:~# lsblk
+NAME       MAJ:MIN       RM        SIZE      RO      TYPE    MOUNTPOINT
+sda          8:0          0        600G       0      disk
+|-sda1       8:1          0        200G       0      part    /boot/efi
+|-sda2       8:2          0        400G       0      part    /
+sdb          8:16         0        600G       0      disk
 ```
 
-<h2 id="版本更新信息.md">版本更新信息</h2>
+ceph建议配置3个或更多节点，而且每个节点均要有可用的存储设备
 
-<a name="table7854542104414"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0280467800_row785512423445"><th class="cellrowborder" valign="top" width="33.33333333333333%" id="mcps1.1.4.1.1"><p id="zh-cn_topic_0280467800_p19856144274419"><a name="zh-cn_topic_0280467800_p19856144274419"></a><a name="zh-cn_topic_0280467800_p19856144274419"></a>版本</p>
-</th>
-<th class="cellrowborder" valign="top" width="33.423342334233425%" id="mcps1.1.4.1.2"><p id="zh-cn_topic_0280467800_p3856134219446"><a name="zh-cn_topic_0280467800_p3856134219446"></a><a name="zh-cn_topic_0280467800_p3856134219446"></a>发布日期</p>
-</th>
-<th class="cellrowborder" valign="top" width="33.24332433243324%" id="mcps1.1.4.1.3"><p id="zh-cn_topic_0280467800_p585634218445"><a name="zh-cn_topic_0280467800_p585634218445"></a><a name="zh-cn_topic_0280467800_p585634218445"></a>修改说明</p>
-</th>
-</tr>
-</thead>
-<tbody><tr id="row5243143131115"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p13391105873914"><a name="p13391105873914"></a><a name="p13391105873914"></a>v2.0.2</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.423342334233425%" headers="mcps1.1.4.1.2 "><p id="p18391658133920"><a name="p18391658133920"></a><a name="p18391658133920"></a>2021-07-15</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.24332433243324%" headers="mcps1.1.4.1.3 "><p id="p1839175810397"><a name="p1839175810397"></a><a name="p1839175810397"></a>增加和K8s交互信息的检查。</p>
-</td>
-</tr>
-<tr id="row533735317138"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p10908832143316"><a name="p10908832143316"></a><a name="p10908832143316"></a>v2.0.1</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.423342334233425%" headers="mcps1.1.4.1.2 "><p id="p590810328337"><a name="p590810328337"></a><a name="p590810328337"></a>2021-03-30</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.24332433243324%" headers="mcps1.1.4.1.3 "><p id="p1690843203317"><a name="p1690843203317"></a><a name="p1690843203317"></a>支持Deployment工作负载。</p>
-</td>
-</tr>
-<tr id="row350715425123"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="p162524106237"><a name="p162524106237"></a><a name="p162524106237"></a>v20.2.0</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.423342334233425%" headers="mcps1.1.4.1.2 "><p id="p8252121092313"><a name="p8252121092313"></a><a name="p8252121092313"></a>2020-12-30</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.24332433243324%" headers="mcps1.1.4.1.3 "><p id="p225281018231"><a name="p225281018231"></a><a name="p225281018231"></a>更新目录结构章节。</p>
-</td>
-</tr>
-<tr id="zh-cn_topic_0280467800_row118567425441"><td class="cellrowborder" valign="top" width="33.33333333333333%" headers="mcps1.1.4.1.1 "><p id="zh-cn_topic_0280467800_p08571442174415"><a name="zh-cn_topic_0280467800_p08571442174415"></a><a name="zh-cn_topic_0280467800_p08571442174415"></a>v20.1.0</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.423342334233425%" headers="mcps1.1.4.1.2 "><p id="zh-cn_topic_0280467800_p38571542154414"><a name="zh-cn_topic_0280467800_p38571542154414"></a><a name="zh-cn_topic_0280467800_p38571542154414"></a>2020-09-30</p>
-</td>
-<td class="cellrowborder" valign="top" width="33.24332433243324%" headers="mcps1.1.4.1.3 "><p id="zh-cn_topic_0280467800_p5857142154415"><a name="zh-cn_topic_0280467800_p5857142154415"></a><a name="zh-cn_topic_0280467800_p5857142154415"></a>第一次正式发布。</p>
-</td>
-</tr>
-</tbody>
-</table>
+请保证各个节点的系统纯净；如果节点上已安装过cephfs系统，请参考官方文档，完全清除节点上已有的ceph系统；否则，可能导致cephfs安装失败或性能下降
 
+## 下载本工具
+
+本工具只支持root用户，下载地址：[ceph-deploy](https://gitee.com/funnyfunny8/ceph-deploy)。2种下载方式：
+
+1. 使用git clone
+
+2. 下载[zip文件](https://gitee.com/funnyfunny8/ceph-deploy/repository/archive/master.zip)
+
+然后联系工程师取得开源软件的ceph_resources.tar.gz离线安装包，将离线安装包解压在/root目录下。按如下方式放置
+
+```bash
+root@ubuntu:~# ls
+ceph-deploy
+ceph_resources             //由ceph_resources.tar.gz解压得到，必须放置在/root目录下
+ceph_resources.tar.gz
+```
+
+## 安装教程
+
+### 步骤1：安装ansible
+
+工具中包含一个install_ansible.sh文件用于安装ansible
+
+在工具目录中执行：
+
+```bash
+root@ubuntu:~/ceph-deploy# bash install_ansible.sh
+
+root@ubuntu:~/ceph-deploy# ansible --version
+config file = None
+configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+ansible python module location = /usr/local/lib/python3.6/dist-packages/ansible
+ansible collection location = /root/.ansible/collections:/usr/share/ansible/collections
+executable location = /usr/local/bin/ansible
+python version = 3.6.9 (default, Jan 26 2021, 15:33:00) [GCC 8.4.0]
+jinja version = 3.0.1
+libyaml = True
+```
+
+ansible默认安装在系统自带python3（Ubuntu：python3.6.9）中，安装完成后执行ansible --version查看ansible是否安装成功
+
+注意：如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
+
+### 步骤2：配置集群信息
+
+已下步骤均在playbooks目录下进行
+
+在playbooks/inventory文件中，需要提前规划好如下集群信息：
+
+1. 安装harbor的服务器ip。默认为本机localhost，可更改为其他服务器ip
+
+2. ceph_localhost节点ip，只能为本机localhost，不可更改
+
+3. ceph_otherhost节点ip。这里至少需要配置2个或2个以上的节点ip，不可包括localhost
+
+```ini
+[harbor]
+localhost ansible_connection=local
+
+[ceph_localhost]
+localhost ansible_connection=local  set_hostname="node-99"
+
+[ceph_otherhost]
+192.0.3.100  set_hostname="node-100"
+192.0.3.101  set_hostname="node-101"
+
+# 以上192.0.*.*等ip仅为示例，请修改为实际规划的ip地址
+```
+
+注意：
+
+1. ceph要求集群内节点(ceph_localhost、ceph_otherhost）的hostname不一样，因此建议执行安装前设置所有设备使用不同的hostname。如果未统一设置且存在相同hostname的设备，那么可在inventory文件中设置set_hostname主机变量，安装过程将自动设置设备的hostname。hostname需满足ceph和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“node-100”。例如：
+
+### 步骤3：配置安装信息
+
+在playbooks/group_vars目录中的all.yaml文件
+
+```yaml
+# harbor ip address
+HARBOR_HOST_IP: ""
+# harbor https port
+HARBOR_HTTPS_PORT: 7443
+# harbor install path
+HARBOR_PATH: /data/harbor
+# password for harbor, can not be empty, delete immediately after finished
+HARBOR_PASSWORD: ""
+```
+
+其中中配置项详细为：
+
+| 配置项               | 说明                                   |
+| ----------------- | ------------------------------------ |
+| HARBOR_HOST_IP    | 配置harbor的监听ip，多网卡场景下*建议配置*         |
+| HARBOR_HTTPS_PORT | harbor的https监听端口，默认为7443             |
+| HARBOR_PATH       | Harbor的安装路径，默认为/data/harbor                   |
+| HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
+
+注意：
+
+1. harbor的登录用户名默认为admin。
+
+### 步骤4：检查集群状态
+
+如果playbooks/inventory_file内配置了非localhost的远程ip，根据ansible官方建议，请用户自行使用SSH密钥的方式连接到远程机器，可参考[[connection_details; Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/connection_details.html#setting-up-ssh-keys)]
+
+在playbooks目录中执行：
+
+```bash
+root@ubuntu:~/ceph-deploy/playbooks# ansible -i inventory_file all -m ping
+
+localhost | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+worker1_ipaddres | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+当所有设备都能ping通，则表示inventory中所有设备连通性正常。否则，请检查设备的ssh连接和inventory文件配置是否正确
+
+### <a name="resources_no_copy">步骤5：执行安装</a>
+
+在playbooks目录中执行：
+
+```bash
+root@ubuntu:~/ceph-deploy/playbooks# ansible-playbook -i inventory_file all.yaml
+```
+
+注：
+
+1. ceph节点不可重复初始化，执行本步骤前，请参考官方文档，完全清除节点上已有的ceph系统
+
+3. 如果某节点docker.service配置了代理，则可能无法访问harbor镜像仓。使用本工具前，请先在`/etc/systemd/system/docker.service.d/proxy.conf`中NO_PROXY添加harbor host的ip，然后执行`systemctl daemon-reload && systemctl restart docker`生效
+
+4. 如果inventory_file内配置了非localhost的远程ip，本工具会将本机的/root/ceph_resources目录分发到远程机器上。如果有重复执行以上命令的需求，可在以上命令后加`-e ceph_resources_no_copy=true`参数，避免重复执行耗时的~/ceph_resources目录打包、分发操作
+
+### 步骤6：安装后检查
+
+检查cephfs健康状态
+
+```bash
+root@ubuntu:~# ceph -s
+  cluster:
+    id:     50b8227e-0d50-11ed-bb57-024216e47cd6
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum node-99,node-100,node-101 (age 3h)
+    mgr: node-99.iocujm(active, since 3h), standbys: node-100.vnrgda
+    mds: 1/1 daemons up, 1 standby
+    osd: 5 osds: 5 up (since 3h), 5 in (since 3h)
+
+  data:
+    volumes: 1/1 healthy
+    pools:   3 pools, 65 pgs
+    objects: 23 objects, 8.4 kiB
+    usage:   0 MiB used, 4.2 TiB / 4.2 TiB avail
+    pgs:     65 active+clean
+```
+
+### 步骤7：挂载cephfs
+
+创建cephfs的挂载目录，并手动挂载cephfs存储集群到该目录。<CEPHFS_IP>为cephfs monitor节点ip，<CEPHFS_PORT>默认为"6789"，<CEPHFS_USER>默认为"admin"，<CEPHFS_KEY>可在cephfs monitor节点通过`ceph auth get-key client.admin`命令查询
+
+```bash
+mkdir <cephfs的挂载目录>
+
+mount -t ceph <CEPHFS_IP>:<CEPHFS_PORT>:/ <cephfs的挂载目录> -o name=<CEPHFS_USER>,secret=<CEPHFS_KEY>
+
+```
+
+cephfs monitor一般会部署多个节点上，建议挂载多个CEPHFS_IP，增加cephfs的高可用性，避免某个节点挂掉后挂载目录不可用；各个<CEPHFS_IP>:<CEPHFS_PORT>之间通过","分隔，最后接上":/"
+
+```bash
+mkdir <cephfs的挂载目录>
+
+mount -t ceph <CEPHFS_IP_1>:<CEPHFS_PORT>,<CEPHFS_IP_2>:<CEPHFS_PORT>,<CEPHFS_IP_3>:<CEPHFS_PORT>:/ <cephfs的挂载目录> -o name=<CEPHFS_USER>,secret=<CEPHFS_KEY>
+
+```
+
+## 分步骤安装
+
+playbooks目录下有很多文件，其中每个yaml文件对应一个组件，可以实现只安装某个组件
+
+```bash
+playbooks/
+├── 01.resource.yaml  # 分发/root/ceph_resources目录
+├── 02.chrony.yaml  # 安装chrony
+├── 03.docker.yaml  # 安装docker
+├── 04.harbor.yaml  # 安装harbor并登录
+├── 05.push_image.yaml  # 推送/root/ceph_resources/images里的开源镜像到harbor
+├── 06.pull_image.yaml  # 拉取部分开源镜像到各个节点
+├── 07.ceph_install.yaml  # 安装ceph
+├── 08.ceph_bootsrap.yaml  # 初始化ceph集群
+├── 09.ceph_add_host.yaml  # 添加其他ceph节点
+├── 10.cephfs_create.yaml  # 部署OSD，创建cephfs集群
+```
+
+例如:
+
+1. 只分发软件包，则执行
+
+   ```bash
+   root@ubuntu:~/ceph-deploy/playbooks# ansible-playbook -i inventory_file 01.resource.yaml
+   ```
+
+   可在以上命令后加`-e ceph_resources_no_copy=true`参数，该参数作用请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>
+
+2. 只初始化ceph集群，则执行
+
+   ```bash
+   root@ubuntu:~/ceph-deploy/playbooks# ansible-playbook -i inventory_file 08.ceph_bootsrap.yaml
+   ```
+
+   ceph节点不可重复初始化，执行本步骤前，请参考官方文档，完全清除节点上已有的ceph系统
+
+   由于ansible的幂等性，除08.ceph_bootsrap.yaml步骤外，其他步骤均可以重复执行
+
+3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行01~10编号的yaml效果一致。实际安装时可根据需要对组件灵活删减

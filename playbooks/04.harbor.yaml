@@ -1,0 +1,14 @@
+---
+# install harbor
+- hosts:
+    - harbor
+  roles:
+    - role: docker
+    - role: harbor.install
+
+# login harbor
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  roles:
+    - role: harbor.login

@@ -1,0 +1,3 @@
+resource_dir: "~/ceph_resources"
+OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') }}"
+OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"

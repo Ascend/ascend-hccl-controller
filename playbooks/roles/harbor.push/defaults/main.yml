@@ -1,0 +1,2 @@
+resource_dir: "~/ceph_resources"
+ARCH: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"

@@ -1,0 +1,7 @@
+[harbor]
+localhost ansible_connection=local
+
+[ceph_localhost]
+localhost ansible_connection=local
+
+[ceph_otherhost]

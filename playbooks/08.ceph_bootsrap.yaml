@@ -1,0 +1,14 @@
+---
+- hosts:
+    - harbor
+    - ceph_localhost
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+
+# ceph bootsrap
+- hosts:
+    - ceph_localhost
+  gather_facts: False
+  roles:
+    - role: ceph.bootsrap

@@ -1,0 +1,6 @@
+---
+# add host
+- hosts:
+    - ceph_otherhost
+  roles:
+    - role: ceph.add.host

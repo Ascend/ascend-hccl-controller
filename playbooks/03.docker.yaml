@@ -1,0 +1,7 @@
+---
+# install docker
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  roles:
+    - role: docker

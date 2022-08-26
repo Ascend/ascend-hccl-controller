@@ -1,0 +1,6 @@
+- name: "docker pull and tag"
+  shell: |
+    docker pull {{REPO_URL}}{{item.repositoty}}:{{item.tag}}
+    docker tag {{REPO_URL}}{{item.repositoty}}:{{item.tag}} {{item.repositoty}}:{{item.tag}}
+  loop:
+    - { repositoty: "quay.io/prometheus/node-exporter", tag: "v1.3.1" }

@@ -1,0 +1,4 @@
+host_count: "{{ ansible_play_hosts_all | length }}"
+first_host: "{{ ansible_play_hosts_all[0] }}"
+resource_dir: "~/ceph_resources"
+no_copy_flag: "{{ ceph_resources_no_copy | default('false') }}"

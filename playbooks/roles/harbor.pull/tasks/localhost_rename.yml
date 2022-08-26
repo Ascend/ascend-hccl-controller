@@ -1,0 +1,8 @@
+- name: "docker tag"
+  shell:
+    docker tag {{item.repositoty}}_{{ARCH}}:{{item.tag}} {{item.repositoty}}:{{item.tag}}
+  loop:
+    - { repositoty: "quay.io/ceph/ceph-grafana", tag: "8.3.5" }
+    - { repositoty: "quay.io/prometheus/prometheus", tag: "v2.33.4" }
+    - { repositoty: "quay.io/prometheus/node-exporter", tag: "v1.3.1" }
+    - { repositoty: "quay.io/prometheus/alertmanager", tag: "v0.23.0" }

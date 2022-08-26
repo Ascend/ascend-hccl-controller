@@ -1,0 +1,91 @@
+---
+# distribute resources
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+    - harbor
+  roles:
+    - role: resource
+      vars:
+        resource_list:
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+
+# copy harbor install package to harbor host
+- hosts: harbor
+  gather_facts: False
+  roles:
+    - role: resource
+      vars:
+        resource_list:
+          - harbor-offline-installer-v2.3.3.tgz
+          - harbor-offline-installer-aarch64-v2.3.3.tgz
+
+# install chrony
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  gather_facts: False
+  roles:
+    - role: chrony
+    - role: docker
+
+# install harbor
+- hosts: harbor
+  gather_facts: False
+  roles:
+    - role: docker
+    - role: harbor.install
+
+# login harbor
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  gather_facts: False
+  roles:
+    - role: harbor.login
+
+# push open source images to harbor
+- hosts: ceph_localhost
+  gather_facts: False
+  roles:
+    - role: harbor.push
+      vars:
+        project_list:
+          - quay.io
+        project_public: "true"
+        images_dir: images
+
+# pull and rename images
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  gather_facts: False
+  roles:
+    - role: harbor.pull
+
+# install ceph
+- hosts:
+    - ceph_localhost
+    - ceph_otherhost
+  gather_facts: False
+  roles:
+    - role: ceph.install
+
+# ceph bootsrap, add host, cephfs create
+- hosts: ceph_localhost
+  gather_facts: False
+  roles:
+    - role: ceph.bootsrap
+
+# ceph bootsrap, add host, cephfs create
+- hosts: ceph_otherhost
+  gather_facts: False
+  roles:
+    - role: ceph.add.host
+
+# ceph bootsrap, add host, cephfs create
+- hosts: ceph_localhost
+  gather_facts: False
+  roles:
+    - role: cephfs.create
