@@ -34,13 +34,11 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
 	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
 )
 
 // NewController returns a new sample controller
-func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
-	informerInfo InformerInfo,
+func NewController(kubeclientset kubernetes.Interface, config *agent.Config, informerInfo InformerInfo,
 	stopCh <-chan struct{}) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
@@ -57,8 +55,6 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 	}
 	c := &Controller{
 		kubeclientset: kubeclientset,
-		jobclientset:  jobclientset,
-		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
 		deploySynced:  informerInfo.DeployInformer.Informer().HasSynced,
 		k8sJobSynced:  informerInfo.K8sJobInformer.Informer().HasSynced,
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
@@ -81,7 +77,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	hwlog.Debug("Waiting for informer caches to sync")
-	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced, c.k8sJobSynced)
+	ok := cache.WaitForCacheSync(stopCh, c.deploySynced, c.k8sJobSynced)
 	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
@@ -229,7 +225,6 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 			controller.enqueueJob(obj, agent.EventDelete)
 		},
 	}
-	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.K8sJobInformer.Informer().AddEventHandler(eventHandlerFunc)
 }

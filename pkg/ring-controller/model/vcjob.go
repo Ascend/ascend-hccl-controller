@@ -186,9 +186,6 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 		key = metaData.GetNamespace() + "/" + metaData.GetName() + "/" + eventType
 	}
 	var model ResourceEventHandler
-	if _, ok := indexers[VCJobType]; !ok {
-		return nil, fmt.Errorf("The key does not exist err %v ", ok)
-	}
 	if _, ok := indexers[DeploymentType]; !ok {
 		return nil, fmt.Errorf("The key does not exist err %v ", ok)
 	}
