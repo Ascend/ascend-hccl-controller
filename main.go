@@ -30,8 +30,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	vkClientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	informers "volcano.sh/volcano/pkg/client/informers/externalversions"
 
 	"hccl-controller/pkg/hwlog"
 	"hccl-controller/pkg/resource-controller/signals"
@@ -96,33 +94,24 @@ func main() {
 	if err != nil {
 		hwlog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
-	jobClient, err := vkClientset.NewForConfig(cfg)
-	if err != nil {
-		hwlog.Fatalf("Error building job clientset: %s", err.Error())
-	}
 
-	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
+	deploymentFactory := newInformerFactory(kubeClient)
 	config := newConifg()
-	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	k8sJobInformer := deploymentFactory.Batch().V1().Jobs()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
-	cacheIndexer[model.VCJobType] = jobInformer.Informer().GetIndexer()
 	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
 	cacheIndexer[model.K8sJobType] = k8sJobInformer.Informer().GetIndexer()
 
 	control := controller.NewController(
 		kubeClient,
-		jobClient,
 		config,
 		controller.InformerInfo{
-			JobInformer:    jobInformer,
 			DeployInformer: deploymentInformer,
 			K8sJobInformer: k8sJobInformer,
 			CacheIndexers:  cacheIndexer},
 		stopCh)
 
-	go jobInformerFactory.Start(stopCh)
 	go deploymentFactory.Start(stopCh)
 	if err = control.Run(jobParallelism, stopCh); err != nil {
 		hwlog.Fatalf("Error running controller: %s", err.Error())
@@ -140,18 +129,13 @@ func newConifg() *agent.Config {
 	return config
 }
 
-func newInformerFactory(jobClient *vkClientset.Clientset, kubeClient *kubernetes.Clientset) (
-	informers.SharedInformerFactory, cinformers.SharedInformerFactory) {
+func newInformerFactory(kubeClient *kubernetes.Clientset) cinformers.SharedInformerFactory {
 	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
-	jobInformerFactory := informers.NewSharedInformerFactoryWithOptions(jobClient, time.Second*30,
-		informers.WithTweakListOptions(func(options *v1.ListOptions) {
-			options.LabelSelector = labelSelector
-		}))
 	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30,
 		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
-	return jobInformerFactory, deploymentFactory
+	return deploymentFactory
 }
 
 func init() {
