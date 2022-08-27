@@ -20,6 +20,7 @@ package controller
 import (
 	"hccl-controller/pkg/ring-controller/agent"
 	v1 "k8s.io/client-go/informers/apps/v1"
+	bv1 "k8s.io/client-go/informers/batch/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -47,6 +48,7 @@ type Controller struct {
 	// component for resource batch/v1alpha1/Job
 	jobsSynced   cache.InformerSynced
 	deploySynced cache.InformerSynced
+	k8sJobSynced cache.InformerSynced
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -66,4 +68,6 @@ type InformerInfo struct {
 	JobInformer v1alpha1informers.JobInformer
 	// DeployInformer: deployment type informer
 	DeployInformer v1.DeploymentInformer
+	//K8sJobInformer: job type informer
+	K8sJobInformer bv1.JobInformer
 }

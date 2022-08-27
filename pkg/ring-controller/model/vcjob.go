@@ -24,6 +24,7 @@ import (
 	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 	v2 "hccl-controller/pkg/ring-controller/ranktable/v2"
 	appsV1 "k8s.io/api/apps/v1"
+	batchV1 "k8s.io/api/batch/v1"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -191,6 +192,10 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 	if _, ok := indexers[DeploymentType]; !ok {
 		return nil, fmt.Errorf("The key does not exist err %v ", ok)
 	}
+	if _, ok := indexers[K8sJobType]; !ok {
+		return nil, fmt.Errorf("The key does not exist err %v ", ok)
+	}
+
 	switch t := obj.(type) {
 	case *v1alpha1apis.Job:
 		model = &VCJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[VCJobType]},
@@ -202,6 +207,11 @@ func Factory(obj interface{}, eventType string, indexers map[string]cache.Indexe
 			containers: t.Spec.Template.Spec.Containers, replicas: *t.Spec.Replicas,
 			DeployInfo: agent2.DeployInfo{DeployNamespace: t.Namespace, DeployName: t.Name,
 				DeployCreationTimestamp: t.CreationTimestamp}}
+	case *batchV1.Job:
+		model = &K8sJobModel{modelCommon: modelCommon{key: key, cacheIndexer: indexers[K8sJobType]},
+			containers: t.Spec.Template.Spec.Containers, replicas: *t.Spec.Parallelism,
+			K8sJobInfo: agent2.K8sJobInfo{JobNamespace: t.Namespace, JobName: t.Name,
+				JobCreationTimestamp: t.CreationTimestamp}}
 	default:
 		return nil, fmt.Errorf("job factory err, %s ", key)
 	}

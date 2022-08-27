@@ -52,6 +52,8 @@ const (
 	PodRankIndexKey = "hccl/rankIndex"
 	// DeploymentNameKey pod label
 	DeploymentNameKey = "deploy-name"
+	// K8sJobNameKey k8s job label
+	K8sJobNameKey = "job-name"
 	// EventAdd event add
 	EventAdd = "add"
 	// EventUpdate event to update
@@ -182,4 +184,23 @@ type DeployInfo struct {
 	DeployNamespace string
 	// DeployName : deployment name
 	DeployName string
+}
+
+// K8SJobWorker for k8s job model
+type K8SJobWorker struct {
+	// WorkerInfo: normal Worker info
+	WorkerInfo
+	// K8sJobInfo: K8S job Worker info
+	K8sJobInfo
+}
+
+// K8sJobInfo ： k8s job Worker info
+type K8sJobInfo struct {
+	// JobCreationTimestamp: when pod reference job uid is different with uid of VCJobWorker
+	// creationTimestamp is needed to distinguish cases between: 1. old pod + new worker  OR  2. new pod + old worker
+	JobCreationTimestamp metav1.Time
+	// JobNamespace :Job namespace
+	JobNamespace string
+	// JobName : Job name
+	JobName string
 }

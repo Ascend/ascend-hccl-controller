@@ -9,18 +9,21 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: pods-hccl-controller-role
 rules:
-  - apiGroups: ["batch.volcano.sh"]
-    resources: ["jobs"]
-    verbs: ["get", "list", "watch",]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "update","watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get","list","watch"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "update","watch"]
+  - apiGroups: [ "batch.volcano.sh" ]
+    resources: [ "jobs" ]
+    verbs: [ "get", "list", "watch", ]
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "list", "update","watch" ]
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments" ]
+    verbs: [ "get","list","watch" ]
+  - apiGroups: [ "batch" ]
+    resources: [ "jobs" ]
+    verbs: [ "get","list","watch" ]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get", "list", "update","watch" ]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -53,29 +56,29 @@ spec:
         masterselector: dls-master-node
       serviceAccountName: hccl-controller
       containers:
-      - name: hccl-controller
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop: ["ALL"]
-        image: hccl-controller:v20.2.0
-        resources:
-          requests:
+        - name: hccl-controller
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ "ALL" ]
+          image: hccl-controller:v20.2.0
+          resources:
+            requests:
               memory: 300Mi
               cpu: 500m
-          limits:
+            limits:
               memory: 300Mi
               cpu: 500m
-        imagePullPolicy: Never
-        command: [ "/bin/bash", "-c", "--"]
-        args: ["umask 027;hccl-controller
+          imagePullPolicy: Never
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "umask 027;hccl-controller
          -logFile=/var/log/mindx-dl/hccl-controller/hccl-controller.log  -logLevel=0   " ]
-        volumeMounts:
-          - name: device-hcclcontroller
-            mountPath: /var/log/mindx-dl/hccl-controller
-          - name: localtime
-            mountPath: /etc/localtime
+          volumeMounts:
+            - name: device-hcclcontroller
+              mountPath: /var/log/mindx-dl/hccl-controller
+            - name: localtime
+              mountPath: /etc/localtime
       volumes:
         - name: device-hcclcontroller
           hostPath:
