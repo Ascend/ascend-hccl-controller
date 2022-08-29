@@ -16,7 +16,7 @@
 
 - name: set HARBOR_IP
   set_fact:
-    HARBOR_IP: "{{ ansible_default_ipv4.address if HARBOR_HOST_IP == '' else HARBOR_HOST_IP }}"
+    HARBOR_IP: "{{ ansible_default_ipv4.address if harbor_host_ip == '' else harbor_host_ip }}"
     cacheable: yes
 
 - name: check harbor service

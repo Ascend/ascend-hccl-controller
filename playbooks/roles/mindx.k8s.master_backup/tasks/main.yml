@@ -26,6 +26,16 @@
   failed_when: true
   when: cluster_info.stdout != "0"
 
+- name: not apiserver_advertise_address
+  set_fact:
+    addr_cmd: ""
+
+- name: set apiserver_advertise_address
+  set_fact:
+    addr_cmd: "--apiserver-advertise-address {{ apiserver_advertise_address }}"
+  when:
+    - apiserver_advertise_address | length != 0
+
 - name: get token
   shell: kubeadm token create --print-join-command
   environment:
@@ -49,7 +59,7 @@
   register: cert_cmd
 
 - name: join cluster
-  shell: "{{ token_cmd.stdout }} --control-plane --certificate-key {{ cert_cmd.stdout.split('key:\n')[-1] }}"
+  shell: "{{ token_cmd.stdout }} --control-plane --certificate-key {{ cert_cmd.stdout.split('key:\n')[-1] }} {{ addr_cmd }}"
   environment:
     http_proxy: ""
     https_proxy: ""

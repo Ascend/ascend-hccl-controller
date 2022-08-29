@@ -34,9 +34,16 @@
     --arp \
     --leaderElection | tee /etc/kubernetes/manifests/kube-vip.yaml
 
-- name: modify kube-vip.yaml
+- name: modify kube-vip.yaml image
   ansible.builtin.lineinfile:
     path: /etc/kubernetes/manifests/kube-vip.yaml
     regexp: "^    image: {{ ORIGIN_KUBE_VIP_IMAGE }}:{{ KVVERSION }}$"
     line: "    image: {{ REPO_URL }}{{ KUBE_VIP_IMAGE }}:{{ KVVERSION }}"
+    state: present
+
+- name: modify kube-vip.yaml imagePullPolicy
+  ansible.builtin.lineinfile:
+    path: /etc/kubernetes/manifests/kube-vip.yaml
+    regexp: "^    imagePullPolicy: Always$"
+    line: "    imagePullPolicy: IfNotPresent"
     state: present

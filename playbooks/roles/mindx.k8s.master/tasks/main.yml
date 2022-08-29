@@ -31,9 +31,9 @@
 
 - name: set apiserver_advertise_address
   set_fact:
-    addr_cmd: "--apiserver-advertise-address={{ apiserver_advertise_address }}"
+    addr_cmd: "--apiserver-advertise-address {{ apiserver_advertise_address }}"
   when:
-    - apiserver_advertise_address != ""
+    - apiserver_advertise_address | length != 0
 
 - name: set repository
   set_fact:
@@ -47,18 +47,6 @@
   when:
     - "'master_backup' in groups"
     - "groups['master_backup'] | length != 0"
-
-# - name: modify /etc/sysctl.conf iptables
-#   ansible.builtin.lineinfile:
-#     path: /etc/sysctl.conf
-#     line: net.bridge.bridge-nf-call-iptables = 1
-#     state: present
-
-# - name: set bridge-nf-call-iptables 1
-#   shell: echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
-#   when:
-#     - OS_ID == 'centos'
-#     - OS_VERSION_ID == '7'
 
 - name: init cluster by kubeadm init
   shell: >
@@ -138,6 +126,24 @@
 - name: label dls master
   shell: |
     kubectl label --overwrite node {{ansible_hostname}} masterselector=dls-master-node
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: label apigw-selector master
+  shell: kubectl label --overwrite node {{ansible_hostname}} apigw-selector=apigw-business-worker-node
+  when: "'worker' not in groups or groups['worker'] | length == 0"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+
+- name: label apigw-selector worker
+  shell: kubectl label --overwrite node {{ hostvars[groups['worker'][0]]['ansible_hostname'] }} apigw-selector=apigw-business-worker-node
+  when: "'worker' in groups and groups['worker'] | length == 0"
   environment:
     http_proxy: ""
     https_proxy: ""

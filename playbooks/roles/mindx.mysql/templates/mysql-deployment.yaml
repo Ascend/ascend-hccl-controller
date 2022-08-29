@@ -60,19 +60,3 @@ spec:
       port: 3306
   selector:
     app: mysql
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql-nodeport
-  namespace: {{ k8s_namespace }}
-spec:
-  ports:
-    - name: mysql-nodeport
-      targetPort: 3306
-      port: 3306
-      nodePort: 30306
-  selector:
-    app: mysql
-  type: NodePort
