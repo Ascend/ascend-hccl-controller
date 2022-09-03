@@ -60,9 +60,12 @@ spec:
         - name: kmckeystore
           hostPath:
             path: /etc/mindx-dl/kmc_primary_store
+            type: Directory
         - name: kmckeybak
           hostPath:
             path: /etc/mindx-dl/.config
+            type: Directory
         - name: kmc-hccl
           hostPath:
             path: /etc/mindx-dl/hccl-controller
+            type: Directory
