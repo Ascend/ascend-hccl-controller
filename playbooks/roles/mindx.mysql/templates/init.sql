@@ -1,14 +1,4 @@
-CREATE DATABASE IF NOT EXISTS dataset_manager CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS label_manager   CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS train_manager   CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS model_manager   CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS edge_manager    CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS task_manager    CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS image_manager   CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS data_manager    CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS cluster_manager CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS user_manager    CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE DATABASE IF NOT EXISTS alarm_manager   CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE DATABASE IF NOT EXISTS dl_platform CHARACTER SET utf8 COLLATE utf8_general_ci;
 
 CREATE USER 'user_user'@'%'    IDENTIFIED BY "{{pwd}}";
 CREATE USER 'edge_user'@'%'    IDENTIFIED BY "{{pwd}}";
@@ -34,7 +24,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'data_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'cluster_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'alarm_user'@'%';
 
-USE image_manager;
+USE dl_platform;
 CREATE TABLE IF NOT EXISTS image_configs(
     id BIGINT AUTO_INCREMENT,
     user_id BIGINT NOT NULL DEFAULT 0,
