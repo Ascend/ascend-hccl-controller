@@ -83,17 +83,17 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   with_items:
-    - { "user":"user_user",    "dbname":"user_manager",    "service": "user-manager"}
-    - { "user":"edge_user",    "dbname":"edge_manager",    "service": "edge-manager"}
-    - { "user":"dataset_user", "dbname":"dataset_manager", "service": "dataset-manager"}
-    - { "user":"train_user",   "dbname":"train_manager",   "service": "train-manager"}
-    - { "user":"label_user",   "dbname":"label_manager",   "service": "label-manager"}
-    - { "user":"model_user",   "dbname":"model_manager",   "service": "model-manager"}
-    - { "user":"task_user",    "dbname":"task_manager",    "service": "task-manager"}
-    - { "user":"image_user",   "dbname":"image_manager",   "service": "image-manager"}
-    - { "user":"data_user",    "dbname":"data_manager",    "service": "data-manager"}
-    - { "user":"cluster_user", "dbname":"cluster_manager", "service": "cluster-manager"}
-    - { "user":"alarm_user",   "dbname":"alarm_manager",   "service": "alarm-manager"}
+    - { "user":"user_user",    "dbname":"dl_platform",    "service": "user-manager"}
+    - { "user":"edge_user",    "dbname":"dl_platform",    "service": "edge-manager"}
+    - { "user":"dataset_user", "dbname":"dl_platform", "service": "dataset-manager"}
+    - { "user":"train_user",   "dbname":"dl_platform",   "service": "train-manager"}
+    - { "user":"label_user",   "dbname":"dl_platform",   "service": "label-manager"}
+    - { "user":"model_user",   "dbname":"dl_platform",   "service": "model-manager"}
+    - { "user":"task_user",    "dbname":"dl_platform",    "service": "task-manager"}
+    - { "user":"image_user",   "dbname":"dl_platform",   "service": "image-manager"}
+    - { "user":"data_user",    "dbname":"dl_platform",    "service": "data-manager"}
+    - { "user":"cluster_user", "dbname":"dl_platform", "service": "cluster-manager"}
+    - { "user":"alarm_user",   "dbname":"dl_platform",   "service": "alarm-manager"}
 
 - name: create yamls
   template:
