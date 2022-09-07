@@ -153,7 +153,7 @@ func newInformerFactory(jobClient *versioned.Clientset, kubeClient *kubernetes.C
 func init() {
 	// hwlog configuration
 	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", 0,
-		"Log level, -1-debug, 0-info(default), 1-warning, 2-error, 3-dpanic, 4-panic, 5-fatal (default 0)")
+		"Log level, -1-debug, 0-info, 1-warning, 2-error, 3-critical(default 0)")
 	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwlog.DefaultMinSaveAge,
 		"Maximum number of days for backup operation log files, must be greater than or equal to 7 days")
 	flag.StringVar(&hwLogConfig.LogFileName, "logFile", defaultLogFileName,
