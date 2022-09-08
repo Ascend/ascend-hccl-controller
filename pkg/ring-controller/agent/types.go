@@ -17,23 +17,23 @@
 package agent
 
 import (
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	"sync"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sync"
+
+	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 const (
 	// Key910 to get Configmap
 	Key910 = "ring-controller.atlas"
 	// Val910 to get Configmap
-	Val910 = "ascend-910" // Val910 to get Configmap
-	// ResourceName for 910
-	ResourceName = "huawei.com/Ascend910"
+	Val910 = "ascend-910"
 	// ConfigmapPrefix to get from configmap
 	ConfigmapPrefix = "rings-config"
 	// ConfigmapCompleted Staus
@@ -42,18 +42,14 @@ const (
 	ConfigmapInitializing = "initializing"
 	// ConfigmapKey configmap Data Name
 	ConfigmapKey = "hccl.json"
-	// VolcanoJobNameKey to get job name
-	VolcanoJobNameKey = "volcano.sh/job-name"
-	// PodJobVersion to get job version
-	PodJobVersion = "volcano.sh/job-version"
 	// PodDeviceKey Pod annoation Key
 	PodDeviceKey = "ascend.kubectl.kubernetes.io/ascend-910-configuration"
 	// PodRankIndexKey pod rank index
 	PodRankIndexKey = "hccl/rankIndex"
 	// DeploymentNameKey pod label
 	DeploymentNameKey = "deploy-name"
-	// K8sJobNameKey k8s job label
-	K8sJobNameKey = "job-name"
+	// WorkloadLNameLabelKey job name label key for k8s job and meituan CRD: tfjob, medaljob, mpijob
+	WorkloadLNameLabelKey = "job-name"
 	// EventAdd event add
 	EventAdd = "add"
 	// EventUpdate event to update
@@ -123,41 +119,14 @@ type podIdentifier struct {
 	eventType string
 }
 
-// VCJobWorker controller for each volcano job, list/watch corresponding pods and build configmap (rank table)
-type VCJobWorker struct {
-	// WorkerInfo: normal Worker info
-	WorkerInfo
-	// JobInfo： VCJob Worker Info
-	JobInfo
+// CommonPodWorker job pod worker for rank table configmap generation
+type CommonPodWorker struct {
+	CommonPodWorkerInfo
+	CommonPodInfo
 }
 
-// JobInfo Job Worker Info
-type JobInfo struct {
-	// JobVersion: When a job restart, JobVersion is needed to identify if a pod is old
-	// with respect to this job
-	JobVersion int32
-	// JobUID: For an identical job, create it immediately after deletion, new
-	// vcjob Worker will cache old pod info without a identifier to distinguish
-	JobUID string
-	// JobCreationTimestamp: when pod reference job uid is different with uid of VCJobWorker
-	// creationTimestamp is needed to distinguish cases between: 1. old pod + new worker  OR  2. new pod + old worker
-	JobCreationTimestamp metav1.Time
-	// JobNamespace: Job namespace
-	JobNamespace string
-	// JobName : Job name
-	JobName string
-}
-
-// DeployWorker for deployment model
-type DeployWorker struct {
-	// WorkerInfo: normal Worker info
-	WorkerInfo
-	// DeployInfo: Deployment Worker info
-	DeployInfo
-}
-
-// WorkerInfo ：normal Worker info
-type WorkerInfo struct {
+// CommonPodWorkerInfo ：normal Worker info
+type CommonPodWorkerInfo struct {
 	kubeclientset     kubernetes.Interface
 	recorder          record.EventRecorder
 	cmMu, statisticMu sync.Mutex
@@ -173,34 +142,16 @@ type WorkerInfo struct {
 	rankIndex         int
 	cachedPodNum      int32
 	taskReplicasTotal int32
+	labelKey          string
+	labelVal          string
 }
 
-// DeployInfo ： deployment Worker info
-type DeployInfo struct {
-	// DeployCreationTimestamp: when pod reference job uid is different with uid of VCJobWorker
-	// creationTimestamp is needed to distinguish cases between: 1. old pod + new worker  OR  2. new pod + old worker
-	DeployCreationTimestamp metav1.Time
-	// DeployNamespace :deployment namespace
-	DeployNamespace string
-	// DeployName : deployment name
-	DeployName string
-}
-
-// K8SJobWorker for k8s job model
-type K8SJobWorker struct {
-	// WorkerInfo: normal Worker info
-	WorkerInfo
-	// K8sJobInfo: K8S job Worker info
-	K8sJobInfo
-}
-
-// K8sJobInfo ： k8s job Worker info
-type K8sJobInfo struct {
-	// JobCreationTimestamp: when pod reference job uid is different with uid of VCJobWorker
-	// creationTimestamp is needed to distinguish cases between: 1. old pod + new worker  OR  2. new pod + old worker
-	JobCreationTimestamp metav1.Time
-	// JobNamespace :Job namespace
-	JobNamespace string
-	// JobName : Job name
-	JobName string
+// CommonPodInfo ： common pod info
+type CommonPodInfo struct {
+	// CreationTimestamp is needed to distinguish cases between: 1. old pod + new worker  OR  2. new pod + old worker
+	CreationTimestamp metav1.Time
+	// Namespace :Job namespace
+	Namespace string
+	// Name : Job name
+	Name string
 }

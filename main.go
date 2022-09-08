@@ -20,22 +20,29 @@ package main
 import (
 	"flag"
 	"fmt"
+	mpiInformerPkg "hccl-controller/pkg/client/training/mpi/informers/externalversions"
+	tfInformerPkg "hccl-controller/pkg/client/training/tensorflow/informers/externalversions"
 	"os"
 	"syscall"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	cinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	medalClientsetPkg "hccl-controller/pkg/client/training/medal/clientset/versioned"
+	medalInformerPkg "hccl-controller/pkg/client/training/medal/informers/externalversions"
+	mpiClientsetPkg "hccl-controller/pkg/client/training/mpi/clientset/versioned"
+	tfClientsetPkg "hccl-controller/pkg/client/training/tensorflow/clientset/versioned"
 	"hccl-controller/pkg/hwlog"
 	"hccl-controller/pkg/resource-controller/signals"
 	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
 	"hccl-controller/pkg/ring-controller/controller"
-	"hccl-controller/pkg/ring-controller/model"
 )
 
 var (
@@ -46,6 +53,8 @@ var (
 	// BuildVersion  build version
 	BuildVersion string
 	hwLogConfig  = &hwlog.LogConfig{LogFileName: defaultLogFileName}
+	labelKey     string
+	labelVal     string
 )
 
 const (
@@ -90,29 +99,44 @@ func main() {
 		hwlog.Fatalf("Error building kubeconfig")
 	}
 
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		hwlog.Fatalf("Error building kubernetes clientset: %s", err.Error())
-	}
+	kubeClient, medalClient, mpiClient, tfClient := newClient(cfg)
 
-	deploymentFactory := newInformerFactory(kubeClient)
+	kubeFactory, medalFactory, mpiFactory, tfFactory := newInformerFactory(kubeClient, medalClient,
+		mpiClient, tfClient)
+
+	deploymentInformer := kubeFactory.Apps().V1().Deployments()
+	k8sJobInformer := kubeFactory.Batch().V1().Jobs()
+	medalInformer := medalFactory.Meituan().V1().MedalJobs()
+	mpiInformer := mpiFactory.Meituan().V1().MPIJobs()
+	tfInformer := tfFactory.Meituan().V1().TFJobs()
+
+	cacheIndexer := make(map[string]cache.Indexer, 3)
+	cacheIndexer[common.DeploymentType] = deploymentInformer.Informer().GetIndexer()
+	cacheIndexer[common.K8sJobType] = k8sJobInformer.Informer().GetIndexer()
+	cacheIndexer[common.MedalType] = medalInformer.Informer().GetIndexer()
+	cacheIndexer[common.MpiType] = mpiInformer.Informer().GetIndexer()
+	cacheIndexer[common.TfType] = tfInformer.Informer().GetIndexer()
+
 	config := newConifg()
-	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
-	k8sJobInformer := deploymentFactory.Batch().V1().Jobs()
-	cacheIndexer := make(map[string]cache.Indexer, 1)
-	cacheIndexer[model.DeploymentType] = deploymentInformer.Informer().GetIndexer()
-	cacheIndexer[model.K8sJobType] = k8sJobInformer.Informer().GetIndexer()
-
 	control := controller.NewController(
 		kubeClient,
 		config,
 		controller.InformerInfo{
-			DeployInformer: deploymentInformer,
-			K8sJobInformer: k8sJobInformer,
-			CacheIndexers:  cacheIndexer},
-		stopCh)
+			DeployInformer:   deploymentInformer,
+			K8sJobInformer:   k8sJobInformer,
+			MedalJobInformer: medalInformer,
+			MpiJobInformer:   mpiInformer,
+			TFJobInformer:    tfInformer,
+			CacheIndexers:    cacheIndexer},
+		stopCh,
+		labelKey,
+		labelVal)
 
-	go deploymentFactory.Start(stopCh)
+	go kubeFactory.Start(stopCh)
+	go medalFactory.Start(stopCh)
+	go mpiFactory.Start(stopCh)
+	go tfFactory.Start(stopCh)
+
 	if err = control.Run(jobParallelism, stopCh); err != nil {
 		hwlog.Fatalf("Error running controller: %s", err.Error())
 	}
@@ -129,13 +153,58 @@ func newConifg() *agent.Config {
 	return config
 }
 
-func newInformerFactory(kubeClient *kubernetes.Clientset) cinformers.SharedInformerFactory {
-	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
-	deploymentFactory := cinformers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30,
-		cinformers.WithTweakListOptions(func(options *v1.ListOptions) {
+func newInformerFactory(kubeClient *kubernetes.Clientset, medalClient *medalClientsetPkg.Clientset,
+	mpiClient *mpiClientsetPkg.Clientset, tfClient *tfClientsetPkg.Clientset) (informers.SharedInformerFactory,
+	medalInformerPkg.SharedInformerFactory, mpiInformerPkg.SharedInformerFactory,
+	tfInformerPkg.SharedInformerFactory) {
+	labelSelector := labels.Set(map[string]string{labelKey: labelVal}).AsSelector().String()
+
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30,
+		informers.WithTweakListOptions(func(options *v1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
-	return deploymentFactory
+
+	medalFactory := medalInformerPkg.NewSharedInformerFactoryWithOptions(medalClient, time.Second*30,
+		medalInformerPkg.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = labelSelector
+		}))
+
+	mpiFactory := mpiInformerPkg.NewSharedInformerFactoryWithOptions(mpiClient, time.Second*30,
+		mpiInformerPkg.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = labelSelector
+		}))
+
+	tfFactory := tfInformerPkg.NewSharedInformerFactoryWithOptions(tfClient, time.Second*30,
+		tfInformerPkg.WithTweakListOptions(func(options *v1.ListOptions) {
+			options.LabelSelector = labelSelector
+		}))
+
+	return kubeFactory, medalFactory, mpiFactory, tfFactory
+}
+
+func newClient(cfg *rest.Config) (*kubernetes.Clientset, *medalClientsetPkg.Clientset,
+	*mpiClientsetPkg.Clientset, *tfClientsetPkg.Clientset) {
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		hwlog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+	}
+
+	medalClient, err := medalClientsetPkg.NewForConfig(cfg)
+	if err != nil {
+		hwlog.Fatalf("Error building medal resource type clientset: %s", err.Error())
+	}
+
+	mpiClient, err := mpiClientsetPkg.NewForConfig(cfg)
+	if err != nil {
+		hwlog.Fatalf("Error building medal resource type clientset: %s", err.Error())
+	}
+
+	tfClient, err := tfClientsetPkg.NewForConfig(cfg)
+	if err != nil {
+		hwlog.Fatalf("Error building medal resource type clientset: %s", err.Error())
+	}
+
+	return kubeClient, medalClient, mpiClient, tfClient
 }
 
 func init() {
@@ -157,6 +226,10 @@ func init() {
 		"Query the verison of the program")
 	flag.StringVar(&hcclVersion, "json", "v2",
 		"Select version of hccl json file (v1/v2).")
+	flag.StringVar(&labelKey, "labelkey", agent.Key910,
+		"key of label for filtering configmap, workload and pod resources")
+	flag.StringVar(&labelVal, "labelval", agent.Val910,
+		"var of label for filtering configmap, workload and pod resources")
 
 }
 

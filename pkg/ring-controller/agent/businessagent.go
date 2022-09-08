@@ -19,7 +19,11 @@ package agent
 
 import (
 	"fmt"
-	"hccl-controller/pkg/hwlog"
+	"math"
+	"reflect"
+	"strings"
+	"time"
+
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,11 +35,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"math"
-	"strings"
-	"time"
 
-	"reflect"
+	"hccl-controller/pkg/hwlog"
 )
 
 // String  to return podIdentifier string style :
@@ -52,11 +53,12 @@ var NewBusinessAgent = func(
 	kubeClientSet kubernetes.Interface,
 	recorder record.EventRecorder,
 	config *Config,
-	stopCh <-chan struct{}) (*BusinessAgent, error) {
+	stopCh <-chan struct{},
+	labelKey, labelVal string) (*BusinessAgent, error) {
 
 	// create pod informer factory
 	labelSelector := labels.Set(map[string]string{
-		Key910: Val910,
+		labelKey: labelVal,
 	}).AsSelector().String()
 	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*30,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
@@ -108,7 +110,7 @@ var NewBusinessAgent = func(
 func (b *BusinessAgent) enqueuePod(obj interface{}, eventType string) {
 	var name string
 	var err error
-	if name, err = nameGenerationFunc(obj, eventType); err != nil {
+	if name, err = b.nameGenerationFunc(obj, eventType); err != nil {
 		hwlog.Errorf("pod key generation error: %v", err)
 		return
 	}
@@ -205,13 +207,19 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 }
 
 // nameGenerationFunc: Generate the objects (Strings) to be put into the queue from POD metadata
-func nameGenerationFunc(obj interface{}, eventType string) (string, error) {
+func (b *BusinessAgent) nameGenerationFunc(obj interface{}, eventType string) (string, error) {
 	metaData, err := meta.Accessor(obj)
 	if err != nil {
 		return "", fmt.Errorf("object has no meta: %v", err)
 	}
 	labelMaps := metaData.GetLabels()
-	return metaData.GetNamespace() + "/" + metaData.GetName() + "/" + getWorkName(labelMaps) + "/" + eventType, nil
+	refs := metaData.GetOwnerReferences()
+	namespace := metaData.GetNamespace()
+
+	return namespace + "/" +
+		metaData.GetName() + "/" +
+		getRootWorkloadName(labelMaps, refs, namespace, b.KubeClientSet) + "/" +
+		eventType, nil
 }
 
 func splitWorkerKey(key string) (podInfo *podIdentifier, err error) {
