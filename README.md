@@ -44,9 +44,8 @@ HCCL-Controller整体流程如[图1](#fig13227145124720)所示。
 
 HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的组件，该组件为Atlas 800 训练服务器K8s集群专用组件。
 
--   <a name="li121021418717"></a>训练任务，Pod，ConfigMap需要设置ring-controller.atlas: ascend-910标签，HCCL-Controller通过该标签过滤，用于区分昇腾910场景和非昇腾910场景。
--   volcano job与configmap的对应方式：volcano job.yaml中volume（ascend-910-config）的configmap name，就是volcano job对应的configmap。
--   HCCL-Controller持续监控volcano job，pod和ConfigMap的变化（需携带[训练任务，Pod，ConfigMap](#li121021418717)中的标签），同一个训练任务的volcano job和ConfigMap通过volume（ascend-910-config）关联。如果有新创建的Pod，HCCL-Controller把Pod中的annotation（ascend.kubectl.kubernetes.io/ascend-910-configuration）的值取出，为volcano job创建数据缓存信息表，当volcano job的所有实例信息获取完整后，更新对应的rings-config的ConfigMap。
+-   <a name="li121021418717"></a>训练任务，Pod，ConfigMap需要设置ring-controller.atlas: ascend-910标签（此为默认值。用户可以在启动yaml中添加-labelkey和-labelval参数，配置自定义label），HCCL-Controller通过该标签过滤，用于区分昇腾910场景和非昇腾910场景。
+-   HCCL-Controller持续监控不同类型workload (当前支持deployment, job, medaljob, tfjob, mpijob)，pod和ConfigMap的变化（需携带[训练任务，Pod，ConfigMap](#li121021418717)中的标签），同一个训练任务的workload和ConfigMap通过volume（ascend-910-config）关联。如果有新创建的Pod，HCCL-Controller把Pod中的annotation（ascend.kubectl.kubernetes.io/ascend-910-configuration）的值取出，为workload创建数据缓存信息表，当workload的所有实例信息获取完整后，更新对应的rings-config的ConfigMap。
 -   ConfigMap中rings-config的文件名默认为hccl.json，默认挂在路径为：“/user/serverid/devindex/config”。
 
 ## 编译HCCL-Controller<a name="section124015514383"></a>
