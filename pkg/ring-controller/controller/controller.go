@@ -19,9 +19,10 @@ package controller
 
 import (
 	"fmt"
-	"hccl-controller/pkg/hwlog"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/model"
+	"reflect"
+	"strings"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -31,36 +32,50 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"reflect"
-	"strings"
-	"time"
-	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
+
+	medalscheme "hccl-controller/pkg/client/training/medal/clientset/versioned/scheme"
+	mpischeme "hccl-controller/pkg/client/training/mpi/clientset/versioned/scheme"
+	tfscheme "hccl-controller/pkg/client/training/tensorflow/clientset/versioned/scheme"
+	"hccl-controller/pkg/hwlog"
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/model"
 )
 
 // NewController returns a new sample controller
-func NewController(kubeclientset kubernetes.Interface, config *agent.Config, informerInfo InformerInfo,
-	stopCh <-chan struct{}) *Controller {
+func NewController(kubeclientset kubernetes.Interface,
+	config *agent.Config,
+	informerInfo InformerInfo,
+	stopCh <-chan struct{},
+	labelKey, labelVal string) *Controller {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
-	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
+	pkgutilruntime.Must(medalscheme.AddToScheme(scheme.Scheme))
+	pkgutilruntime.Must(mpischeme.AddToScheme(scheme.Scheme))
+	pkgutilruntime.Must(tfscheme.AddToScheme(scheme.Scheme))
+
 	hwlog.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(hwlog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
-	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
+	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh, labelKey, labelVal)
 	if err != nil {
 		hwlog.Fatalf("Error creating business agent: %s", err.Error())
 	}
 	c := &Controller{
-		kubeclientset: kubeclientset,
-		deploySynced:  informerInfo.DeployInformer.Informer().HasSynced,
-		k8sJobSynced:  informerInfo.K8sJobInformer.Informer().HasSynced,
-		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
-		recorder:      recorder,
-		agent:         agents,
-		cacheIndexers: informerInfo.CacheIndexers,
+		kubeclientset:  kubeclientset,
+		deploySynced:   informerInfo.DeployInformer.Informer().HasSynced,
+		k8sJobSynced:   informerInfo.K8sJobInformer.Informer().HasSynced,
+		medalJobSynced: informerInfo.MedalJobInformer.Informer().HasSynced,
+		mpiJobSynced:   informerInfo.MpiJobInformer.Informer().HasSynced,
+		tfJobSynced:    informerInfo.TFJobInformer.Informer().HasSynced,
+		workqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "model"),
+		recorder:       recorder,
+		agent:          agents,
+		cacheIndexers:  informerInfo.CacheIndexers,
+		labelKey:       labelKey,
+		labelVal:       labelVal,
 	}
 	informerInfo.addEventHandle(c)
 	return c
@@ -163,7 +178,7 @@ func (c *Controller) processNextWorkItem() bool {
 // it into a namespace/name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than Job.
 func (c *Controller) enqueueJob(obj interface{}, eventType string) {
-	models, err := model.Factory(obj, eventType, c.cacheIndexers)
+	models, err := model.Factory(obj, c.cacheIndexers, eventType, c.labelKey, c.labelVal)
 	if err != nil {
 		pkgutilruntime.HandleError(err)
 		return
@@ -227,6 +242,9 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 	}
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.K8sJobInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.MedalJobInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.MpiJobInformer.Informer().AddEventHandler(eventHandlerFunc)
+	in.TFJobInformer.Informer().AddEventHandler(eventHandlerFunc)
 }
 
 // splitKeyFunc to splite key by format namespace,jobname,eventType

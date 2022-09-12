@@ -18,15 +18,17 @@
 package controller
 
 import (
-	"hccl-controller/pkg/ring-controller/agent"
 	v1 "k8s.io/client-go/informers/apps/v1"
 	bv1 "k8s.io/client-go/informers/batch/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	v1alpha1informers "volcano.sh/volcano/pkg/client/informers/externalversions/batch/v1alpha1"
+
+	v1medalinformer "hccl-controller/pkg/client/training/medal/informers/externalversions/medal/v1"
+	v1mpiinformer "hccl-controller/pkg/client/training/mpi/informers/externalversions/mpi/v1"
+	v1tfinformer "hccl-controller/pkg/client/training/tensorflow/informers/externalversions/tensorflow/v1"
+	"hccl-controller/pkg/ring-controller/agent"
 )
 
 const (
@@ -42,13 +44,12 @@ type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
-	// jobclientset is a clientset for volcano job
-	jobclientset clientset.Interface
+	deploySynced   cache.InformerSynced
+	k8sJobSynced   cache.InformerSynced
+	medalJobSynced cache.InformerSynced
+	mpiJobSynced   cache.InformerSynced
+	tfJobSynced    cache.InformerSynced
 
-	// component for resource batch/v1alpha1/Job
-	jobsSynced   cache.InformerSynced
-	deploySynced cache.InformerSynced
-	k8sJobSynced cache.InformerSynced
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
@@ -58,16 +59,25 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	// key of label for filtering configmap, workload and pod resources
+	labelKey string
+	// val of label for filtering configmap, workload and pod resources
+	labelVal string
 }
 
 // InformerInfo : Defining what the Controller will use
 type InformerInfo struct {
 	// CacheIndexers : to store different type cache index
 	CacheIndexers map[string]cache.Indexer
-	// JobInformer : vcjob type informer
-	JobInformer v1alpha1informers.JobInformer
 	// DeployInformer: deployment type informer
 	DeployInformer v1.DeploymentInformer
-	//K8sJobInformer: job type informer
+	// K8sJobInformer: job type informer
 	K8sJobInformer bv1.JobInformer
+	// MedalJobInformer
+	MedalJobInformer v1medalinformer.MedalJobInformer
+	// MpiJobInformer
+	MpiJobInformer v1mpiinformer.MPIJobInformer
+	// MedalJobInformer
+	TFJobInformer v1tfinformer.TFJobInformer
 }

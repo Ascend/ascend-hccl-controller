@@ -17,51 +17,32 @@
 package model
 
 import (
-	"hccl-controller/pkg/ring-controller/agent"
+	"time"
+
 	apiCorev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"time"
-	v1alpha1apis "volcano.sh/volcano/pkg/apis/batch/v1alpha1"
+
+	"hccl-controller/pkg/ring-controller/agent"
 )
 
 const (
 	decimal = 10
-	// VCJobType To determine the type of listening：vcjob.
-	VCJobType = "vcjob"
-	// DeploymentType To determine the type of listening：deployment.
-	DeploymentType = "deployment"
-	// K8sJobType To determine the type of listening：job.
-	K8sJobType = "job"
 
 	// BuildStatInterval 1 * time.Minute
 	BuildStatInterval = 30 * time.Second
 )
 
-type modelCommon struct {
+type commonWorkloadInfo struct {
 	key          string
+	labelKey     string
+	labelVal     string
 	cacheIndexer cache.Indexer
 }
 
-// VCJobModel : to handle vcjob type
-type VCJobModel struct {
-	modelCommon
-	agent.JobInfo
-	jobPhase string
-	taskSpec []v1alpha1apis.TaskSpec
-}
-
-// DeployModel : to handle deployment type
-type DeployModel struct {
-	modelCommon
-	agent.DeployInfo
-	replicas   int32
-	containers []apiCorev1.Container
-}
-
-// K8sJobModel : to handle k8s job type
-type K8sJobModel struct {
-	modelCommon
-	agent.K8sJobInfo
+// CommonWorkload : to handle deployment, job workloads type
+type CommonWorkload struct {
+	commonWorkloadInfo
+	agent.CommonPodInfo
 	replicas   int32
 	containers []apiCorev1.Container
 }
