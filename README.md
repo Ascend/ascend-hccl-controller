@@ -101,9 +101,9 @@ ansible默认安装在python3（Ubuntu 18.04系统自带：python3.6.9，Centos 
 
 3. master节点ip。只能为本机localhost，不可更改
 
-4. worker节点ip。默认无，即为无worker节点集群；可更改为其他服务器ip。如果这里包括master或master_backup组的ip，即把该ip的节点同时作为master和worker节点
+4. master_backup节点ip。默认无，即为单master集群。如需部署master高可用集群，这里至少需要配置2个或2个以上的节点ip（建议配置2个，即为3 master集群；本工具仅在3 master场景下经过全面测试）。不可包括master节点，即不可包括localhost。master_backup节点需要与master节点的系统架构一致
 
-5. master_backup节点ip。默认无，即为单master集群。如需部署master高可用集群，这里至少需要配置2个或2个以上的节点ip（建议配置2个，即为3 master集群；本工具仅在3 master场景下经过全面测试）。不可包括master节点，即不可包括localhost。master_backup节点需要与master节点的系统架构一致
+5. worker节点ip。默认无，即为无worker节点集群；可更改为其他服务器ip。如果这里包括master或master_backup组的ip，即把该ip的节点同时作为master和worker节点
 
 ```ini
 [harbor]
@@ -115,9 +115,9 @@ localhost ansible_connection=local
 [master]
 localhost ansible_connection=local
 
-[worker]
-
 [master_backup]
+
+[worker]
 
 # 这个默认配置，即把本机部署成一个单master节点的k8s集群，而且无worker节点
 ```
@@ -138,14 +138,14 @@ localhost ansible_connection=local
 [master]
 localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f0"
 
+[master_backup]
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f0"
+192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f0"
+
 [worker]
 192.0.2.50  set_hostname="worker-1"
 192.0.2.51  set_hostname="worker-2"
 192.0.2.52  set_hostname="worker-3"
-
-[master_backup]
-192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f0"
-192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f0"
 
 [all:vars]
 kube_vip="192.0.4.200"
@@ -166,14 +166,14 @@ localhost ansible_connection=local
 [master]
 localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.99"
 
+[master_backup]
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.100"
+192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.101"
+
 [worker]
 192.0.2.50  set_hostname="worker-1"  kube_interface="enp125s0f1"
 192.0.2.51  set_hostname="worker-2"  kube_interface="enp125s0f1"
 192.0.2.52  set_hostname="worker-3"  kube_interface="enp125s0f1"
-
-[master_backup]
-192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.100"
-192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.101"
 
 [all:vars]
 kube_vip="195.0.4.200"

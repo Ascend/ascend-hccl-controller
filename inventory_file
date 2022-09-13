@@ -7,6 +7,6 @@ localhost ansible_connection=local
 [master]
 localhost ansible_connection=local
 
-[worker]
-
 [master_backup]
+
+[worker]
