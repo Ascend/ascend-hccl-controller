@@ -25,8 +25,8 @@ groups:
     labels:
       severity: Major
       source: ""
-  - alert: task-manager-status
-    expr: sum by(pod,phase) (kube_pod_status_phase{phase!~"Running",pod=~"task-manager-.*"})==1
+  - alert: inference-manager-status
+    expr: sum by(pod,phase) (kube_pod_status_phase{phase!~"Running",pod=~"inference-manager-.*"})==1
     for: 3m
     labels:
       severity: Major

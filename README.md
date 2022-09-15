@@ -454,7 +454,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 
 1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 只支持安装MindX DL平台组件，当前包括16个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、task-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
+2. 只支持安装MindX DL平台组件，当前包括16个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
 
 3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从社区版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 

@@ -35,7 +35,7 @@
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-image-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-label-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-model-manager*.zip"
-    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-task-manager*.zip"
+    - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-inference-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-train-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-alarm-manager*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-hccl-controller*.zip"

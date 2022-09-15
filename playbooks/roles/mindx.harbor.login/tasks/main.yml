@@ -4,7 +4,7 @@
 
 - name: set HARBOR_IP
   set_fact:
-    HARBOR_IP: "{{ hostvars[groups['harbor'][0]]['ansible_default_ipv4']['address'] if harbor_host_ip == '' else harbor_host_ip }}"
+    HARBOR_IP: "{{ hostvars[groups['harbor'][0]]['ansible_default_ipv4']['address'] if harbor_host_ip is not defined else harbor_host_ip }}"
     cacheable: yes
   when: HARBOR_IP is not defined
 

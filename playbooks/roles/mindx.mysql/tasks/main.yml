@@ -89,7 +89,7 @@
     - { "user":"train_user",   "dbname":"dl_platform",   "service": "train-manager"}
     - { "user":"label_user",   "dbname":"dl_platform",   "service": "label-manager"}
     - { "user":"model_user",   "dbname":"dl_platform",   "service": "model-manager"}
-    - { "user":"task_user",    "dbname":"dl_platform",    "service": "task-manager"}
+    - { "user":"inference_user",    "dbname":"dl_platform",    "service": "inference-manager"}
     - { "user":"image_user",   "dbname":"dl_platform",   "service": "image-manager"}
     - { "user":"data_user",    "dbname":"dl_platform",    "service": "data-manager"}
     - { "user":"cluster_user", "dbname":"dl_platform", "service": "cluster-manager"}

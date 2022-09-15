@@ -41,7 +41,7 @@
     - "{{ PLATFORM_PATH }}/log/edge-manager"
     - "{{ PLATFORM_PATH }}/log/label-manager"
     - "{{ PLATFORM_PATH }}/log/model-manager"
-    - "{{ PLATFORM_PATH }}/log/task-manager"
+    - "{{ PLATFORM_PATH }}/log/inference-manager"
     - "{{ PLATFORM_PATH }}/log/train-manager"
     - "{{ PLATFORM_PATH }}/log/user-manager"
     - "{{ PLATFORM_PATH }}/log/alarm-manager"
