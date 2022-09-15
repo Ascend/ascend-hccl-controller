@@ -170,13 +170,7 @@ function build_image()
     fi
 
     cd ${DEPLOY_PATH}
-    if [[ ${name} == apigw-business ]]; then
-        docker build . --build-arg CONF_PATH=business -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
-    elif [[ ${name} == apigw ]]; then
-        docker build . --build-arg CONF_PATH=manager -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
-    else
-        docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
-    fi
+    docker build . -f ${docker_file} -t ${HARBOR_HOST}${HARBOR_PORT}/${PROJECT}/${name}_${arch}:${tag}
 
     if [ $? != 0 ];then
         echo "docker build failed"
@@ -216,12 +210,7 @@ function build_images()
         local file_name=$(basename $docker_file)
         echo "build image for $file_name:"
         if [ ${file_name} == "Dockerfile" ];then
-            if [[ ${IMAGE} == apigw ]]; then
-                build_image ${docker_file} apigw-business ${ARCH} ${TAG}
-                build_image ${docker_file} apigw ${ARCH} ${TAG}
-            else
-                build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
-            fi
+            build_image ${docker_file} ${IMAGE} ${ARCH} ${TAG}
         elif [ ${file_name} == "Dockerfile-controller" ];then
             build_image ${docker_file} "volcanosh/vc-controller-manager" ${ARCH} ${TAG}
         elif [ ${file_name} == "Dockerfile-scheduler" ];then

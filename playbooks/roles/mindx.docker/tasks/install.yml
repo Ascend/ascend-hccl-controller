@@ -19,30 +19,6 @@
     - OS_ID == 'centos'
     - OS_VERSION_ID == '7'
 
-# - name: modify /etc/sysctl.conf iptables
-#   ansible.builtin.lineinfile:
-#     path: /etc/sysctl.conf
-#     line: net.bridge.bridge-nf-call-iptables = 1
-#     state: present
-#   when:
-#     - OS_ID == 'centos'
-#     - OS_VERSION_ID == '7'
-
-# - name: modify /etc/sysctl.conf ip6tables
-#   ansible.builtin.lineinfile:
-#     path: /etc/sysctl.conf
-#     line: net.bridge.bridge-nf-call-ip6tables = 1
-#     state: present
-#   when:
-#     - OS_ID == 'centos'
-#     - OS_VERSION_ID == '7'
-
-# - name: sysctl -p
-#   shell: sysctl -p
-#   when:
-#     - OS_ID == 'centos'
-#     - OS_VERSION_ID == '7'
-
 - name: config docker
   template:
     src: daemon.json.j2

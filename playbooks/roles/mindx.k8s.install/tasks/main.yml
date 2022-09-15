@@ -22,6 +22,25 @@
     state: absent
     regexp: '.*?swap.*?'
 
+- name: set route in rc.local
+  ansible.builtin.lineinfile:
+    path: /etc/rc.local
+    line: ip route add 10.96.0.0/16 dev {{ kube_interface }}
+    state: present
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
+    - kube_interface is defined
+
+- name: set route
+  shell: |
+    ip route del 10.96.0.0/16 dev {{ kube_interface }}
+    ip route add 10.96.0.0/16 dev {{ kube_interface }}
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
+    - kube_interface is defined
+
 - name: install sys for ubuntu
   shell: dpkg --force-all -i {{ sys_dir }}/*.deb
   environment:

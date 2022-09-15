@@ -1,5 +1,3 @@
-# harbor ip address
-HARBOR_HOST_IP: ""
 # harbor https port
 HARBOR_HTTPS_PORT: 7443
 # harbor install path
@@ -31,8 +29,6 @@ CEPHFS_KEY: ""
 
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
-# ip address for api-server
-K8S_API_SERVER_IP: ""
 
 #mindx user
 MINDX_USER: hwMindX
