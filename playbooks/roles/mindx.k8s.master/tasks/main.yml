@@ -33,7 +33,7 @@
   set_fact:
     addr_cmd: "--apiserver-advertise-address {{ apiserver_advertise_address }}"
   when:
-    - apiserver_advertise_address | length != 0
+    - apiserver_advertise_address is defined
 
 - name: set repository
   set_fact:
