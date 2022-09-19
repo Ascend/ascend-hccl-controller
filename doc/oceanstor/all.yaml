@@ -1,0 +1,40 @@
+# harbor https port
+HARBOR_HTTPS_PORT: 7443
+# harbor install path
+HARBOR_PATH: /data/harbor
+# password for harbor, can not be empty, delete immediately after finished
+HARBOR_PASSWORD: "Harbor12345"
+
+# password for mysql, can not be empty, delete immediately after finished
+MYSQL_PASSWORD: "Huawei12#$"
+
+# password for redis, can not be empty, delete immediately after finished
+REDIS_PASSWORD: "Huawei@123"
+
+# select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
+STORAGE_TYPE: "OCEANSTORE"
+# mindx-dl platform storage path on "NFS" or "CEPHFS" or "OCEANSTORE", default to /data/atlas_dls
+STORAGE_PATH: "/dl/atlas_dls"
+# storage capatity, default to "5120Gi", i.e. 5Ti. 1 pb == 1048576 gb
+STORAGE_CAPACITY: "1048576Gi"
+
+# cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_IP: ""
+# cephfs port. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_PORT: ""
+# cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_USER: ""
+# cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_KEY: ""
+
+# mindx k8s namespace
+K8S_NAMESPACE: "mindx-dl"
+
+#mindx user
+MINDX_USER: hwMindX
+MINDX_USER_ID: 9000
+MINDX_GROUP: hwMindX
+MINDX_GROUP_ID: 9000
+
+#HwHiAiUser group
+HIAI_GROUP: HwHiAiUser

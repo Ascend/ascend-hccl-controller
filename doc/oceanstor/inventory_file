@@ -1,0 +1,51 @@
+[harbor]
+localhost ansible_connection=local
+
+[nfs_server]
+localhost ansible_connection=local
+
+# 172.16.0.44 作为安装部署工具的主节点
+[master]
+localhost ansible_connection=local  set_hostname="master-main-44"  kube_interface="bond0"
+
+[master_backup]
+172.16.0.22  set_hostname="master-22"  kube_interface="bond0"
+172.16.0.39  set_hostname="master-39"  kube_interface="bond0"
+
+[worker]
+172.16.0.10  set_hostname="worker-10"
+172.16.0.11  set_hostname="worker-11"
+172.16.0.12  set_hostname="worker-12"
+172.16.0.13  set_hostname="worker-13"
+172.16.0.14  set_hostname="worker-14"
+172.16.0.15  set_hostname="worker-15"
+172.16.0.16  set_hostname="worker-16"
+172.16.0.17  set_hostname="worker-17"
+172.16.0.18  set_hostname="worker-18"
+172.16.0.19  set_hostname="worker-19"
+172.16.0.20  set_hostname="worker-20"
+172.16.0.21  set_hostname="worker-21"
+172.16.0.23  set_hostname="worker-23"
+172.16.0.24  set_hostname="worker-24"
+172.16.0.25  set_hostname="worker-25"
+172.16.0.26  set_hostname="worker-26"
+172.16.0.27  set_hostname="worker-27"
+172.16.0.28  set_hostname="worker-28"
+172.16.0.29  set_hostname="worker-29"
+172.16.0.30  set_hostname="worker-30"
+172.16.0.31  set_hostname="worker-31"
+172.16.0.32  set_hostname="worker-32"
+172.16.0.33  set_hostname="worker-33"
+172.16.0.34  set_hostname="worker-34"
+172.16.0.35  set_hostname="worker-35"
+172.16.0.36  set_hostname="worker-36"
+172.16.0.37  set_hostname="worker-37"
+172.16.0.38  set_hostname="worker-38"
+172.16.0.40  set_hostname="worker-40"
+172.16.0.41  set_hostname="worker-41"
+172.16.0.42  set_hostname="worker-42"
+172.16.0.43  set_hostname="worker-43"
+
+[all:vars]
+kube_vip="172.16.0.252"
+ansible_python_interpreter=/usr/bin/python2.7
