@@ -421,7 +421,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 3. 在工具目录中执行安装命令
 
    ```bash
-   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/15.mindxdl.yaml
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
    ```
 
 4. （可选）如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
@@ -454,7 +454,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 
 1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 只支持安装MindX DL平台组件，当前包括16个平台组件（apigw、cluster-manager、data-manager、dataset-manager、edge-manager、image-manager、label-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
+2. 只支持安装MindX DL平台组件，当前包括14个平台组件（apigw、cluster-manager、data-manager、dataset-manager、image-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
 
 3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从社区版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 
@@ -480,7 +480,7 @@ Ascend-Docker-Runtime组件包含在MindX Toolbox包中，需要先获取MindX T
 3. 在工具目录中执行安装命令。MindX Toolbox中的Ascend-Docker-Runtime即可安装到各个worker节点
 
    ```bash
-   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindx-toolbox.yaml
+   root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/17.mindx-toolbox.yaml
    ```
 
 ## 更新MindX DL平台组件

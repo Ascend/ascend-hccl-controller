@@ -3,7 +3,6 @@ CREATE DATABASE IF NOT EXISTS dl_platform CHARACTER SET utf8 COLLATE utf8_genera
 CREATE USER 'user_user'@'%'    IDENTIFIED BY "{{pwd}}";
 CREATE USER 'dataset_user'@'%' IDENTIFIED BY "{{pwd}}";
 CREATE USER 'train_user'@'%'   IDENTIFIED BY "{{pwd}}";
-CREATE USER 'label_user'@'%'   IDENTIFIED BY "{{pwd}}";
 CREATE USER 'model_user'@'%'   IDENTIFIED BY "{{pwd}}";
 CREATE USER 'image_user'@'%'   IDENTIFIED BY "{{pwd}}";
 CREATE USER 'data_user'@'%'    IDENTIFIED BY "{{pwd}}";
@@ -14,7 +13,6 @@ CREATE USER 'inference_user'@'%' IDENTIFIED BY "{{pwd}}";
 GRANT ALL PRIVILEGES ON *.* TO 'user_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'dataset_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'train_user'@'%';
-GRANT ALL PRIVILEGES ON *.* TO 'label_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'model_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'image_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'data_user'@'%';
