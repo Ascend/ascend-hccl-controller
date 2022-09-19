@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DL_PLATFORM_COMPONENTS="apigw,cluster,data,dataset,image,"\
-"label,model,task,train,user,alarm,mysql"
+"model,task,train,user,alarm,mysql"
 
 function delete_components()
 {

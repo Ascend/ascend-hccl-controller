@@ -16,7 +16,7 @@ DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
 DL_PLATFORM_COMPONENTS="apigw,cluster-manager,data-manager,dataset-manager,image-manager,"\
-"label-manager,model-manager,task-manager,train-manager,user-manager,alarm-manager,hccl-controller,volcano"
+"model-manager,inference-manager,train-manager,user-manager,alarm-manager,hccl-controller,volcano"
 
 function print_usage()
 {

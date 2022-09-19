@@ -43,7 +43,7 @@ mkdir -p -m 750 ${STORAGE_PATH} ${STORAGE_PATH}/platform
 cd ${STORAGE_PATH}/platform
 mkdir -p -m 750 kmc log services services/prometheus
 cd log
-mkdir -p -m 750 apigw apigw-business cluster-manager data-manager dataset-manager edge-manager image-manager label-manager model-manager task-manager train-manager user-manager alarm-manager
+mkdir -p -m 750 apigw apigw-business cluster-manager data-manager dataset-manager image-manager model-manager inference-manager train-manager user-manager alarm-manager
 cd ../../../..
 cp -f rule.yaml ${STORAGE_PATH}/platform/services/prometheus/rule.yaml
 chmod 600 ${STORAGE_PATH}/platform/services/prometheus/rule.yaml
