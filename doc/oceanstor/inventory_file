@@ -4,13 +4,13 @@ localhost ansible_connection=local
 [nfs_server]
 localhost ansible_connection=local
 
-# 172.16.0.44 作为安装部署工具的主节点
+# 172.16.0.44 作为安装部署工具的主节点。用172.16.0.44登录上去执行安装部署任务，并且建议down掉这3台master 10.129.239.* 网段的网口
 [master]
-localhost ansible_connection=local  set_hostname="master-main-44"  kube_interface="bond0"
+localhost ansible_connection=local  set_hostname="master-main-44"  kube_interface="bond0" apiserver_advertise_address="172.16.0.44"
 
 [master_backup]
-172.16.0.22  set_hostname="master-22"  kube_interface="bond0"
-172.16.0.39  set_hostname="master-39"  kube_interface="bond0"
+172.16.0.22  set_hostname="master-22"  kube_interface="bond0" apiserver_advertise_address="172.16.0.22"
+172.16.0.39  set_hostname="master-39"  kube_interface="bond0" apiserver_advertise_address="172.16.0.39"
 
 [worker]
 172.16.0.10  set_hostname="worker-10"
@@ -48,4 +48,5 @@ localhost ansible_connection=local  set_hostname="master-main-44"  kube_interfac
 
 [all:vars]
 kube_vip="172.16.0.252"
+harbor_host_ip="172.16.0.44"
 ansible_python_interpreter=/usr/bin/python2.7

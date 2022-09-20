@@ -182,6 +182,7 @@ harbor_host_ip="195.0.3.99"
 # 这个配置，即部署一个管理面网络和业务面网络分离的3 master高可用k8s集群，而且有3个worker节点
 # 以上192.0.*.*、195.0.*.*等ip仅为示例，请修改为实际规划的ip地址
 # 192.0.*.*为管理面网络，195.0.*.*为业务面网络；kube_interface、apiserver_advertise_address分别为业务面网络的网卡名称和ip；kube_vip在业务面网络中，且为闲置、未被他人使用的ip；harbor_host_ip为harbor主机的业务面网络ip
+# 在多网卡的复杂网络场景，建议把master和master_backup的apiserver_advertise_address主机变量、all的harbor_host_ip主机组变量都配置上
 ```
 
 
@@ -327,6 +328,13 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file all.yam
    kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
    ```
 
+   3 master场景下，执行以上命令后，3个master节点上可能会残留inventory_file中设置的“kube-vip”，绑定在“kube_interface”上。需要在3个master节点上确认并手动删除
+   ```bash
+   ip a  # 查询网卡（kube_interface）上是否存在此ip（kube-vip）
+   ip addr delete <kube-vip> dev <kube_interface>  # 如果存在，需手动删除
+   ```
+
+
 2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件kmc证书存放在外部存储目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必清空这2个目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常。详细目录见下。
 
 外部存储中的MindX DL平台目录结构
@@ -456,7 +464,7 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
 
 2. 只支持安装MindX DL平台组件，当前包括14个平台组件（apigw、cluster-manager、data-manager、dataset-manager、image-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
 
-3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要从社区版本中获取并重新打包。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
+3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要获取到对应版本的文件并重新打包，获取地址：[链接](https://gitee.com/ascend/mindxdl-deploy/tags)。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 
 ### 步骤8：安装Ascend-Docker-Runtime组件
 
@@ -541,6 +549,12 @@ playbooks/
    kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
    ```
 
+   3 master场景下，执行以上命令后，3个master节点上可能会残留inventory_file中设置的“kube-vip”，绑定在“kube_interface”上。需要在3个master节点上确认并手动删除
+   ```bash
+   ip a  # 查询网卡（kube_interface）上是否存在此ip（kube-vip）
+   ip addr delete <kube-vip> dev <kube_interface>  # 如果存在，需手动删除
+   ```
+
    由于ansible的幂等性，除playbooks/06.k8s.yaml步骤外，其他步骤均可以重复执行
 
 3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml和17.mindx-toolbox.yaml）。实际安装时可根据需要对组件灵活删减
@@ -556,3 +570,21 @@ playbooks/
 2. Q: 安装某组件时报错，报错信息中包含访问harbor镜像仓失败等字样
 
 - A: harbor镜像仓会管理安装过程中的所有镜像。首先可能是某节点docker.service配置了代理，具体请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>。其次可能是harbor服务异常，可在harbor主机上执行`docker ps | grep goharbor`，如果不是存在9个容器且均为up状态，可执行`systemctl restart harbor`重启harbor服务。如果重启harbor服务后harbor服务仍然异常，建议直接重装harbor（执行04.harbor.yaml子任务）
+
+3. 初始化master时，有报错信息“no default routes found in /proc/net/route or /proc/net/ipv6_route”、“cannot use 0.0.0.0 as the bind address for the API Server"等
+
+- A: 多网卡的复杂网络场景下，可能会出现这个问题。请确认网卡路由是否畅通
+
+4. 3 master场景下，2个master_backup节点执行加入k8s集群命令时，报错访问\<kube-vip\>:6443被拒。
+
+- A: 可能是该节点上残留之前部署的“kube-vip”，手动删除该ip即可。具体操作可见上文
+
+5. k8s集群部署起来后，pod ip和node ip不是预期的业务ip，而是其他无关的ip
+
+- A: 多网卡的复杂网络场景下，可能会出现这个问题。建议在各个节点上配置kubelet参数，操作如下
+   ```bash
+   vi /etc/default/kubelet  # 新建这个配置文件
+   KUBELET_EXTRA_ARGS="--node-ip=195.0.3.99"  # 上面的新建的文件中写入此内容，195.0.3.99请改为该节点预期的业务ip
+
+   systemctl daemon-reload && systemctl restart kubelet  # 重启kubelet，使配置生效
+   ```

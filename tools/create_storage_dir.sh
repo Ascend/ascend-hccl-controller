@@ -34,7 +34,7 @@ set -o errexit
 # 根据实际情况修改STORAGE_PATH变量
 STORAGE_PATH=data/atlas_dls
 
-if [[ ! -f rule.yaml ]]; `then`
+if [[ ! -f rule.yaml ]]; then
     echo "rule.yaml is not existed, please copy here from playbooks/roles/mindx.nfs.server/files/rule.yaml"
     exit
 fi
