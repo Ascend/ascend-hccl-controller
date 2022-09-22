@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"unicode/utf8"
 
 	"huawei.com/mindx/common/hwlog"
 	"k8s.io/api/core/v1"
@@ -48,8 +47,9 @@ func (r *RankTableStatus) GetStatus() string {
 
 // UnmarshalToRankTable ： Unmarshal json string to RankTable
 func (r *RankTableStatus) UnmarshalToRankTable(jsonString string) error {
-	if utf8.RuneCount([]byte(jsonString)) > maximumMemory {
-		return fmt.Errorf("out of memory")
+	// get string bytes with len
+	if len(jsonString) > cmDataMaxMemory {
+		return fmt.Errorf("rank table date size is out of memory")
 	}
 	err := json.Unmarshal([]byte(jsonString), &r)
 	if err != nil {

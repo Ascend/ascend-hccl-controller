@@ -13,8 +13,8 @@ const (
 	// ConfigmapInitializing status
 	ConfigmapInitializing = "initializing"
 
-	// MaximumMemory Memory limit unit B
-	maximumMemory = 50 * 1024 * 1024
+	// configmap max data size 1MB
+	cmDataMaxMemory = 1024 * 1024
 )
 
 // RankTableStatus to hccl
