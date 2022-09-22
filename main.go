@@ -155,7 +155,7 @@ func init() {
 	flag.IntVar(&hwLogConfig.LogLevel, "logLevel", 0,
 		"Log level, -1-debug, 0-info, 1-warning, 2-error, 3-critical(default 0)")
 	flag.IntVar(&hwLogConfig.MaxAge, "maxAge", hwlog.DefaultMinSaveAge,
-		"Maximum number of days for backup operation log files, must be greater than or equal to 7 days")
+		"Maximum number of days for backup operation log files, range [7, 700] days")
 	flag.StringVar(&hwLogConfig.LogFileName, "logFile", defaultLogFileName,
 		"Log file path. if the file size exceeds 20MB, will be rotated")
 	flag.IntVar(&hwLogConfig.MaxBackups, "maxBackups", hwlog.DefaultMaxBackups,
