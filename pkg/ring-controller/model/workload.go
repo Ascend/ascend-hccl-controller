@@ -155,7 +155,7 @@ func Factory(obj interface{}, indexers map[string]cache.Indexer,
 		model = &CommonWorkload{
 			commonWorkloadInfo: commonWorkloadInfo{
 				key:          key,
-				cacheIndexer: indexers[common.MedalType],
+				cacheIndexer: indexers[common.MpiType],
 				labelKey:     labelKey,
 				labelVal:     labelVal},
 			containers: t.Spec.MPIReplicaSpecs[v1common.ReplicaTypeWorker].Template.Spec.Containers,
@@ -168,7 +168,7 @@ func Factory(obj interface{}, indexers map[string]cache.Indexer,
 		model = &CommonWorkload{
 			commonWorkloadInfo: commonWorkloadInfo{
 				key:          key,
-				cacheIndexer: indexers[common.MedalType],
+				cacheIndexer: indexers[common.TfType],
 				labelKey:     labelKey,
 				labelVal:     labelVal},
 			containers: t.Spec.TFReplicaSpecs[v1common.ReplicaTypeWorker].Template.Spec.Containers,
