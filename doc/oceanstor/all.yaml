@@ -16,7 +16,7 @@ STORAGE_TYPE: "OCEANSTORE"
 # mindx-dl platform storage path on "NFS" or "CEPHFS" or "OCEANSTORE", default to /data/atlas_dls
 STORAGE_PATH: "/dl/atlas_dls"
 # storage capatity, default to "5120Gi", i.e. 5Ti. 1 pb == 1048576 gb
-STORAGE_CAPACITY: "1048576Gi"
+STORAGE_CAPACITY: "104857600Gi"
 
 # cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_IP: ""
@@ -29,6 +29,8 @@ CEPHFS_KEY: ""
 
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
+# k8s pod network cidr
+POD_NETWORK_CIDR: "139.100.0.0/16"
 
 #mindx user
 MINDX_USER: hwMindX

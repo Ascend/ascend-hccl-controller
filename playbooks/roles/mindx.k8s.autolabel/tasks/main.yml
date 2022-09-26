@@ -62,3 +62,27 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   when: "'Device d801' in processing_accelerator.stdout"
+
+- name: label apigw-selector master
+  shell: kubectl label --overwrite node {{ansible_hostname}} apigw-selector=apigw-business-worker-node
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  run_once: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'worker' not in groups or groups['worker'] | length == 0"
+
+- name: label apigw-selector worker
+  shell: kubectl label --overwrite node {{ hostvars[groups['worker'][0]]['ansible_hostname'] }} apigw-selector=apigw-business-worker-node
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  run_once: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'worker' in groups and groups['worker'] | length != 0"

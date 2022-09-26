@@ -29,6 +29,8 @@ CEPHFS_KEY: ""
 
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
+# k8s pod network cidr
+POD_NETWORK_CIDR: "192.168.0.0/16"
 
 #mindx user
 MINDX_USER: hwMindX

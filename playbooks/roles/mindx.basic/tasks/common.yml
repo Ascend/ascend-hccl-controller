@@ -48,3 +48,9 @@
   when:
     - OS_ID == 'centos'
     - OS_VERSION_ID == '7'
+
+- name: enable haveged
+  systemd:
+    name: "haveged"
+    enabled: true
+    state: started

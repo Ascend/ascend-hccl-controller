@@ -44,7 +44,6 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   delegate_to: "{{ groups['master'][0] }}"
-  run_once: true
   register: token_cmd
 
 - name: get certificate-key

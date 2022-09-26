@@ -131,21 +131,3 @@
     https_proxy: ""
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
-
-- name: label apigw-selector master
-  shell: kubectl label --overwrite node {{ansible_hostname}} apigw-selector=apigw-business-worker-node
-  when: "'worker' not in groups or groups['worker'] | length == 0"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-
-- name: label apigw-selector worker
-  shell: kubectl label --overwrite node {{ hostvars[groups['worker'][0]]['ansible_hostname'] }} apigw-selector=apigw-business-worker-node
-  when: "'worker' in groups and groups['worker'] | length != 0"
-  environment:
-    http_proxy: ""
-    https_proxy: ""
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
