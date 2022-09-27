@@ -1,0 +1,16 @@
+/var/log/mindx-dl/volcano-*/*.log{    
+     daily     
+     rotate 8     
+     size 50M     
+     compress     
+     dateext     
+     missingok     
+     notifempty     
+     copytruncate     
+     create 0640 hwMindX hwMindX     
+     sharedscripts     
+     postrotate         
+         chmod 640 /var/log/mindx-dl/volcano-*/*.log                
+         chmod 440 /var/log/mindx-dl/volcano-*/*.log-*            
+     endscript 
+}

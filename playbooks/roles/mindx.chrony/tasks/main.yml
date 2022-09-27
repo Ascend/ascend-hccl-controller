@@ -1,0 +1,16 @@
+- name: message
+  debug:
+    msg: "*************************start install chrony***************************"
+
+- name: check chrony service
+  shell: systemctl is-active {{ chrony_service }} | grep '^active$' | wc -l
+  register: chrony_status
+  changed_when: false
+
+- include_tasks: install.yml
+  when: chrony_status.stdout == "0"
+
+- name: message
+  debug:
+    msg: "{{ chrony_service }} is running already"
+  when: chrony_status.stdout == "1"

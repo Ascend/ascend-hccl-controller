@@ -1,0 +1,50 @@
+- name: install chrony for ubuntu
+  shell: dpkg --force-all -i {{ chrony_dir }}/*.deb
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_PRIORITY: critical
+  when:
+    - OS_ID == 'ubuntu'
+    - OS_VERSION_ID == '18.04'
+
+- name: install chrony for centos
+  shell: rpm -ivh --force --nodeps --replacepkgs {{ chrony_dir }}/*.rpm
+  when:
+    - OS_ID == 'centos'
+    - OS_VERSION_ID == '7'
+
+- name: config chrony
+  ansible.builtin.replace:
+    path: "{{ chrony_config }}"
+    regexp: '^(pool|server) (.*?ntp\..*?)$'
+    replace: '# \1 \2'
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: "{{ chrony_config }}"
+    regexp: "^allow"
+    line: "allow"
+    state: present
+  when: ansible_connection == "local"
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: "{{ chrony_config }}"
+    regexp: "^local stratum"
+    line: "local stratum 10"
+    state: present
+  when: ansible_connection == "local"
+
+- name: config chrony
+  ansible.builtin.lineinfile:
+    path: "{{ chrony_config }}"
+    regexp: "^server "
+    line: "server {{ MASTER_IP }} iburst"
+    state: present
+  when: ansible_connection != "local"
+
+- name: "restart chrony"
+  systemd:
+    name: "{{ chrony_service }}"
+    enabled: true
+    state: restarted

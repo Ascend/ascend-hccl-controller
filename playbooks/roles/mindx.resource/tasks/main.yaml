@@ -37,6 +37,7 @@
     - not item.endswith("tgz")
     - ansible_connection != "local"
     - no_copy_flag != "true"
+    - ansible_architecture in item
 
 - name: copy archive to remote
   copy:
@@ -48,3 +49,4 @@
     - item.endswith("tgz")
     - ansible_connection != "local"
     - no_copy_flag != "true"
+    - item == harbor_item

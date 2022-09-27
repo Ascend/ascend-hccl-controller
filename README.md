@@ -15,6 +15,7 @@
 | mysql      | 8.0.26    | 安装在k8s集群中，关系型数据库系统 |
 | redis      | 5.0.14    | 安装在k8s集群中，非关系型数据库系统 |
 | prometheus + grafana + node-exporter + alertmanager + kube-state-metrics | 2.29.2 + 7.5.5 + 1.2.2 + 0.24.0 + 2.3.0 | 安装在k8s集群中，资源监控组件      |
+| chrony     | 3.2        | (可选）时间同步组件，所有节点安装          |
 
 ## 环境要求
 
@@ -188,14 +189,6 @@ harbor_host_ip="195.0.3.99"
 
 inventory_file文件配置详细可参考[[How to build your inventory &mdash; Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)]
 
-由于centos7.6自带python2.7，没有python3，而ansible对centos7.6的支持和适配有限。如果远程节点为centos7.6 arm，则需在inventory_file文件显式配置[all:vars]的主机组变量ansible_python_interpreter=/usr/bin/python2.7；
-```ini
-...
-
-[all:vars]
-ansible_python_interpreter=/usr/bin/python2.7
-```
-
 ### 步骤3：配置安装信息
 
 在group_vars目录中的all.yaml文件
@@ -307,10 +300,10 @@ worker1_ipaddres | SUCCESS => {
 
 当所有节点都能ping通，则表示inventory_file文件中所有节点连通性正常。否则，请检查节点的ssh连接和inventory_file文件配置是否正确
 
-各个节点的时间应保持同步，不然可能会出现不可预知异常。手动将各个节点的时间设置为一致，可参考执行如下命令，'2022-06-01 08:00:00'请改成当前实际时间
+各个节点应保持时间同步，不然可能会出现不可预知异常，时间同步服务应当由网络管理员提供支持。无法获取网络管理员提供支持的时间同步服务时，本工具也提供了可选的时间同步服务，依次执行01、99这2个子任务即可。
 
 ```bash
-root@master:~/ascend-hccl-controller# ansible -i inventory_file all -m shell -a "date -s '2022-06-01 08:00:00'; hwclock -w"
+root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/01.resource.yaml playbooks/99.chrony.yaml
 ```
 
 ### <a name="resources_no_copy">步骤5：执行安装</a>
@@ -334,8 +327,7 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file all.yam
    ip addr delete <kube-vip> dev <kube_interface>  # 如果存在，需手动删除
    ```
 
-
-2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储目录（/data/atlas_dls/platform/mysql）。MindX DL平台组件kmc证书存放在外部存储目录（/data/atlas_dls/platform/kmc）。如果需手动清除k8s系统，请务必清空这2个目录下文件（目录不要删除），避免后续MindX DL平台组件运行异常。详细目录见下。
+2. mysql数据库会持久化MindX DL平台组件的相关数据，存放在外部存储目录（/data/atlas_dls/platform/mysql）。如果需手动清除k8s系统，请务必删除这个目录，避免后续MindX DL平台组件运行异常。详细目录见下。
 
 外部存储中的MindX DL平台目录结构
    ```bash
@@ -510,10 +502,10 @@ playbooks目录下有很多文件，其中每个yaml文件对应一个组件，�
 ```bash
 playbooks/
 ├── 01.resource.yaml  # 分发/root/resources目录（耗时较长）
-├── 02.basic.yaml  # 创建MindX DL所需的用户、日志目录等基础操作
-├── 03.docker.yaml  # 安装docker
-├── 04.harbor.yaml  # 安装harbor并登录
-├── 05.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor（耗时较长）
+├── 02.docker.yaml  # 安装docker
+├── 03.harbor.yaml  # 安装harbor并登录
+├── 04.open-source-image.yaml  # 推送/root/resources/images里的开源镜像到harbor（耗时较长）
+├── 05.basic.yaml  # 创建MindX DL所需的用户、日志目录等基础操作
 ├── 06.k8s.yaml  # 安装k8s系统
 ├── 07.nfs.yaml  # 安装nfs并创建nfs的pv。当"STORAGE_TYPE"设置不为"NFS"时，此步骤会自动跳过
 ├── 08.cephfs.yaml  # 创建cephfs的pv、secret。当"STORAGE_TYPE"设置不为"CEPHFS"时，此步骤会自动跳过
@@ -526,6 +518,7 @@ playbooks/
 ├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor（耗时较长）
 ├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件和基础组件
 ├── 17.mindx-toolbox.yaml  # 安装或更新MindX Toolbox
+├── 99.chrony.yaml  # （可选）安装chrony
 ```
 
 例如:
@@ -557,9 +550,15 @@ playbooks/
 
    由于ansible的幂等性，除playbooks/06.k8s.yaml步骤外，其他步骤均可以重复执行
 
-3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml和17.mindx-toolbox.yaml）。实际安装时可根据需要对组件灵活删减
+3. 工具目录下的all.yaml为全量安装，安装效果跟依次执行playbooks目录下的01~15编号的yaml效果一致（不包括16.mindxdl.yaml、17.mindx-toolbox.yaml、99.chrony.yaml）。实际安装时可根据需要对组件灵活删减
 
-   如果需要重新部署DL平台，手动清除k8s系统及DL平台残留的mysql数据库文件和组件证书文件后，只需分别依次执行06-16这些子任务（这些子任务都跟k8s相关）即可，不必执行01-05、17这些子任务
+   如果需要重新部署DL平台，手动清除k8s系统及DL平台残留的mysql数据库目录后，只需分别依次执行06-16这些子任务（这些子任务都跟k8s相关）即可，不必执行01-05、17这些子任务
+
+4. （可选）各个节点应保持时间同步，不然可能会出现不可预知异常，时间同步服务应当由网络管理员提供支持。无法获取网络管理员提供支持的时间同步服务时，本工具也提供了可选的时间同步服务，执行01、99这2个子任务即可。
+
+```bash
+root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/01.resource.yaml playbooks/99.chrony.yaml
+```
 
 # FAQ
 
@@ -588,3 +587,15 @@ playbooks/
 
    systemctl daemon-reload && systemctl restart kubelet  # 重启kubelet，使配置生效
    ```
+
+6. coredns在centos7.6上可能报错"plugin/forward: no nameservers found"
+
+- A: 修改configmap coredns，操作如下
+
+   ```bash
+   kubectl edit configmap coredns -n kube-system  # 进入configmap coredns的编辑状态
+
+   将里面的"forward . /etc/resolv.conf" 改成 "forward . 8.8.8.8"
+   ```
+
+7. 3 master场景下，任意一个master节点宕机后，一般会等待约6分钟，宕机节点的pod才会迁移到其他可用节点。在这段约6分钟的pod迁移时间内，mindxdl平台将不可用。

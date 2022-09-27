@@ -37,27 +37,6 @@
           - harbor-offline-installer-v2.3.3.tgz
           - harbor-offline-installer-aarch64-v2.3.3.tgz
 
-# set basic config for mindxdl
-- hosts:
-    - master
-    - worker
-    - master_backup
-  gather_facts: False
-  tasks:
-  - include_tasks: playbooks/roles/mindx.basic/tasks/common.yml
-
-- hosts:
-    - master
-    - master_backup
-  gather_facts: False
-  tasks:
-  - include_tasks: playbooks/roles/mindx.basic/tasks/master.yml
-
-- hosts: worker
-  gather_facts: False
-  tasks:
-  - include_tasks: playbooks/roles/mindx.basic/tasks/worker.yml
-
 # install softwares
 - hosts:
     - master
@@ -102,6 +81,27 @@
           - ghcr.io
         project_public: "true"
         images_dir: images
+
+# set basic config for mindxdl
+- hosts:
+    - master
+    - worker
+    - master_backup
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/common.yml
+
+- hosts:
+    - master
+    - master_backup
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/master.yml
+
+- hosts: worker
+  gather_facts: False
+  tasks:
+  - include_tasks: playbooks/roles/mindx.basic/tasks/worker.yml
 
 # master init k8s
 - hosts: master

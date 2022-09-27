@@ -3,12 +3,4 @@ resource_dir: "~/resources"
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 
-deb_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/k8s"
 sys_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/sys"
-
-bin_dir: "{{resource_dir}}/linux_{{ansible_architecture}}/k8s"
-image_dir: "{{resource_dir}}/images/{{ansible_architecture}}"
-node_ip: "127.0.0.1"
-k8s_version: 1.19.16
-calico_version: v3.20.2
-online: false
