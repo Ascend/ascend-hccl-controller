@@ -2,6 +2,7 @@
 calico_version: v3.20.2
 kubernetes_version: v1.19.16
 pod_network_cidr: "{{POD_NETWORK_CIDR}}"
+service_cidr: "{{SERVICE_CIDR}}"
 k8s_namespace: "mindx-dl"
 IMAGE_REPO: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}"
 K8S_REPO: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/k8s.gcr.io"

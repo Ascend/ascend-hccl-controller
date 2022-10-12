@@ -57,7 +57,7 @@ master节点无需为NPU插卡环境，普通服务器即可
 
 2. 下载mindxdl-deploy分支的[zip文件](https://gitee.com/ascend/ascend-hccl-controller/repository/archive/mindxdl-deploy.zip)
 
-然后联系工程师取得离线依赖包resources.tar.gz（里面包括开源软件、镜像以及mindxdl的预置镜像等），将离线依赖包解压在master节点的/root目录下。按如下方式放置
+然后联系工程师取得离线依赖包resources.tar.gz（里面包括开源软件、镜像以及mindxdl的内置、预置镜像等），将离线依赖包解压在master节点的/root目录下。mindxdl的内置、预置镜像也需要跟NPU驱动和固件等配套使用。
 
 ```bash
 root@master:~# ls
@@ -223,6 +223,10 @@ CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_KEY: ""
 
+# k8s pod network cidr
+POD_NETWORK_CIDR: "192.168.0.0/16"
+# k8s service cidr
+SERVICE_CIDR: "10.96.0.0/12"
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
 
@@ -252,6 +256,8 @@ HIAI_GROUP: HwHiAiUser
 | CEPHFS_PORT       | cephfs集群的port，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
 | CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。一般为admin  |
 | CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。可在cephfs monitor节点通过`ceph auth get-key client.admin`查询。**安装完成后应立即删除**  |
+| POD_NETWORK_CIDR  | k8s默认pod网段，不可跟其他ip网段重叠或冲突            |
+| SERVICE_CIDR      | k8s默认service网段，不可跟其他ip网段重叠或冲突        |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
 | MINDX_USER_ID     | mindx dl组件默认运行用户id                   |
@@ -271,7 +277,9 @@ HIAI_GROUP: HwHiAiUser
 
    - 3.3 当"STORAGE_TYPE"配置项为"OCEANSTORE"时，请提前准备好oceanstore集群。
 
-3. 使用CephFS或OceanStore方案时，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
+3. 使用CephFS或OceanStore方案时，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为/data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
+
+4. k8s默认使用"192.168.0.0/16"和"10.96.0.0/12"分别作为内部的pod和service网段，不可跟其他网段重叠或冲突。请规划好集群内的ip资源，必要时可根据实际修改POD_NETWORK_CIDR和SERVICE_CIDR配置项
 
 ### 步骤4：检查集群状态
 

@@ -54,6 +54,7 @@
     --kubernetes-version={{ kubernetes_version }}
     --node-name={{ ansible_hostname }}
     --pod-network-cidr={{ pod_network_cidr }}
+    --service-cidr={{ service_cidr }}
     {{ addr_cmd }} {{ repo_cmd }} {{ control_plane_cmd }}
   environment:
     http_proxy: ""
