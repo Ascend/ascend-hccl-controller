@@ -9,3 +9,27 @@
     - /var/log/mindx-dl/hccl-controller
     - /var/log/mindx-dl/volcano-controller
     - /var/log/mindx-dl/volcano-scheduler
+
+- name: create /etc/mindx-dl/image-manager
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+  ignore_errors: true
+  loop:
+    - /etc/mindx-dl
+    - /etc/mindx-dl/image-manager
+
+- name: copy harbor certs
+  copy:
+    src: /etc/kubeedge/ca/rootCA.crt
+    dest: /etc/mindx-dl/image-manager
+    mode: 0400
+
+- name: set volcano logrotate
+  template:
+    src: volcano.j2
+    dest: /etc/logrotate.d/volcano
+    mode: 0640

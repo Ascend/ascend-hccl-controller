@@ -1,13 +1,8 @@
 # defaults file for mindx.k8s.master
-resource_dir: "~/resources"
-OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
-OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
-
-deb_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/k8s"
-image_dir: "{{resource_dir}}/images/{{ansible_architecture}}"
 calico_version: v3.20.2
 kubernetes_version: v1.19.16
 pod_network_cidr: "{{POD_NETWORK_CIDR}}"
+service_cidr: "{{SERVICE_CIDR}}"
 k8s_namespace: "mindx-dl"
 IMAGE_REPO: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}"
 K8S_REPO: "{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/k8s.gcr.io"

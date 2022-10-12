@@ -1,0 +1,9 @@
+---
+# install chrony
+- hosts:
+    - harbor
+    - master
+    - worker
+    - master_backup
+  roles:
+    - role: mindx.chrony

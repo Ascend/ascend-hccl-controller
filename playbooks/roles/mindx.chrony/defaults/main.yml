@@ -1,16 +1,11 @@
-# defaults file for mindx.nfs.server
 resource_dir: "~/resources"
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 
-client_pkg: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsclient"
-server_pkg: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/nfsserver"
+chrony_dir: "{{resource_dir}}/{{OS_ID}}_{{OS_VERSION_ID}}_{{ansible_architecture}}/chrony"
 
-DL_USR: "{{ MINDX_USER }}"
-DL_GRP: "{{ MINDX_GROUP }}"
-
-DL_PATH: "{{ STORAGE_PATH }}"
-PLATFORM_PATH: "{{ STORAGE_PATH }}/platform"
+chrony_config: "{{ '/etc/chrony/chrony.conf' if OS_ID == 'ubuntu' else '/etc/chrony.conf' }}"
+chrony_service: "{{ 'chrony' if OS_ID == 'ubuntu' else 'chronyd' }}"
 
 MASTER_HOSTVARS: "{{ hostvars[groups['master'][0]] }}"
 MASTER_IP: "{{ MASTER_HOSTVARS.apiserver_advertise_address if MASTER_HOSTVARS.apiserver_advertise_address is defined else MASTER_HOSTVARS.ansible_default_ipv4.address }}"

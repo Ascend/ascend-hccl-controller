@@ -3,7 +3,6 @@ resource_dir: "~/resources"
 OS_ID: "{{ lookup('ini', 'ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 OS_VERSION_ID: "{{ lookup('ini', 'VERSION_ID type=properties section=global file=/etc/os-release') | replace('\"', '') }}"
 
-image_dir: "{{resource_dir}}/images/{{ansible_architecture}}"
 k8s_namespace: "{{K8S_NAMESPACE}}"
 pwd: "{{MYSQL_PASSWORD}}"
 MYSQL_YAML_DIR: "~/deploy_yamls/mysql"
