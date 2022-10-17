@@ -432,9 +432,9 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
    root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/16.mindxdl.yaml
    ```
 
-4. （可选）如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin镜像。
+4. （可选）如果k8s集群中包含跟master节点的CPU架构不一致的worker节点，则需要单独执行这一步，用来构建npu-exporter、device-plugin、apigw镜像。
 
-   4.1 任意选择在某个异构的worker节点，将对应CPU架构的npu-exporter、device-plugin组件放到某个目录，比如/tmp/mindxdl；将本工具的tools/build_image.sh构建脚本也传到这个目录
+   4.1 任意选择在某个异构的worker节点，将对应CPU架构的npu-exporter、device-plugin、apigw组件放到某个目录，比如/tmp/mindxdl；将本工具的tools/build_image.sh构建脚本也传到这个目录
 
    ```bash
    /tmp/
@@ -442,27 +442,32 @@ mindx-dl      redis-deploy-85dbb68c56-cfxhq              1/1     Running   1    
       ├── build_image.sh
       ├── Ascend-mindxdl-npu-exporter_{version}-{arch}.zip
       ├── Ascend-mindxdl-device-plugin_{version}-{arch}.zip
+      ├── Ascend-mindxdl-apigw_{version}-{arch}.zip
    ```
 
-   4.2 在该worker节点，执行如下命令，用来构建镜像并上传到harbor。\<harbor-ip\>和\<harbor-port\>分别为之前部署的harbor仓的ip和端口（端口默认为7443），\<*zip_file\>为上一步传上去的npu-exporter或device-plugin的zip包路径
+   4.2 在该worker节点，执行如下命令，用来构建镜像并上传到harbor。\<harbor-ip\>和\<harbor-port\>分别为之前部署的harbor仓的ip和端口（端口默认为7443），\<*zip_file\>为上一步传上去的npu-exporter或device-plugin或apigw的zip包路径
    ```bash
    root@worker-1:/tmp/mindxdl# bash build_image.sh --harbor-ip <harbor-ip> --harbor-port <harbor-port> <npu-exporter_zip_file>
 
    root@worker-1:/tmp/mindxdl# bash build_image.sh --harbor-ip <harbor-ip> --harbor-port <harbor-port> <device-plugin_zip_file>
+
+   root@worker-1:/tmp/mindxdl# bash build_image.sh --harbor-ip <harbor-ip> --harbor-port <harbor-port> <apigw>
    ```
 
-   4.3 回到master节点的本工具目录，执行如下命令，将构建的harbor镜像拉取到所有的worker节点。\<tag\>为镜像tag，可通过组件包内的yaml查询。跟上一步构建镜像的worker节点的架构不一致的其他worker节点，镜像会拉取失败，但无影响，因为镜像已存在
+   4.3 回到master节点的本工具目录，执行如下命令，将构建的npu-exporter或device-plugin镜像拉取到所有的worker节点。\<tag\>为镜像tag，可通过组件包内的yaml查询。跟上一步构建镜像的worker节点的架构不一致的其他worker节点，镜像会拉取失败，但无影响，因为镜像已存在。
    ```bash
    root@master:~/ascend-hccl-controller# ansible worker -i inventory_file -m shell -a "docker pull <harbor-ip>:<harbor-port>/mindx/ascend-k8sdeviceplugin:<tag>"
 
    root@master:~/ascend-hccl-controller# ansible worker -i inventory_file -m shell -a "docker pull <harbor-ip>:<harbor-port>/mindx/npu-exporter:<tag>"
    ```
 
+   apigw中的apigw-business部署在某个worker节点（k8s集群中没有worker节点时部署在master节点），apigw-business的镜像也是apigw。apigw-business由k8s调度到某个worker节点，apigw镜像会从harbor仓自动拉取，故不建议执行上面的命令手动拉取apigw镜像。k8s自动拉取的apigw镜像不会强制更新，如需更新同tag名的apigw镜像，请先删除环境上已存在的旧apigw镜像。
+
 注：
 
 1. MindX DL平台组件安装时依赖harbor。安装过程会制作镜像并上传到harbor中
 
-2. 只支持安装MindX DL平台组件，当前包括14个平台组件（apigw、cluster-manager、data-manager、dataset-manager、image-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在worker节点，其他组件都部署在master节点
+2. 只支持安装MindX DL平台组件，当前包括14个平台组件（apigw、cluster-manager、data-manager、dataset-manager、image-manager、model-manager、inference-manager、train-manager、user-manager、alarm-manager、hccl-controller、volcano、npu-exporter、device-plugin）。其中npu-exporter、device-plugin部署在所有worker节点，apigw中的apigw-business部署在某个worker节点（k8s集群中没有worker节点时部署在master节点），apigw中的apigw及其他组件都部署在master节点
 
 3. npu-exporter、device-plugin组件包内的部分版本由于安全整改，可能没有Dockerfile和yaml文件，需要获取到对应版本的文件并重新打包，获取地址：[链接](https://gitee.com/ascend/mindxdl-deploy/tags)。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 

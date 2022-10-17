@@ -14,7 +14,7 @@ DEBUG="n"
 DRYRUN="n"
 PROJECT="mindx"
 LOCAL_ARCH=$(uname -m)
-DL_COMPONENTS="npu-exporter,device-plugin"
+DL_COMPONENTS="npu-exporter,device-plugin,apigw"
 
 function print_usage()
 {
@@ -143,6 +143,8 @@ function modify_dockerfile()
     fi
     if [[ "${base_img}" == "ubuntu"* ]];then
         sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/dockerhub/${image}_${ARCH}:${tag}#g" ${docker_file}
+    else
+        sed -i "s#^FROM.*#FROM ${HARBOR_HOST}${HARBOR_PORT}/${image}_${ARCH}:${tag}#g" ${docker_file}
     fi
 }
 
