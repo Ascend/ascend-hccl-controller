@@ -31,7 +31,7 @@ function install_ansible()
 
         local have_rpm=0
         case ${os_name} in
-        centos)
+        centos|openEuler)
             local have_rpm=1
             ;;
         ubuntu)
@@ -43,16 +43,22 @@ function install_ansible()
             ;;
         esac
 
-        if [ ${have_rpm} -eq 1 ]; then
+        if [[ ${have_rpm} == 1 ]] && [[ "${os_name}" != "openEuler" ]]; then
             rpm -ivh --force --nodeps --replacepkgs $RESOURCE_DIR/${os_name}_${os_version}_${arch}/python/*.rpm
-        else
+        fi
+        if [[ ${have_rpm} == 0 ]]; then
             export DEBIAN_FRONTEND=noninteractive && export DEBIAN_PRIORITY=critical; dpkg --force-all -i $RESOURCE_DIR/${os_name}_${os_version}_${arch}/python/*.deb
         fi
 
         local python3_version=$(python3 -V)
-        if [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
+        if [[ "${os_name}" != "openEuler" ]] && [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
             echo "python3_version is '${python3_version}'"
-            echo "error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'"
+            echo "error: python3 must be python3.6 provided by the system by default in centos or ubuntu, check it by run 'python3 -V'"
+	        return 1
+        fi
+        if [[ "${os_name}" == "openEuler" ]] && [[ ! "${python3_version}" =~ "Python 3.7." ]]; then
+            echo "python3_version is '${python3_version}'"
+            echo "error: python3 must be python3.7 provided by the system by default in openEuler, check it by run 'python3 -V'"
 	        return 1
         fi
         python3 -m pip install --upgrade pip --no-index --find-links $RESOURCE_DIR/pylibs

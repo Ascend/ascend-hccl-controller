@@ -7,8 +7,7 @@ spec:
   capacity:
     storage: {{ capacity }}
   cephfs:
-    monitors:
-      - {{ CEPHFS_IP }}:{{ CEPHFS_PORT }}
+    monitors: {{ CEPHFS_MONITOR }}
     user: {{ CEPHFS_USER }}
     secretRef:
       name: ceph-secret

@@ -26,6 +26,7 @@
 | Ubuntu | 18.04     | aarch64 |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
 | Ubuntu | 18.04     | x86_64  |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
 | Centos | 7.6       | aarch64 |安装到【SOFTWARE SELECTION】这一步时建议勾选”Debugging Tools、Compatibility Libraries、Development Toos"附件组件|
+| openEuler | 20.03 LTS  | x86_64  |默认最小化安装|
 
 根目录的磁盘空间利用率高于85%会触发Kubelet的镜像垃圾回收机制，将导致服务不可用。请确保根目录有足够的磁盘空间，建议大于500GB
 
@@ -45,9 +46,17 @@ master节点无需为NPU插卡环境，普通服务器即可
 
 请在worker节点先安装NPU硬件对应的驱动和固件，才能构建昇腾NPU的训练和推理任务。安装文档[链接](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909)。NPU驱动和固件、MindX DL平台组件、Toolbox的版本需要配套使用，请参阅官方文档获取配套的软件包
 
+安装NPU驱动和固件时，需要先创建默认运行用户HwHiAiUser。请保证HwHiAiUser的uid和gid一致，且都为1000
+
+```bash
+groupadd -g 1000 HwHiAiUser
+useradd -g HwHiAiUser -u 1000 -d /home/HwHiAiUser -m HwHiAiUser -s /bin/bash
+```
+
 3. 存储（NFS、CephFS、OceanStore）
 
 4. 容器镜像仓（harbor）
+harbor默认安装在本机localhost的/data目录，建议额外配置一块磁盘挂载到/data目录，以避免占用根目录的磁盘空间。
 
 ## 下载本工具
 
@@ -88,9 +97,9 @@ jinja version = 3.0.1
 libyaml = True
 ```
 
-ansible默认安装在python3（Ubuntu 18.04系统自带：python3.6.9，Centos 7.6：python3.6.8）中，安装完成后执行ansible --version查看ansible是否安装成功
+ansible默认安装在python3（Ubuntu 18.04系统自带：python3.6.9，Centos 7.6：python3.6.8，openEuler 20.03 LTS：python3.7.4）中，安装完成后执行ansible --version查看ansible是否安装成功
 
-注意：如果执行中报错“error: python3 must be python3.6 provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3.6.9
+注意：如果执行中报错“error: python3 must be python3.× provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3
 
 ### 步骤2：配置集群信息
 
@@ -125,7 +134,7 @@ localhost ansible_connection=local
 
 注意：
 
-1. k8s要求集群内节点(master、worker、master_backup）的hostname不一样，因此建议执行安装前设置所有节点使用不同的hostname。如果未统一设置且存在相同hostname的节点，那么可在inventory_file文件中设置set_hostname主机变量，安装过程将自动设置节点的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。例如：
+1. k8s要求集群内节点(master、worker、master_backup）的hostname不一样，因此建议执行安装前设置所有节点使用不同的hostname。如果未统一设置且存在相同hostname的节点，那么可在inventory_file文件中设置set_hostname主机变量，安装过程将自动设置节点的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。
 
 2. 在部署master高可用集群时，必须给[master]和[master_backup]的节点设置kube_interface主机变量，以及增加一个[all:vars]的kube_vip主机组变量。kube_interface为各自节点实际使用的ip对应的网卡名称，可通过`ip a`查询，如"enp125s0f0"。kube_vip需跟k8s集群节点ip在同一子网，且为闲置、未被他人使用的ip，请联系网络管理员获取。
 
@@ -214,10 +223,8 @@ STORAGE_PATH: "/data/atlas_dls"
 # storage capatity, default to "5120Gi", i.e. 5Ti
 STORAGE_CAPACITY: "5120Gi"
 
-# cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_IP: ""
-# cephfs port. can not be empty if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_PORT: ""
+# cephfs monitor "ip1:port1,ip2:port2,..." list. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_MONITOR: []
 # cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
@@ -236,8 +243,11 @@ MINDX_USER_ID: 9000
 MINDX_GROUP: hwMindX
 MINDX_GROUP_ID: 9000
 
-#HwHiAiUser group
+#HwHiAiUser user
+HIAI_USER: HwHiAiUser
+HIAI_USER_ID: 1000
 HIAI_GROUP: HwHiAiUser
+HIAI_GROUP_ID: 1000
 ```
 
 其中中配置项详细为：
@@ -252,9 +262,8 @@ HIAI_GROUP: HwHiAiUser
 | STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"或"OCEANSTORE"           |
 | STORAGE_PATH      | 存储的共享路径，默认为/data/atlas_dls   |
 | STORAGE_CAPACITY  | 存储的共享容量，默认为5Ti，**请根据实际配置**   |
-| CEPHFS_IP         | cephfs集群的monitor ip，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
-| CEPHFS_PORT       | cephfs集群的port，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*  |
-| CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。一般为admin  |
+| CEPHFS_MONITOR    | cephfs集群的monitor节点["ip1:port,ip2:port,..."]列表，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。cephfs集群一般会有多个monitor节点，建议都配置上，以实现挂载高可用性；port默认为6789  |
+| CEPHFS_USER       | cephfs集群的用户名，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。默认为admin  |
 | CEPHFS_KEY        | cephfs集群的密钥，*"STORAGE_TYPE"设置为"CEPHFS"时不可为空，必须配置*。可在cephfs monitor节点通过`ceph auth get-key client.admin`查询。**安装完成后应立即删除**  |
 | POD_NETWORK_CIDR  | k8s默认pod网段，不可跟其他ip网段重叠或冲突            |
 | SERVICE_CIDR      | k8s默认service网段，不可跟其他ip网段重叠或冲突        |
@@ -263,7 +272,10 @@ HIAI_GROUP: HwHiAiUser
 | MINDX_USER_ID     | mindx dl组件默认运行用户id                   |
 | MINDX_GROUP       | mindx dl组件默认运行用户组                    |
 | MINDX_GROUP_ID    | mindx dl组件默认运行用户组id                  |
-| HIAI_GROUP        | 驱动默认运行用户组                    |
+| HIAI_USER         | 驱动默认运行用户                              |
+| HIAI_USER_ID      | 驱动默认运行用户id                            |
+| HIAI_GROUP        | 驱动默认运行用户组                            |
+| HIAI_GROUP_ID     | 驱动默认运行用户组id                          |
 
 注：
 
@@ -273,11 +285,11 @@ HIAI_GROUP: HwHiAiUser
 
    - 3.1 当"STORAGE_TYPE"配置项为"NFS"时，请确认【步骤2：配置集群信息】inventory_file的"nfs_server"配置正确。
 
-   - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_IP"、"CEPHFS_PORT"、"CEPHFS_USER"、"CEPHFS_KEY"这4个配置项填写正确。
+   - 3.2 当"STORAGE_TYPE"配置项为"CEPHFS"时，请提前准备好cephfs集群，并确认"CEPHFS_MONITOR"、"CEPHFS_USER"、"CEPHFS_KEY"这3个配置项填写正确。
 
    - 3.3 当"STORAGE_TYPE"配置项为"OCEANSTORE"时，请提前准备好oceanstore集群。
 
-3. 使用CephFS或OceanStore方案时，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为/data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
+3. **使用CephFS或OceanStore方案时**，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为/data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
 
 4. k8s默认使用"192.168.0.0/16"和"10.96.0.0/12"分别作为内部的pod和service网段，不可跟其他网段重叠或冲突。请规划好集群内的ip资源，必要时可根据实际修改POD_NETWORK_CIDR和SERVICE_CIDR配置项
 
@@ -581,9 +593,9 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
 
 2. Q: 安装某组件时报错，报错信息中包含访问harbor镜像仓失败等字样
 
-- A: harbor镜像仓会管理安装过程中的所有镜像。首先可能是某节点docker.service配置了代理，具体请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>。其次可能是harbor服务异常，可在harbor主机上执行`docker ps | grep goharbor`，如果不是存在9个容器且均为up状态，可执行`systemctl restart harbor`重启harbor服务。如果重启harbor服务后harbor服务仍然异常，建议直接重装harbor（执行04.harbor.yaml子任务）
+- A: harbor镜像仓会管理安装过程中的所有镜像。首先可能是某节点docker.service配置了代理，具体请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>。其次可能是harbor服务异常，可在harbor主机上执行`docker ps | grep goharbor`，如果不是存在9个容器且均为up状态，可执行`systemctl restart harbor`重启harbor服务。如果重启harbor服务后harbor服务仍然异常，建议直接重装harbor（执行03.harbor.yaml子任务）
 
-3. 初始化master时，有报错信息“no default routes found in /proc/net/route or /proc/net/ipv6_route”、“cannot use 0.0.0.0 as the bind address for the API Server"等
+3. 初始化master时，有报错信息“no default routes found in /proc/net/route or /proc/net/ipv6_route”、“cannot use 0.0.0.0 as the bind address for the API Server”等
 
 - A: 多网卡的复杂网络场景下，可能会出现这个问题。请确认网卡路由是否畅通
 
@@ -611,4 +623,14 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
    将里面的"forward . /etc/resolv.conf" 改成 "forward . 8.8.8.8"
    ```
 
-7. 3 master场景下，任意一个master节点宕机后，一般会等待约6分钟，宕机节点的pod才会迁移到其他可用节点。在这段约6分钟的pod迁移时间内，mindxdl平台将不可用。
+7. 3 master场景下，任意一个master节点宕机后，一般会等待约6分钟，宕机节点的pod才会迁移到其他可用节点。在这段约6分钟的pod迁移时间内，mindxdl平台将不可用。harbor默认安装在本机localhost上，如果本机宕机，mindxdl平台将不可用
+
+8. kube-controller-manager或其他k8s组件日志出现“Throttling request took ”访问超时等报错信息。
+
+- A: 在k8s集群规模变大、应用数量变多时，可能出现与kube-apiserver的通信阻塞。kube-controller-manager的--kube-api-burst、--kube-api-qps参数默认值分别为10、5；根据集群规模，可适当增大这2个参数值来实现性能调优。比如分别调整为500、300
+
+   ```bash
+   vi /etc/kubernetes/manifests/kube-controller-manager.yaml  # 修改master节点上的kube-controller-manager静态pod文件；如果是3 master场景的话，3个master节点上都要修改
+
+   在"spec.containers.command"下面，与"- kube-controller-manager"同级，增加"- --kube-api-burst=500"和"- --kube-api-qps=300"2行参数  # 修改完成后，kube-controller-manager静态pod会自动重启生效
+   ```

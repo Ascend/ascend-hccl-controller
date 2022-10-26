@@ -16,8 +16,6 @@
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
 
-- name: install nfs client for centos
+- name: install nfs client for centos or openEuler
   shell: rpm -ivh --force --nodeps --replacepkgs {{ client_pkg }}/*.rpm
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'

@@ -13,13 +13,11 @@
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
 
-- name: install nfs server for centos
+- name: install nfs server for centos or openEuler
   shell: |
       rpm -ivh --force --nodeps --replacepkgs {{ client_pkg }}/*.rpm
       rpm -ivh --force --nodeps --replacepkgs {{ server_pkg }}/*.rpm
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'
 
 - name: create nfs path
   file:

@@ -7,11 +7,9 @@
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
 
-- name: install chrony for centos
+- name: install chrony for centos or openEuler
   shell: rpm -ivh --force --nodeps --replacepkgs {{ chrony_dir }}/*.rpm
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'
 
 - name: config chrony
   ansible.builtin.replace:
@@ -42,6 +40,13 @@
     line: "server {{ MASTER_IP }} iburst"
     state: present
   when: ansible_connection != "local"
+
+- name: "stopped firewalld"
+  systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+  when: OS_ID != 'ubuntu'
 
 - name: "restart chrony"
   systemd:
