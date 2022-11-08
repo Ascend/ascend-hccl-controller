@@ -72,6 +72,4 @@
     name: firewalld
     enabled: no
     state: stopped
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'

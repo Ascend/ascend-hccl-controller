@@ -5,6 +5,7 @@
 - name: set hostname
   ansible.builtin.hostname:
     name: "{{set_hostname}}"
+    use: systemd
   when: set_hostname is defined
 
 - name: set bridge-nf-call-iptables 1
@@ -41,6 +42,12 @@
     - OS_VERSION_ID == '7'
     - kube_interface is defined
 
+- name: create /etc/resolv.conf
+  file:
+    path: /etc/resolv.conf
+    state: touch
+    mode: '0640'
+
 - name: install sys for ubuntu
   shell: dpkg --force-all -i {{ sys_dir }}/*.deb
   environment:
@@ -50,11 +57,9 @@
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
 
-- name: install sys for centos
+- name: install sys for centos or openEuler
   shell: rpm -ivh --force --nodeps --replacepkgs {{ sys_dir }}/*.rpm
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'
 
 - include_tasks: common.yml
 

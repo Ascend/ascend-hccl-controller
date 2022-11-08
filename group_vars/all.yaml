@@ -18,10 +18,8 @@ STORAGE_PATH: "/data/atlas_dls"
 # storage capatity, default to "5120Gi", i.e. 5Ti
 STORAGE_CAPACITY: "5120Gi"
 
-# cephfs monitor ip. can not be empty if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_IP: ""
-# cephfs port. can not be empty if "STORAGE_TYPE" is "CEPHFS"
-CEPHFS_PORT: ""
+# cephfs monitor "ip1:port1,ip2:port2,..." list. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_MONITOR: []
 # cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
 CEPHFS_USER: ""
 # cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
@@ -40,5 +38,8 @@ MINDX_USER_ID: 9000
 MINDX_GROUP: hwMindX
 MINDX_GROUP_ID: 9000
 
-#HwHiAiUser group
+#HwHiAiUser user
+HIAI_USER: HwHiAiUser
+HIAI_USER_ID: 1000
 HIAI_GROUP: HwHiAiUser
+HIAI_GROUP_ID: 1000

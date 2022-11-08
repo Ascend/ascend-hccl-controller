@@ -7,17 +7,13 @@
     - OS_ID == 'ubuntu'
     - OS_VERSION_ID == '18.04'
 
-- name: install docker-ce for centos
+- name: install docker-ce for centos or openEuler
   shell: rpm -ivh --force --nodeps --replacepkgs {{ pkg_dir }}/*.rpm
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'
 
 - name: restart docker
   shell: systemctl restart docker
-  when:
-    - OS_ID == 'centos'
-    - OS_VERSION_ID == '7'
+  when: OS_ID != 'ubuntu'
 
 - name: config docker
   template:
