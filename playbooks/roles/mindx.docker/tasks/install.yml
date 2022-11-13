@@ -3,17 +3,14 @@
   environment:
     DEBIAN_FRONTEND: noninteractive
     DEBIAN_PRIORITY: critical
-  when:
-    - OS_ID == 'ubuntu'
-    - OS_VERSION_ID == '18.04'
+  when: OS_ID == 'ubuntu'
 
-- name: install docker-ce for centos or openEuler
+- name: install docker-ce for not ubuntu
   shell: rpm -ivh --force --nodeps --replacepkgs {{ pkg_dir }}/*.rpm
   when: OS_ID != 'ubuntu'
 
 - name: restart docker
   shell: systemctl restart docker
-  when: OS_ID != 'ubuntu'
 
 - name: config docker
   template:

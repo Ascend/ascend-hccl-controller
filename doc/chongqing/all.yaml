@@ -1,0 +1,45 @@
+# harbor https port
+HARBOR_HTTPS_PORT: 7443
+# harbor install path
+HARBOR_PATH: /data/harbor
+# password for harbor, can not be empty, delete immediately after finished
+HARBOR_PASSWORD: "Harbor12345"
+
+# password for mysql, can not be empty, delete immediately after finished
+MYSQL_PASSWORD: "Huawei12#$"
+
+# password for redis, can not be empty, delete immediately after finished
+REDIS_PASSWORD: "Huawei@123"
+
+# select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
+STORAGE_TYPE: "CEPHFS"
+# mindx-dl platform storage path on "NFS" or "CEPHFS" or "OCEANSTORE", default to /data/atlas_dls
+STORAGE_PATH: "/data/atlas_dls"
+# storage capatity, default to "5120Gi", i.e. 5Ti
+STORAGE_CAPACITY: "46080Gi"
+
+# cephfs monitor "ip1:port1,ip2:port2,..." list. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_MONITOR: ["192.168.105.81:6789,192.168.105.82:6789,192.168.105.83:6789"]
+# cephfs user. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_USER: "admin"
+# cephfs key. can not be empty if "STORAGE_TYPE" is "CEPHFS"
+CEPHFS_KEY: "AQCXr3Fj5YGfNxAAsNX1pqISpNRLWK0F5MBZDw=="
+
+# k8s pod network cidr
+POD_NETWORK_CIDR: "193.188.0.0/16"
+# k8s service cidr
+SERVICE_CIDR: "12.96.0.0/12"
+# mindx k8s namespace
+K8S_NAMESPACE: "mindx-dl"
+
+#mindx user
+MINDX_USER: hwMindX
+MINDX_USER_ID: 9000
+MINDX_GROUP: hwMindX
+MINDX_GROUP_ID: 9000
+
+#HwHiAiUser user
+HIAI_USER: HwHiAiUser
+HIAI_USER_ID: 1000
+HIAI_GROUP: HwHiAiUser
+HIAI_GROUP_ID: 1000

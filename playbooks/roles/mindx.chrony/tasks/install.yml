@@ -3,11 +3,9 @@
   environment:
     DEBIAN_FRONTEND: noninteractive
     DEBIAN_PRIORITY: critical
-  when:
-    - OS_ID == 'ubuntu'
-    - OS_VERSION_ID == '18.04'
+  when: OS_ID == 'ubuntu'
 
-- name: install chrony for centos or openEuler
+- name: install chrony for not ubuntu
   shell: rpm -ivh --force --nodeps --replacepkgs {{ chrony_dir }}/*.rpm
   when: OS_ID != 'ubuntu'
 

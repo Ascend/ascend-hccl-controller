@@ -31,14 +31,14 @@ function install_ansible()
 
         local have_rpm=0
         case ${os_name} in
-        centos|openEuler)
+        centos|openEuler|kylin)
             local have_rpm=1
             ;;
         ubuntu)
             local have_rpm=0
             ;;
         *)
-            log_error "check OS ${os_name} fail"
+            echo "error: check OS ${os_name} fail"
             return 1
             ;;
         esac
@@ -51,16 +51,46 @@ function install_ansible()
         fi
 
         local python3_version=$(python3 -V)
-        if [[ "${os_name}" != "openEuler" ]] && [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
-            echo "python3_version is '${python3_version}'"
-            echo "error: python3 must be python3.6 provided by the system by default in centos or ubuntu, check it by run 'python3 -V'"
-	        return 1
-        fi
-        if [[ "${os_name}" == "openEuler" ]] && [[ ! "${python3_version}" =~ "Python 3.7." ]]; then
-            echo "python3_version is '${python3_version}'"
-            echo "error: python3 must be python3.7 provided by the system by default in openEuler, check it by run 'python3 -V'"
-	        return 1
-        fi
+        echo "python3_version is '${python3_version}'"
+        case ${os_name} in
+        centos)
+            if [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
+                echo "error: python3 must be Python 3.6 provided by the centos 7.6 by default, check it by run 'python3 -V'"
+                return 1
+            fi
+            ;;
+        ubuntu)
+            case ${os_version} in
+            18.04)
+                if [[ ! "${python3_version}" =~ "Python 3.6." ]]; then
+                echo "error: python3 must be Python 3.6 provided by the ubuntu 18.04 by default, check it by run 'python3 -V'"
+                return 1
+                fi
+                ;;
+            20.04)
+                if [[ ! "${python3_version}" =~ "Python 3.8." ]]; then
+                echo "error: python3 must be Python 3.8 provided by the ubuntu 20.04 by default, check it by run 'python3 -V'"
+                return 1
+                fi
+                ;;
+            *)
+                echo "error: check version ${os_version} fail"
+                return 1
+                ;;
+            esac
+            ;;
+        openEuler|kylin)
+            if [[ ! "${python3_version}" =~ "Python 3.7." ]]; then
+                echo "error: python3 must be Python 3.7 provided by the openEuler 20.03 or kylin v10 sp1 by default, check it by run 'python3 -V'"
+                return 1
+            fi
+            ;;
+        *)
+            echo "error: check OS ${os_name} fail"
+            return 1
+            ;;
+        esac
+
         python3 -m pip install --upgrade pip --no-index --find-links $RESOURCE_DIR/pylibs
         python3 -m pip install ansible --no-index --find-links $RESOURCE_DIR/pylibs
     else
