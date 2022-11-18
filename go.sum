@@ -26,6 +26,7 @@ codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/utils v0.1.4/go.mod h1:gzaoiHwloaNTtm46GVe93KtXMcXVHJ8LBVqWEAjmh+0=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.7 h1:Z7CL7mSZJvTjYZ1CIT4qwxeF950K4q5ihr6eUsovcAM=
 codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.7/go.mod h1:coN56EHJ/BP51hHy5jtD5ob8L7r72KgMDOo0zAC5R4Y=
+codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/common-utils.git/x509 v0.0.8/go.mod h1:coN56EHJ/BP51hHy5jtD5ob8L7r72KgMDOo0zAC5R4Y=
 codehub-dg-y.huawei.com/OpenSourceCenter/golang/protobuf.git v1.5.1 h1:ptrmIDK/X3PgIa5CV5ATOs3m/rfRD3EmpcLXgYXp/2s=
 codehub-dg-y.huawei.com/OpenSourceCenter/golang/protobuf.git v1.5.1/go.mod h1:DopwsBzvsk0Fs44TXzsVbJyPhcCPeIwnvohx4u74HPM=
 codehub-dg-y.huawei.com/OpenSourceCenter/kubernetes.git/staging/src/k8s.io/api v1.19.4-h4 h1:lVQ8yCZOb7UM2OMwIW0DDWc5242hFIM3n18Ri02IFR0=
