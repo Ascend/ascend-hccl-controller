@@ -9,6 +9,7 @@ CREATE USER 'data_user'@'%'    IDENTIFIED BY "{{pwd}}";
 CREATE USER 'cluster_user'@'%' IDENTIFIED BY "{{pwd}}";
 CREATE USER 'alarm_user'@'%'   IDENTIFIED BY "{{pwd}}";
 CREATE USER 'inference_user'@'%' IDENTIFIED BY "{{pwd}}";
+CREATE USER 'apigw_user'@'%' IDENTIFIED BY "{{pwd}}";
 
 GRANT ALL PRIVILEGES ON *.* TO 'user_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'dataset_user'@'%';
@@ -19,6 +20,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'data_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'cluster_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'alarm_user'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'inference_user'@'%';
+GRANT ALL PRIVILEGES ON *.* TO 'apigw_user'@'%';
 
 USE dl_platform;
 CREATE TABLE IF NOT EXISTS image_configs(
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS image_configs(
     extra_param VARCHAR(256) DEFAULT '',
     create_time DATETIME NOT NULL,
     is_share tinyint(1) NOT NULL DEFAULT 0,
+    image_usage VARCHAR(32) DEFAULT '',
     PRIMARY KEY ( id ),
     UNIQUE (harbor_path)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8;

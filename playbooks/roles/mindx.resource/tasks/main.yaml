@@ -1,8 +1,8 @@
 - name: check HARBOR_PASSWORD and MYSQL_PASSWORD and REDIS_PASSWORD
   debug:
-    msg: "HARBOR_PASSWORD and MYSQL_PASSWORD and REDIS_PASSWORD can not be empty in group_vars/all.yaml, please check"
+    msg: "HARBOR_PASSWORD and MYSQL_PASSWORD and REDIS_PASSWORD and APIGW_LOADBALANCER_IP can not be empty in group_vars/all.yaml, please check"
   failed_when: true
-  when: HARBOR_PASSWORD | length == 0 or MYSQL_PASSWORD | length == 0 or REDIS_PASSWORD | length == 0
+  when: HARBOR_PASSWORD | length == 0 or MYSQL_PASSWORD | length == 0 or REDIS_PASSWORD | length == 0 or APIGW_LOADBALANCER_IP | length == 0
 
 - name: create resource directory
   file:

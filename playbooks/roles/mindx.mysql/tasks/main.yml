@@ -92,6 +92,7 @@
     - { "user":"data_user",    "dbname":"dl_platform",    "service": "data-manager"}
     - { "user":"cluster_user", "dbname":"dl_platform", "service": "cluster-manager"}
     - { "user":"alarm_user",   "dbname":"dl_platform",   "service": "alarm-manager"}
+    - { "user":"apigw_user",   "dbname":"dl_platform",   "service": "apigw"}
 
 - name: create yamls
   template:

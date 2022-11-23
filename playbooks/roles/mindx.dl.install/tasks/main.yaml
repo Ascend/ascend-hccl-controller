@@ -2,19 +2,23 @@
   debug:
     msg: "**********start install MindX DL********************"
 
+- name: message
+  debug:
+    msg: "APIGW_LOADBALANCER_IP can not be empty in group_vars/all.yaml, please check"
+  failed_when: true
+  when: APIGW_LOADBALANCER_IP | length == 0
+
 - name: create image-pull-secret
   shell: |
-    kubectl delete secret --namespace={{ item }} image-pull-secret
+    kubectl delete secret --namespace={{ K8S_NAMESPACE }} image-pull-secret
     kubectl create secret docker-registry image-pull-secret \
-    --namespace={{ item }} \
+    --namespace={{ K8S_NAMESPACE }} \
     --docker-server={{ HARBOR_IP }}:{{ HARBOR_HTTPS_PORT }} --docker-username=admin --docker-password={{ HARBOR_PASSWORD }}
   environment:
     http_proxy: ""
     https_proxy: ""
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
-  loop:
-    - mindx-dl
 
 - name: copy dlinstall script
   copy:
@@ -41,3 +45,34 @@
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-volcano*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-npu-exporter*.zip"
     - "{{ resource_dir }}/mindxdl/Ascend-mindxdl-device-plugin*.zip"
+
+- name: create deploy directory on host
+  file:
+    path: "{{ APIGW_YAML_DIR }}"
+    state: directory
+    mode: 0750
+
+- name: create yamls
+  template:
+    src: "{{ item }}"
+    dest: "{{ APIGW_YAML_DIR }}/{{ item }}"
+    mode: 0640
+  with_items:
+    - apigw-loadbalancer.yaml
+    - apigw-business-loadbalancer.yaml
+
+- name: expose loadbalancer
+  shell: "kubectl apply -f {{ APIGW_YAML_DIR }}/{{ item }}"
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  with_items:
+    - apigw-loadbalancer.yaml
+    - apigw-business-loadbalancer.yaml
+
+- name: message
+  debug:
+    msg:
+      - "Mindx DL Platform is now available at: https://{{ APIGW_LOADBALANCER_IP }}:{{ APIGW_LOADBALANCER_PORT }}"

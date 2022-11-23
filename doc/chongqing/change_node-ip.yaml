@@ -1,0 +1,11 @@
+# hosts指定为all，master的inventory_hostname默认为localhost，不是ip，需单独改一下
+---
+- hosts: all
+  gather_facts: False
+  tasks: 
+    - debug: 
+        msg: "{{ inventory_hostname }}"
+    - shell: |
+        echo 'KUBELET_EXTRA_ARGS="--node-ip={{ inventory_hostname }}"' > /etc/default/kubelet
+        systemctl daemon-reload
+        systemctl restart kubelet

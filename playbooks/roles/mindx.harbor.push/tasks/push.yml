@@ -47,10 +47,10 @@
     kubectl exec {{ mysql_pod.stdout }} -n {{ k8s_namespace }} -- \
     mysql -u image_user -p{{ MYSQL_PASSWORD }} -e \
     "USE dl_platform; \
-    INSERT IGNORE INTO image_configs(image_name, image_tag, image_size, harbor_path, prefabricated, image_arch, create_time) \
+    INSERT IGNORE INTO image_configs(image_name, image_tag, image_size, harbor_path, prefabricated, image_arch, create_time, image_usage) \
     VALUES('{{manifest_name.split('/')[-1]}}', '{{tag}}', \
     {{ (image_size.stdout | replace(image_size.stdout[-2:], '') | float) * ((1024 if 'GB' in image_size.stdout else 1) | float) }}, \
-    '{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{harbor_path}}:{{tag}}', {{prefabricated}}, '{{image_arch}}', NOW());"
+    '{{HARBOR_IP}}:{{HARBOR_HTTPS_PORT}}/{{harbor_path}}:{{tag}}', {{prefabricated}}, '{{image_arch}}', NOW(), '{{image_usage}}');"
   environment:
     http_proxy: ""
     https_proxy: ""
