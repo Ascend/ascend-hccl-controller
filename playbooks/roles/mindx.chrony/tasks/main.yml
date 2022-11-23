@@ -8,7 +8,7 @@
   changed_when: false
 
 - include_tasks: install.yml
-  when: chrony_status.stdout == "0" or (chrony_status.stdout == "1" and OS_ID == "openEuler")
+  when: chrony_status.stdout == "0" or (chrony_status.stdout == "1" and (OS_ID == "openEuler" or OS_ID == "kylin"))
 
 - name: message
   debug:

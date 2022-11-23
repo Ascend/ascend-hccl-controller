@@ -6,13 +6,13 @@
 
 # 然后用chmod u+x ssh-copy-id.sh，执行./ssh-copy-id.sh，即可循环执行ssh-copy-id命令，将公钥copy到远程节点172.16.0.10~172.16.0.43
 
-set timeout 5
+set timeout 8
 
 for {set i 10} {${i}<=43} {incr i} {
   spawn ssh-copy-id 172.16.0.${i}
   expect {
     "(yes/no)?" { send "yes\n"; exp_continue }
-    "password"  { send "Huawei12#$\n" }
+    "password"  { send "****\n" }
   }
 #  expect eof
 }

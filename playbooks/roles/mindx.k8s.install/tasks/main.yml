@@ -53,11 +53,9 @@
   environment:
     DEBIAN_FRONTEND: noninteractive
     DEBIAN_PRIORITY: critical
-  when:
-    - OS_ID == 'ubuntu'
-    - OS_VERSION_ID == '18.04'
+  when: OS_ID == 'ubuntu'
 
-- name: install sys for centos or openEuler
+- name: install sys for not ubuntu
   shell: rpm -ivh --force --nodeps --replacepkgs {{ sys_dir }}/*.rpm
   when: OS_ID != 'ubuntu'
 

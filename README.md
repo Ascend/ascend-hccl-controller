@@ -25,10 +25,14 @@
 |:------:|:---------:|:-------:|:-----------:|
 | Ubuntu | 18.04     | aarch64 |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
 | Ubuntu | 18.04     | x86_64  |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
+| Ubuntu | 20.04     | x86_64  |安装到【Software selection】这一步时勾选【OpenSSH server】/【SSH server】附件组件|
 | Centos | 7.6       | aarch64 |安装到【SOFTWARE SELECTION】这一步时建议勾选”Debugging Tools、Compatibility Libraries、Development Toos"附件组件|
-| openEuler | 20.03 LTS  | x86_64  |默认最小化安装|
+| openEuler | 20.03 LTS  | x86_64  |最小化安装|
+| Kylin |  v10 sp1  | x86_64  |最小化安装|
 
 根目录的磁盘空间利用率高于85%会触发Kubelet的镜像垃圾回收机制，将导致服务不可用。请确保根目录有足够的磁盘空间，建议大于500GB
+
+建议参照上述备注要求安装操作系统，如最小化安装，否则可能有软件包冲突，导致服务不可用
 
 ### 角色说明
 
@@ -97,9 +101,9 @@ jinja version = 3.0.1
 libyaml = True
 ```
 
-ansible默认安装在python3（Ubuntu 18.04系统自带：python3.6.9，Centos 7.6：python3.6.8，openEuler 20.03 LTS：python3.7.4）中，安装完成后执行ansible --version查看ansible是否安装成功
+ansible安装在系统默认的python3（Ubuntu 18.04：python3.6.9，Ubuntu 20.04：python3.8.10，Centos 7.6：python3.6.8，openEuler 20.03 LTS：python3.7.4，Kylin v10 sp1：python3.7.9）中，安装完成后执行ansible --version查看ansible是否安装成功
 
-注意：如果执行中报错“error: python3 must be python3.× provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统自带的python3
+注意：如果执行中报错“error: python3 must be Python 3.× provided by the system by default, check it by run 'python3 -V'”，可能原因是环境上设置了相关环境变量或软连接，导致python3指向了其他的python版本，请保证python3命令指向系统默认的python3
 
 ### 步骤2：配置集群信息
 
@@ -587,23 +591,25 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
 
 # FAQ
 
-1. Q: 某个节点的calico-node-**出现READY “0/1”，`kubectl describe pod calico-node-**(master的calico-node)`时有报错信息“calico/node is not ready: BIRD is not ready: BGP not established with \<ip\>”
+1. 3 master场景下，任意一个master节点宕机后，一般会等待约6分钟，宕机节点的pod才会迁移到其他可用节点。在这段约6分钟的pod迁移时间内，mindxdl平台将不可用。harbor默认安装在本机localhost上，如果本机宕机，mindxdl平台将不可用
+
+2. Q: 某个节点的calico-node-**出现READY “0/1”，`kubectl describe pod calico-node-**(master的calico-node)`时有报错信息“calico/node is not ready: BIRD is not ready: BGP not established with \<ip\>”
 
 - A: 可能是该节点的交换分区被打开了（swap on，可通过`free`查询)，kubelet日志报错“failed to run Kubelet: running with swap on is not supported, please disable swap”，导致该节点calico访问失败。解决方案是禁用swap（执行`swapoff -a`）
 
-2. Q: 安装某组件时报错，报错信息中包含访问harbor镜像仓失败等字样
+3. Q: 安装某组件时报错，报错信息中包含访问harbor镜像仓失败等字样
 
 - A: harbor镜像仓会管理安装过程中的所有镜像。首先可能是某节点docker.service配置了代理，具体请见<a href="#resources_no_copy">步骤5：执行安装注意事项第3点</a>。其次可能是harbor服务异常，可在harbor主机上执行`docker ps | grep goharbor`，如果不是存在9个容器且均为up状态，可执行`systemctl restart harbor`重启harbor服务。如果重启harbor服务后harbor服务仍然异常，建议直接重装harbor（执行03.harbor.yaml子任务）
 
-3. 初始化master时，有报错信息“no default routes found in /proc/net/route or /proc/net/ipv6_route”、“cannot use 0.0.0.0 as the bind address for the API Server”等
+4. 初始化master时，有报错信息“no default routes found in /proc/net/route or /proc/net/ipv6_route”、“cannot use 0.0.0.0 as the bind address for the API Server”等
 
 - A: 多网卡的复杂网络场景下，可能会出现这个问题。请确认网卡路由是否畅通
 
-4. 3 master场景下，2个master_backup节点执行加入k8s集群命令时，报错访问\<kube-vip\>:6443被拒。
+5. 3 master场景下，2个master_backup节点执行加入k8s集群命令时，报错访问\<kube-vip\>:6443被拒。
 
 - A: 可能是该节点上残留之前部署的“kube-vip”，手动删除该ip即可。具体操作可见上文
 
-5. k8s集群部署起来后，pod ip和node ip不是预期的业务ip，而是其他无关的ip
+6. k8s集群部署起来后，pod ip和node ip不是预期的业务ip，而是其他无关的ip
 
 - A: 多网卡的复杂网络场景下，可能会出现这个问题。建议在各个节点上配置kubelet参数，操作如下
    ```bash
@@ -613,7 +619,7 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
    systemctl daemon-reload && systemctl restart kubelet  # 重启kubelet，使配置生效
    ```
 
-6. coredns在centos7.6上可能报错"plugin/forward: no nameservers found"
+7. coredns在centos7.6上可能报错"plugin/forward: no nameservers found"
 
 - A: 修改configmap coredns，操作如下
 
@@ -623,9 +629,7 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
    将里面的"forward . /etc/resolv.conf" 改成 "forward . 8.8.8.8"
    ```
 
-7. 3 master场景下，任意一个master节点宕机后，一般会等待约6分钟，宕机节点的pod才会迁移到其他可用节点。在这段约6分钟的pod迁移时间内，mindxdl平台将不可用。harbor默认安装在本机localhost上，如果本机宕机，mindxdl平台将不可用
-
-8. kube-controller-manager或其他k8s组件日志出现“Throttling request took ”访问超时等报错信息。
+8. kube-controller-manager或其他k8s组件日志出现“Throttling request took ”访问超时等报错信息
 
 - A: 在k8s集群规模变大、应用数量变多时，可能出现与kube-apiserver的通信阻塞。kube-controller-manager的--kube-api-burst、--kube-api-qps参数默认值分别为10、5；根据集群规模，可适当增大这2个参数值来实现性能调优。比如分别调整为500、300
 
@@ -634,3 +638,17 @@ root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playboo
 
    在"spec.containers.command"下面，与"- kube-controller-manager"同级，增加"- --kube-api-burst=500"和"- --kube-api-qps=300"2行参数  # 修改完成后，kube-controller-manager静态pod会自动重启生效
    ```
+
+9. hostname自动改变
+
+- A: 部分OS安装时自带cloud-init组件，该组件会自动设置hostname为某个默认值，可禁用此功能
+
+   ```bash
+   vi /etc/cloud/cloud.cfg  # 进入cloud-init的配置文件
+   
+   将里面的"preserve_hostname: false" 改成 "preserve_hostname: true"
+   ```
+
+10. 部分pod如coredns，在Kylin v10 sp1上报错"Error response from daemon: OCI runtime create failed: container_linux.go:318: starting container process caused process_linux.go:281: applying cgroup configuration for process caused No such device or address: unknown"
+
+- A: Kylin v10 sp1安装os时非最小化安装，自带了docker-runc、podman组件，与本工具安装的k8s、docker版本不匹配。卸载docker-runc、podman组件即可

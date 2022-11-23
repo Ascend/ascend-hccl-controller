@@ -13,8 +13,10 @@
           - linux_x86_64
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
+          - ubuntu_20.04_x86_64
           - centos_7_aarch64
           - openEuler_20.03_x86_64
+          - kylin_V10_x86_64
 
 # copy nfs resources to nfs_server host
 - hosts:
@@ -26,8 +28,10 @@
         resource_list:
           - ubuntu_18.04_aarch64
           - ubuntu_18.04_x86_64
+          - ubuntu_20.04_x86_64
           - centos_7_aarch64
           - openEuler_20.03_x86_64
+          - kylin_V10_x86_64
 
 # copy harbor install package to harbor host
 - hosts: harbor
