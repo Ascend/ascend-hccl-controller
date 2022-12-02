@@ -220,6 +220,13 @@ MYSQL_PASSWORD: ""
 # password for redis, can not be empty, delete immediately after finished
 REDIS_PASSWORD: ""
 
+# apigw/apigw-business loadBalancerIP
+APIGW_LOADBALANCER_IP: ""
+# apigw loadBalancerIP port
+APIGW_LOADBALANCER_PORT: "443"
+# apigw-business loadBalancerIP port
+APIGW_BUSINESS_LOADBALANCER_PORT: "444"
+
 # select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
 # mindx-dl platform storage path on "NFS" or "CEPHFS" or "OCEANSTORE", default to /data/atlas_dls
@@ -263,6 +270,9 @@ HIAI_GROUP_ID: 1000
 | HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
 | MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
 | REDIS_PASSWORD    | redis的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
+| APIGW_LOADBALANCER_IP    | apigw/apigw-business的loadBalancerIP，作为Mindx DL平台的访问ip，不可为空，**必须配置**。这个ip表现为虚拟ip，应设置为闲置、未被他人使用的ip，且在用户可访问的ip网段内  |
+| APIGW_LOADBALANCER_PORT | apigw loadBalancerIP port，默认为443             |
+| APIGW_BUSINESS_LOADBALANCER_PORT | apigw-business loadBalancerIP port，默认为444             |
 | STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"或"OCEANSTORE"           |
 | STORAGE_PATH      | 存储的共享路径，默认为/data/atlas_dls   |
 | STORAGE_CAPACITY  | 存储的共享容量，默认为5Ti，**请根据实际配置**   |
@@ -296,6 +306,8 @@ HIAI_GROUP_ID: 1000
 3. **使用CephFS或OceanStore方案时**，需要手动挂载并在挂载目录下创建STORAGE_PATH（默认为/data/atlas_dls）目录及其下的相关目录，并修改该目录属主为hwMindX用户。具体操作请参考tools/create_storage_dir.sh。
 
 4. k8s默认使用"192.168.0.0/16"和"10.96.0.0/12"分别作为内部的pod和service网段，不可跟其他网段重叠或冲突。请规划好集群内的ip资源，必要时可根据实际修改POD_NETWORK_CIDR和SERVICE_CIDR配置项
+
+5. 部署完成后，Mindx DL平台的URL访问地址即为"https://\<APIGW_LOADBALANCER_IP\>:\<APIGW_LOADBALANCER_PORT\>"。
 
 ### 步骤4：检查集群状态
 
@@ -522,7 +534,9 @@ Ascend-Docker-Runtime组件包含在MindX Toolbox包中，需要先获取MindX T
 
 ## 安装后操作
 
-如果worker节点中包含中心训练硬件时，需要配置device的网卡IP。具体操作参考[[配置device的网卡IP](https://support.huawei.com/enterprise/zh/doc/EDOC1100234042/5a225af5)]
+1. 如果worker节点中包含中心训练硬件时，需要配置device的网卡IP。具体操作参考[[配置device的网卡IP](https://support.huawei.com/enterprise/zh/doc/EDOC1100234042/5a225af5)]
+
+2. Mindx DL平台至此已部署完成，URL访问地址为"https://\<APIGW_LOADBALANCER_IP\>:\<APIGW_LOADBALANCER_PORT\>"，开启你的AI体验之旅吧~
 
 ## 分步骤安装
 

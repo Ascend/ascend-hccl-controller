@@ -1,1 +1,4 @@
 resource_dir: "~/resources"
+APIGW_YAML_DIR: "~/deploy_yamls/apigw"
+
+targetPort: 8080
