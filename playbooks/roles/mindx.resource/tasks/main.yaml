@@ -27,6 +27,7 @@
   run_once: true
 
 - name: unarchive on remote
+  ignore_errors: yes
   ansible.builtin.unarchive:
     src: "{{resource_dir}}/{{item}}.tar.gz"
     dest: "{{resource_dir}}"

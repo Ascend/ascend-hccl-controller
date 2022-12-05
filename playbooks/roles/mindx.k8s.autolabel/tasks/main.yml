@@ -73,10 +73,12 @@
     https_proxy: ""
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
-  when: "'worker' not in groups or groups['worker'] | length == 0"
+  when:
+  - "'worker' not in groups or groups['worker'] | length == 0"
+  - "'worker_join' not in groups or groups['worker_join'] | length == 0"
 
 - name: label apigw-selector worker
-  shell: kubectl label --overwrite node {{ hostvars[groups['worker'][0]]['ansible_hostname'] }} apigw-selector=apigw-business-worker-node
+  shell: kubectl label --overwrite node {{ hostvars[groups['worker'][0]]['set_hostname'] }} apigw-selector=apigw-business-worker-node
   delegate_to: "{{ groups['master'][0] }}"
   delegate_facts: true
   run_once: true
@@ -86,3 +88,15 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   when: "'worker' in groups and groups['worker'] | length != 0"
+
+- name: label apigw-selector worker_join
+  shell: kubectl label --overwrite node {{ hostvars[groups['worker_join'][0]]['set_hostname'] }} apigw-selector=apigw-business-worker-node
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  run_once: true
+  environment:
+    http_proxy: ""
+    https_proxy: ""
+    HTTP_PROXY: ""
+    HTTPS_PROXY: ""
+  when: "'worker' not in groups or groups['worker'] | length == 0"

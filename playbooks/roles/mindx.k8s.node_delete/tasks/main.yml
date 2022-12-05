@@ -1,0 +1,12 @@
+- name: message
+  debug:
+    msg: "*************************start delete node***************************"
+
+- name: kubectl delete node
+  shell: kubectl delete node {{set_hostname}}
+  delegate_to: "{{ groups['master'][0] }}"
+  delegate_facts: true
+  failed_when: false
+  when:
+    - inventory_hostname not in groups['master']
+

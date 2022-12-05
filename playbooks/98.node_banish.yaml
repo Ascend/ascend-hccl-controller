@@ -1,0 +1,14 @@
+---
+# k8s cluster banish nodes
+
+# nodes uninstall k8s
+- hosts:
+    - node_banish
+  roles:
+    - role: mindx.k8s.uninstall
+
+# k8s cluster delete node
+- hosts:
+    - node_banish
+  roles:
+    - role: mindx.k8s.node_delete

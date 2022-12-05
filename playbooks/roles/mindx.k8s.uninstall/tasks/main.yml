@@ -1,0 +1,21 @@
+- name: message
+  debug:
+    msg: "*************************start node uninstall k8s***************************"
+
+- name: check kubelet service
+  shell: systemctl is-active kubelet | grep '^active$' | wc -l
+  register: kubelet_status
+
+- name: message
+  debug:
+    msg: "kubelet is inactive and may already be uninstalled"
+  when: kubelet_status.stdout == "0"
+
+- name: uninstall k8s for node
+  shell: kubeadm reset -f; iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X; systemctl restart docker
+  failed_when: false
+  when:
+    - ansible_connection != "local"
+    - inventory_hostname not in groups['master']
+
+

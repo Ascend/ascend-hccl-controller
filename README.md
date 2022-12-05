@@ -602,6 +602,93 @@ playbooks/
 ```bash
 root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/01.resource.yaml playbooks/99.chrony.yaml
 ```
+## 节点扩缩容
+目标：用此脚本搭建平台后，针对已有集群实现节点扩缩容
+
+playbooks中97.worker_join.yaml任务可将worker节点加入已有集群  98.node_banish任务则可将对应节点踢出已有集群
+
+### 加入节点操作：
+
+1.在inventory_file中填写原有集群[harbor]、[master]字段内容（若集群由此脚本安装保持原有配置不变即可）
+
+[harbor]为目标集群harbor对应ip, [master]为目标集群master信息
+
+2.在inventory_file [worker_join]写入对应节点信息
+```ini
+[harbor]
+localhost ansible_connection=local
+
+[nfs_server]
+localhost ansible_connection=local
+
+[master]
+localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.99"
+
+[master_backup]
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.100"
+
+[worker]
+192.0.2.50  set_hostname="worker-1"
+
+[worker_join]
+192.0.2.52  set_hostname="worker-3"
+```
+3.参照步骤3 填写group_vars目录中的all.yaml文件
+
+若集群由此脚本安装保持原有配置不变即可
+
+若配置丢失请根据harbor信息正确填写harbor相关字段   并保持MYSQL_PASSWORD、REDIS_PASSWORD、APIGW_LOADBALANCER_IP字段非空（任意内容）
+
+4.执行以下命令即可将节点加入集群
+```bash
+root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/97.node_join.yaml
+```
+若inventory_file已有[worker]节点，则会为[worker]中第一个节点添加apigw-business调度label
+
+若无worker节点，则会为[worker_join]中第一个节点添加apigw-business调度label
+
+
+
+
+### 放逐节点操作：
+
+1.在inventory_file[master]字段填写入主节点信息 [node_banish]字段写入对应节点信息
+```ini
+[harbor]
+localhost ansible_connection=local
+
+[nfs_server]
+localhost ansible_connection=local
+
+[master]
+localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.99"
+
+[master_backup]
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.100"
+
+[worker]
+192.0.2.50  set_hostname="worker-1"
+192.0.2.51  set_hostname="worker-2"
+
+[worker_join]
+192.0.2.52  set_hostname="worker-3"
+
+[node_banish]
+192.0.2.51  set_hostname="worker-2"
+```
+
+2.执行以下命令即可将节点踢出集群
+```bash
+root@master:~/ascend-hccl-controller# ansible-playbook -i inventory_file playbooks/98.node_banish.yaml
+```
+**！！！注意！！！**
+
+放逐节点为高危操作：请务必根据集群状态以及实际需求使用此功能
+
+1.若集群主master节点被放逐出集群，将导致平台、集群整体崩溃
+
+2.部分worker、master集群被放逐出集群可能导致平台部分业务不可用
+
 
 # FAQ
 
