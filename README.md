@@ -127,20 +127,21 @@ localhost ansible_connection=local
 localhost ansible_connection=local
 
 [master]
-localhost ansible_connection=local
+localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f0"
 
 [master_backup]
 
 [worker]
 
 # 这个默认配置，即把本机部署成一个单master节点的k8s集群，而且无worker节点
+# 以上enp125s0f0网卡名仅为示例，请根据实际修改
 ```
 
 注意：
 
 1. k8s要求集群内节点(master、worker、master_backup）的hostname不一样，因此建议执行安装前设置所有节点使用不同的hostname。如果未统一设置且存在相同hostname的节点，那么可在inventory_file文件中设置set_hostname主机变量，安装过程将自动设置节点的hostname。hostname需满足k8s和ansible的格式要求，建议用“[a-z]-[0-9]”的格式，如“worker-1”。
 
-2. 在部署master高可用集群时，必须给[master]和[master_backup]的节点设置kube_interface主机变量，以及增加一个[all:vars]的kube_vip主机组变量。kube_interface为各自节点实际使用的ip对应的网卡名称，可通过`ip a`查询，如"enp125s0f0"。kube_vip需跟k8s集群节点ip在同一子网，且为闲置、未被他人使用的ip，请联系网络管理员获取。
+2. 必须给[master]和[master_backup]的节点设置kube_interface主机变量。kube_interface为各自节点实际使用的ip对应的网卡名称，可通过`ip a`查询，如"enp125s0f0"。
 
 ```ini
 [harbor]
@@ -161,14 +162,11 @@ localhost ansible_connection=local  set_hostname="master"  kube_interface="enp12
 192.0.2.51  set_hostname="worker-2"
 192.0.2.52  set_hostname="worker-3"
 
-[all:vars]
-kube_vip="192.0.4.200"
-
 # 这个配置，即部署一个3 master高可用k8s集群，而且有3个worker节点
-# 以上192.0.*.*等ip仅为示例，请修改为实际规划的ip地址
+# 以上192.0.*.*等ip、enp125s0f0网卡名仅为示例，请根据实际修改
 ```
 
-3. （高阶）如果需要配置管理面网络和业务面网络分离，各节点硬件上需要2张网卡。必须给[master]和[master_backup]设置kube_interface和apiserver_advertise_address主机变量，分别为各自节点业务面网卡名称和业务面网络ip；[worker]需设置kube_interface。[all:vars]的kube_vip主机组变量为业务面网络的闲置ip，harbor_host_ip主机组变量为harbor主机的业务面网络ip
+3. （高阶）如果需要配置管理面网络和业务面网络分离，各节点硬件上需要2张网卡。必须给[master]和[master_backup]设置kube_interface和apiserver_advertise_address主机变量，分别为各自节点业务面网卡名称和业务面网络ip；[worker]需设置kube_interface。[all:vars]harbor_host_ip主机组变量为harbor主机的业务面网络ip
 
 ```ini
 [harbor]
@@ -178,27 +176,25 @@ localhost ansible_connection=local
 localhost ansible_connection=local
 
 [master]
-localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.99"
+localhost ansible_connection=local  set_hostname="master"  kube_interface="enp125s0f0"  apiserver_advertise_address="195.0.3.99"
 
 [master_backup]
-192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.100"
-192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f1"  apiserver_advertise_address="195.0.3.101"
+192.0.3.100  set_hostname="master-backup-1"  kube_interface="enp125s0f0"  apiserver_advertise_address="195.0.3.100"
+192.0.3.101  set_hostname="master-backup-2"  kube_interface="enp125s0f0"  apiserver_advertise_address="195.0.3.101"
 
 [worker]
-192.0.2.50  set_hostname="worker-1"  kube_interface="enp125s0f1"
-192.0.2.51  set_hostname="worker-2"  kube_interface="enp125s0f1"
-192.0.2.52  set_hostname="worker-3"  kube_interface="enp125s0f1"
+192.0.2.50  set_hostname="worker-1"  kube_interface="enp125s0f0"
+192.0.2.51  set_hostname="worker-2"  kube_interface="enp125s0f0"
+192.0.2.52  set_hostname="worker-3"  kube_interface="enp125s0f0"
 
 [all:vars]
-kube_vip="195.0.4.200"
 harbor_host_ip="195.0.3.99"
 
 # 这个配置，即部署一个管理面网络和业务面网络分离的3 master高可用k8s集群，而且有3个worker节点
-# 以上192.0.*.*、195.0.*.*等ip仅为示例，请修改为实际规划的ip地址
-# 192.0.*.*为管理面网络，195.0.*.*为业务面网络；kube_interface、apiserver_advertise_address分别为业务面网络的网卡名称和ip；kube_vip在业务面网络中，且为闲置、未被他人使用的ip；harbor_host_ip为harbor主机的业务面网络ip
+# 以上192.0.*.*、195.0.*.*等ip、enp125s0f0网卡名仅为示例，请根据实际修改
+# 192.0.*.*为管理面网络，195.0.*.*为业务面网络；kube_interface、apiserver_advertise_address分别为业务面网络的网卡名称和ip；harbor_host_ip为harbor主机的业务面网络ip
 # 在多网卡的复杂网络场景，建议把master和master_backup的apiserver_advertise_address主机变量、all的harbor_host_ip主机组变量都配置上
 ```
-
 
 inventory_file文件配置详细可参考[[How to build your inventory &mdash; Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)]
 
@@ -220,12 +216,14 @@ MYSQL_PASSWORD: ""
 # password for redis, can not be empty, delete immediately after finished
 REDIS_PASSWORD: ""
 
-# apigw/apigw-business loadBalancerIP
+# kube_vip, can not be empty
+kube_vip: ""
+# apigw/apigw-business loadBalancerIP, can not be empty
 APIGW_LOADBALANCER_IP: ""
 # apigw loadBalancerIP port
 APIGW_LOADBALANCER_PORT: "443"
 # apigw-business loadBalancerIP port
-APIGW_BUSINESS_LOADBALANCER_PORT: "444"
+APIGW_BUSINESS_LOADBALANCER_PORT: "449"
 
 # select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"
@@ -270,9 +268,10 @@ HIAI_GROUP_ID: 1000
 | HARBOR_PASSWORD   | harbor的登录密码，不可为空，**必须配置**。**安装完成后应立即删除** |
 | MYSQL_PASSWORD    | mysql的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
 | REDIS_PASSWORD    | redis的登录密码，不可为空，**必须配置**。**安装完成后应立即删除**  |
-| APIGW_LOADBALANCER_IP    | apigw/apigw-business的loadBalancerIP，作为Mindx DL平台的访问ip，不可为空，**必须配置**。这个ip表现为虚拟ip，应设置为闲置、未被他人使用的ip，且在用户可访问的ip网段内  |
+| kube_vip          | 不可为空，**必须配置**。kube_vip需跟k8s集群节点业务面ip在同一子网，且为闲置、未被他人使用的ip，请联系网络管理员获取  |
+| APIGW_LOADBALANCER_IP    | apigw/apigw-business的loadBalancerIP，作为Mindx DL平台的访问ip，不可为空，**必须配置**。这个ip表现为虚拟ip，应设置为闲置、未被他人使用的ip，且在用户可访问的ip网段内，请联系网络管理员获取  |
 | APIGW_LOADBALANCER_PORT | apigw loadBalancerIP port，默认为443             |
-| APIGW_BUSINESS_LOADBALANCER_PORT | apigw-business loadBalancerIP port，默认为444             |
+| APIGW_BUSINESS_LOADBALANCER_PORT | apigw-business loadBalancerIP port，默认为449             |
 | STORAGE_TYPE      | 由用户按需选用的存储方案，默认为"NFS"；也可选"CEPHFS"或"OCEANSTORE"           |
 | STORAGE_PATH      | 存储的共享路径，默认为/data/atlas_dls   |
 | STORAGE_CAPACITY  | 存储的共享容量，默认为5Ti，**请根据实际配置**   |
