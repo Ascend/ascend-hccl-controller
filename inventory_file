@@ -10,3 +10,7 @@ localhost ansible_connection=local
 [master_backup]
 
 [worker]
+
+[worker_join]
+
+[node_banish]

@@ -1,0 +1,64 @@
+---
+# node join k8s cluster
+
+# distribute resources
+- hosts:
+    - worker_join
+  roles:
+    - role: mindx.resource
+      vars:
+        resource_list:
+          - linux_aarch64
+          - linux_x86_64
+          - ubuntu_18.04_aarch64
+          - ubuntu_18.04_x86_64
+          - ubuntu_20.04_x86_64
+          - centos_7_aarch64
+          - openEuler_20.03_x86_64
+          - kylin_V10_x86_64
+
+# install docker
+- hosts:
+    - worker_join
+  roles:
+    - role: mindx.docker
+
+# docker login harbor
+- hosts:
+    - master
+    - worker_join
+  roles:
+    - role: mindx.harbor.login
+
+# set basic config for mindxdl
+- hosts:
+    - worker_join
+  tasks:
+  - include_tasks: roles/mindx.basic/tasks/common.yml
+
+- hosts: worker_join
+  gather_facts: False
+  tasks:
+  - include_tasks: roles/mindx.basic/tasks/worker.yml
+
+- hosts:
+    - harbor
+    - worker_join
+  tasks:
+  - name: set HARBOR_IP
+    include_tasks: task_set_harbor_ip.yaml
+
+# install k8s
+- hosts:
+   - worker_join
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.install
+
+# worker join k8s
+- hosts: worker_join
+  gather_facts: False
+  roles:
+    - role: mindx.k8s.worker
+    - role: mindx.k8s.autolabel
+

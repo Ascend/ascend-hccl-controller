@@ -4,7 +4,10 @@
 
 - name: worker join k8s
   include_tasks: worker_join.yml
-  when: ansible_connection != "local" and inventory_hostname not in groups['master_backup']
+  when:
+    - ansible_connection != "local"
+    - (inventory_hostname in groups['worker'] or inventory_hostname in groups['worker_join'])
+    - inventory_hostname not in groups['master_backup']
 
 - name: label worker
   shell: |
