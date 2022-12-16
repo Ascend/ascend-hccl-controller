@@ -99,4 +99,6 @@
     https_proxy: ""
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
-  when: "'worker' not in groups or groups['worker'] | length == 0"
+  when:
+    - "'worker' not in groups or groups['worker'] | length == 0"
+    - "'worker_join' in groups and groups['worker_join'] | length == 0"
