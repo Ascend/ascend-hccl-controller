@@ -22,7 +22,7 @@ spec:
         masterselector: dls-master-node
       containers:
         - name: grafana
-          image: "{{ REPO_URL }}grafana/grafana:7.5.5"
+          image: "{{ REPO_URL }}grafana/grafana:9.2.4"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

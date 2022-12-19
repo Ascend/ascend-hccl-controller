@@ -41,7 +41,7 @@ fi
 
 mkdir -p -m 750 ${STORAGE_PATH} ${STORAGE_PATH}/platform
 cd ${STORAGE_PATH}/platform
-mkdir -p -m 750 kmc log services services/prometheus
+mkdir -p -m 750 kmc log loki services services/prometheus
 cd log
 mkdir -p -m 750 apigw apigw-business cluster-manager data-manager dataset-manager image-manager model-manager inference-manager train-manager user-manager alarm-manager
 cd ../../../..

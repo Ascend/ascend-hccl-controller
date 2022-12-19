@@ -39,6 +39,7 @@
     - "{{ PLATFORM_PATH }}/log/train-manager"
     - "{{ PLATFORM_PATH }}/log/user-manager"
     - "{{ PLATFORM_PATH }}/log/alarm-manager"
+    - "{{ PLATFORM_PATH }}/loki"
     - "{{ PLATFORM_PATH }}/services"
     - "{{ PLATFORM_PATH }}/services/prometheus"
 

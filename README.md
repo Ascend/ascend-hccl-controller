@@ -14,7 +14,9 @@
 | nfs        | 1.3       | nfs存储系统               |
 | mysql      | 8.0.26    | 安装在k8s集群中，关系型数据库系统 |
 | redis      | 5.0.14    | 安装在k8s集群中，非关系型数据库系统 |
-| prometheus + grafana + node-exporter + alertmanager + kube-state-metrics | 2.29.2 + 7.5.5 + 1.2.2 + 0.24.0 + 2.3.0 | 安装在k8s集群中，资源监控组件      |
+| prometheus + grafana + node-exporter | 2.29.2 + 7.5.5 + 1.2.2 | 安装在k8s集群中，资源监控组件      |
+| alertmanager + kube-state-metrics | 0.24.0 + 2.3.0 | 安装在k8s集群中，告警管理组件      |
+| loki + promtail | 2.6.1 + 2.7.0 | 安装在k8s集群中，日志采集组件      |
 | chrony     | 3.2        | (可选）时间同步组件，所有节点安装          |
 
 ## 环境要求
@@ -246,6 +248,9 @@ SERVICE_CIDR: "10.96.0.0/12"
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
 
+# mindx log retention period
+MINDX_LOG_RETENTION_PERIOD: "30d"
+
 #mindx user
 MINDX_USER: hwMindX
 MINDX_USER_ID: 9000
@@ -281,6 +286,7 @@ HIAI_GROUP_ID: 1000
 | POD_NETWORK_CIDR  | k8s默认pod网段，不可跟其他ip网段重叠或冲突            |
 | SERVICE_CIDR      | k8s默认service网段，不可跟其他ip网段重叠或冲突        |
 | K8S_NAMESPACE     | mindx dl组件默认k8s命名空间                  |
+| MINDX_LOG_RETENTION_PERIOD| mindx dl日志保留期限，默认一个月         |
 | MINDX_USER        | mindx dl组件默认运行用户                     |
 | MINDX_USER_ID     | mindx dl组件默认运行用户id                   |
 | MINDX_GROUP       | mindx dl组件默认运行用户组                    |
@@ -555,7 +561,7 @@ playbooks/
 ├── 10.pvc.yaml  # 创建pvc
 ├── 11.mysql.yaml  # 安装mysql
 ├── 12.redis.yaml  # 安装redis
-├── 13.prometheus.yaml  # 安装prometheus、grafana、node-exporter、alertmanager、kube-state-metrics
+├── 13.prometheus.yaml  # 安装prometheus、grafana、node-exporter、alertmanager、kube-state-metrics、loki、promtail
 ├── 14.inner-image.yaml  # 推送/root/resources/mindx-inner-images里的内置镜像到harbor（耗时较长）
 ├── 15.pre-image.yaml  # 推送/root/resources/mindx-pre-images里的预置镜像到harbor（耗时较长）
 ├── 16.mindxdl.yaml  # 安装或更新MindX DL平台组件和基础组件
