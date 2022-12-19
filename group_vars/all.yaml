@@ -11,12 +11,14 @@ MYSQL_PASSWORD: ""
 # password for redis, can not be empty, delete immediately after finished
 REDIS_PASSWORD: ""
 
-# apigw/apigw-business loadBalancerIP
+# kube_vip, can not be empty
+kube_vip: ""
+# apigw/apigw-business loadBalancerIP, can not be empty
 APIGW_LOADBALANCER_IP: ""
 # apigw loadBalancerIP port
 APIGW_LOADBALANCER_PORT: "443"
 # apigw-business loadBalancerIP port
-APIGW_BUSINESS_LOADBALANCER_PORT: "444"
+APIGW_BUSINESS_LOADBALANCER_PORT: "449"
 
 # select "NFS" or "CEPHFS" or "OCEANSTORE" as the storage solution, default to "NFS"
 STORAGE_TYPE: "NFS"

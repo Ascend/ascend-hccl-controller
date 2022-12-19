@@ -253,6 +253,10 @@ function do_install()
         if [[ ${is_platform_dl} == 0 ]]; then
             ansible worker -i ../inventory_file -m shell -a "docker pull ${image}"
         fi
+        if [[ "${image}" =~ "apigw" ]]; then
+            local apigw_business_ip=$(cat ../inventory_file | grep $(kubectl get node -l apigw-selector=apigw-business-worker-node | awk 'END{print $1}') | awk 'END{print $1}')
+            [[ -n "${apigw_business_ip}" ]] && ansible ${apigw_business_ip} -i ../inventory_file -m shell -a "docker pull ${image}"
+        fi
     done
     [[ -d ${DEPLOY_PATH}.last ]] && kubectl delete -f ${DEPLOY_PATH}.last/${YML_FILE}
     kubectl apply -f ${DEPLOY_PATH}/${YML_FILE}

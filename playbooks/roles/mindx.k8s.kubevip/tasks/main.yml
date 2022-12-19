@@ -1,4 +1,1 @@
 - include_tasks: master_kubevip.yml
-  when:
-    - "'master_backup' in groups"
-    - "groups['master_backup'] | length != 0"
