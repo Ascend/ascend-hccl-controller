@@ -41,6 +41,9 @@ SERVICE_CIDR: "10.96.0.0/12"
 # mindx k8s namespace
 K8S_NAMESPACE: "mindx-dl"
 
+# mindx log retention period
+MINDX_LOG_RETENTION_PERIOD: "30d"
+
 #mindx user
 MINDX_USER: hwMindX
 MINDX_USER_ID: 9000

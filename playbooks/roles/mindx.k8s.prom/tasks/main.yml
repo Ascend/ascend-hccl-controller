@@ -10,6 +10,7 @@
     dest: "{{ PROM_YAML_DIR }}/{{ item }}"
     mode: 0640
   with_items:
+    - loki-stack.yaml
     - prometheus.yaml
     - node-exporter.yaml
     - grafana.yaml
@@ -24,6 +25,7 @@
     HTTP_PROXY: ""
     HTTPS_PROXY: ""
   with_items:
+    - loki-stack.yaml
     - prometheus.yaml
     - node-exporter.yaml
     - grafana.yaml
