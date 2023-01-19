@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 
 	"hccl-controller/pkg/ring-controller/agent"
 	"hccl-controller/pkg/ring-controller/common"
