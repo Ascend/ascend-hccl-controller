@@ -37,6 +37,7 @@ docker_zip_name="hccl-controller-${build_version}-${arch}.tar.gz"
 docker_images_name="hccl-controller:${build_version}"
 function clean() {
   rm -rf "${top_dir}"/output/*
+  mkdir -p "${top_dir}"/output
 }
 
 function build() {
@@ -66,15 +67,6 @@ function mv_file() {
   cp "${top_dir}"/build/${docker_file_name} "${top_dir}"/output
 }
 
-function copy_kmc_files() {
-    cp -rf "${npu_exporter_folder}/lib" "${top_dir}"/output
-    cp -rf "${npu_exporter_folder}/cert-importer" "${top_dir}"/output
-    chmod 550 "${top_dir}"/output/lib
-    chmod 500 "${top_dir}"/output/lib/*
-    chmod 500 "${top_dir}/output/cert-importer"
-}
-
-
 function change_mod() {
   chmod 400 "${top_dir}"/output/*
   chmod 500 "${top_dir}/output/${output_name}"
@@ -85,9 +77,6 @@ function main() {
   build
   mv_file
   change_mod
-  if [ "$1" != nokmc ]; then
-   copy_kmc_files
-  fi
 }
 
 if [ "$1" = clean ]; then

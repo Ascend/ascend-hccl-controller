@@ -1,6 +1,6 @@
 #!/bin/bash
 # Perform  test for  hccl-controller
-# Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+# Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ set -e
 
 # execute go test and echo result to report files
 function execute_test() {
-  if ! (go test -v -race -coverprofile cov.out "${TOP_DIR}"/pkg/ring-controller/... >./"$file_input"); then
+  if ! (go test -mod=mod -v -race -coverprofile cov.out "${TOP_DIR}"/pkg/ring-controller/... >./"$file_input"); then
     echo '****** go test cases error! ******'
     exit 1
   else
@@ -29,12 +29,6 @@ function execute_test() {
 }
 
 function main() {
-    os_type=$(arch)
-    if [ "${os_type}" = "aarch64" ]; then
-        echo "arm not support. Thanks"
-        exit 1
-    fi
-
     echo "************************************* Start LLT Test *************************************"
     execute_test
     echo "************************************* End   LLT Test *************************************"

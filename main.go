@@ -20,18 +20,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
-	"huawei.com/mindx/common/hwlog"
-	"huawei.com/mindx/common/k8stool"
-	"huawei.com/mindx/common/utils"
-	"huawei.com/mindx/common/x509"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"volcano.sh/apis/pkg/client/clientset/versioned"
 	"volcano.sh/apis/pkg/client/informers/externalversions"
 
@@ -50,18 +48,14 @@ var (
 	// BuildVersion  build version
 	BuildVersion string
 	hwLogConfig  = &hwlog.LogConfig{LogFileName: defaultLogFileName}
-	// KubeConfig kubernetes config file
-	KubeConfig string
 )
 
 const (
-	dryRun               = false
-	displayStatistic     = false
-	cmCheckInterval      = 2
-	cmCheckTimeout       = 10
-	defaultLogFileName   = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
-	defaultKubeConfig    = "/etc/mindx-dl/hccl-controller/.config/config6"
-	defaultKubeConfigBkp = "/etc/mindx-dl/hccl-controller/.config6"
+	dryRun             = false
+	displayStatistic   = false
+	cmCheckInterval    = 2
+	cmCheckTimeout     = 10
+	defaultLogFileName = "/var/log/mindx-dl/hccl-controller/hccl-controller.log"
 )
 
 func main() {
@@ -81,7 +75,7 @@ func main() {
 	}
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-	kubeClient, jobClient, err := getClient()
+	kubeClient, jobClient, err := NewClientK8s()
 	if err != nil {
 		hwlog.RunLog.Error(err)
 		return
@@ -106,20 +100,11 @@ func main() {
 	}
 }
 
-func getClient() (*kubernetes.Clientset, *versioned.Clientset, error) {
-	if KubeConfig == "" && (utils.IsExist(defaultKubeConfig) || utils.IsExist(defaultKubeConfigBkp)) {
-		cfgInstance, err := x509.NewBKPInstance(nil, defaultKubeConfig, defaultKubeConfigBkp)
-		if err != nil {
-			return nil, nil, err
-		}
-		cfgBytes, err := cfgInstance.ReadFromDisk(utils.FileMode, true)
-		if err != nil || cfgBytes == nil {
-			return nil, nil, errors.New("no kubeConfig file Found")
-		}
-		KubeConfig = defaultKubeConfig
-	}
-	cfg, err := getK8sConfig()
+// NewClientK8s create k8s client
+func NewClientK8s() (*kubernetes.Clientset, *versioned.Clientset, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
+		hwlog.RunLog.Errorf("build client config err: %#v", err)
 		return nil, nil, err
 	}
 	kubeClient, err := kubernetes.NewForConfig(cfg)
@@ -131,6 +116,7 @@ func getClient() (*kubernetes.Clientset, *versioned.Clientset, error) {
 		return nil, nil, fmt.Errorf("error building job clientset: %s", err.Error())
 	}
 	return kubeClient, jobClient, nil
+
 }
 
 func newConfig() *agent.Config {
@@ -178,9 +164,6 @@ func init() {
 		"Query the verison of the program")
 	flag.StringVar(&hcclVersion, "json", "v2",
 		"Select version of hccl json file (v1/v2).")
-	flag.StringVar(&KubeConfig, "kubeConfig", "", "Path to a kubeconfig. "+
-		"Only required if out-of-cluster.")
-
 }
 
 func initHwLogger() error {
@@ -204,17 +187,4 @@ func validate() error {
 		return errors.New("error parsing parameters: pod parallelism should be range [1, 32]")
 	}
 	return nil
-}
-
-func getK8sConfig() (*rest.Config, error) {
-	path, err := utils.CheckPath(KubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	cfg, err := k8stool.BuildConfigFromFlags("", path)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
 }

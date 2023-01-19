@@ -19,7 +19,7 @@ import (
 	"context"
 	"fmt"
 
-	"huawei.com/mindx/common/hwlog"
+	"huawei.com/npu-exporter/common-utils/hwlog"
 )
 
 // this is for llt
