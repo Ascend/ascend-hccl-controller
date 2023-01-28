@@ -16,7 +16,7 @@ require (
 replace (
 	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
 	github.com/golang/protobuf => github.com/golang/protobuf v1.5.1
-	huawei.com/npu-exporter => codehub-dg-y.huawei.com/MindX_DL/AtlasEnableWarehouse/npu-exporter.git v0.3.0
+	huawei.com/npu-exporter => gitee.com/ascend/ascend-npu-exporter v0.3.0
 	k8s.io/api v0.19.11 => k8s.io/api v0.19.11
 	k8s.io/apimachinery v0.19.11 => k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v0.19.11 => k8s.io/client-go v0.19.4
