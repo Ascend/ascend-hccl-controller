@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"huawei.com/npu-exporter/common-utils/hwlog"
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
