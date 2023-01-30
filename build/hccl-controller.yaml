@@ -62,7 +62,7 @@ spec:
           readOnlyRootFilesystem: true
           capabilities:
             drop: ["ALL"]
-        image: hccl-controller:v20.2.0
+        image: hccl-controller:v3.0.0
         resources:
           requests:
               memory: 300Mi

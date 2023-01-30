@@ -20,7 +20,7 @@ cur_dir=$(dirname "$(readlink -f "$0")")
 top_dir=$(realpath "${cur_dir}"/..)
 export GO111MODULE="on"
 ver_file="${top_dir}"/service_config.ini
-build_version="beta"
+build_version="v3.0.0"
 if [ -f "$ver_file" ]; then
   line=$(sed -n '3p' "$ver_file" 2>&1)
   #cut the chars after ':'
@@ -60,9 +60,6 @@ function mv_file() {
   cp "${top_dir}"/build/hccl-controller.yaml "${top_dir}"/output/hccl-controller-"${build_version}".yaml
   sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" \
   "${top_dir}"/output/hccl-controller-"${build_version}".yaml
-  cp "${top_dir}"/build/hccl-controller-without-token.yaml  "${top_dir}"/output/hccl-controller-without-token-"${build_version}".yaml
-  sed -i "s/hccl-controller:.*/hccl-controller:${build_version}/" \
-  "${top_dir}"/output/hccl-controller-without-token-"${build_version}".yaml
 
   cp "${top_dir}"/build/${docker_file_name} "${top_dir}"/output
 }
