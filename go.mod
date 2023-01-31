@@ -1,6 +1,6 @@
 module hccl-controller
 
-go 1.14
+go 1.17
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.8.0

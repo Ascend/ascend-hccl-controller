@@ -1,10 +1,9 @@
 # hccl-controller.zh
--   [Controller介绍](#Controller介绍.md)
--   [HCCL-Controller](#HCCL-Controller.md)
--   [环境依赖](#环境依赖.md)
--   [目录结构](#目录结构.md)
--   [版本更新信息](#版本更新信息.md)
-<h2 id="Controller介绍.md">Controller介绍</h2>
+-   [组件介绍](#组件介绍.md)
+-   [编译HCCL-Controller](#编译HCCL-Controller.md)
+-   [组件安装](#组件安装.md)
+-   [更新日志](#更新日志.md)
+<h2 id="组件介绍.md">组件介绍</h2>
 
 -   一个Controller至少追踪一种类型的Kubernetes资源。这些对象有一个代表期望状态的指定字段。Controller负责确保其追踪的资源对象的当前状态接近期望状态。
 -   Controller Manager就是集群内部的管理控制中心，由负责不同资源的多个Controller构成，共同负责集群内的节点、Pod等所有资源的管理。
@@ -14,9 +13,7 @@
 **图 1**  Controller interaction process<a name="fig14783175555117"></a>  
 ![](doc/images/Controller-interaction-process.png "Controller-interaction-process")
 
-<h2 id="HCCL-Controller.md">HCCL-Controller</h2>
-
-## HCCL-Controller整体流程<a name="section2078393613277"></a>
+## 1、HCCL-Controller整体流程<a name="section2078393613277"></a>
 HCCL-Controller 是华为自研的一款用于NPU训练任务的组件，利用kubernetes的informer机制，持续监控NPU训练任务及其POD的各种事件，并读取POD的NPU信息，生成对应的
 Configmap。该Configmap包含了NPU训练任务需要的hccl.json配置文件，方便NPU训练任务更好的协同和调度底层的昇腾处理器。
 HCCL-Controller整体流程如[图1](#fig13227145124720)所示。
@@ -39,7 +36,7 @@ HCCL-Controller整体流程如[图1](#fig13227145124720)所示。
 7.  Pod中容器训练任务持续查看Configmap的状态，发现状态为完成后，则可以从configmap中生成hccl.json文件
 
 
-## HCCL-Controller业务规则<a name="section139091513611"></a>
+## 2、HCCL-Controller业务规则<a name="section139091513611"></a>
 
 HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的组件，该组件为Atlas 800 训练服务器K8s集群专用组件。
 
@@ -48,98 +45,42 @@ HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的�
 -   hccl-controller持续监控 volcano job，pod和ConfigMap的变化（需携带[•约定1：训练任务，Pod，ConfigMap需...](#li121021418717)中的标签），同一个训练任务的volcano job和ConfigMap通过volume（ascend-910-config）关联。如果有新创建的Pod，hccl-controller把Pod中的annotation（atlas.kubectl.kubernetes.io/ascend-910-configuration）的值取出，为volcano job创建数据缓存信息表，当volcano job的所有实例信息获取完整后，更新对应的rings-config的ConfigMap。
 -   ConfigMap中rings-config的文件名默认为hccl.json，默认挂在路径为：“/user/serverid/devindex/config”。
 
-## 部署HCCL-Controller<a name="section124015514383"></a>
+<h2 id="编译HCCL-Controller.md">编译HCCL-Controller</h2>
 
-1.  编译HCCL-controller
+1.  下载源码包，获得ascend-hccl-controller。
+
+    示例：源码放在/home/test/ascend-hccl-controller目录下
+
+2.  执行以下命令，进入构建目录，执行构建脚本，在“output“目录下生成二进制hccl-controller、yaml文件和Dockerfile。
+
+    **cd **_/home/test/_**ascend-hccl-controller/build/**
+
+    **chmod +x build.sh**
+
+    **./build.sh**
+
+3.  执行以下命令，查看**output**生成的软件列表。
+
+    **ll **_/home/test/_**ascend-hccl-controller/output**
+
     ```
-        cd build
-        chmod +x build.sh
-        ./build.sh
+    drwxr-xr-x 2 root root     4096 Jan 29 19:12 ./
+    drwxr-xr-x 9 root root     4096 Jan 29 19:09 ../
+    -r-------- 1 root root      498 Jan 29 19:09 Dockerfile
+    -r-x------ 1 root root 35323904 Jan 29 19:09 hccl-controller
+    -r-------- 1 root root     2374 Jan 29 19:12 hccl-controller-v3.0.0.yaml
     ```
 
-2.  执行以下命令，启动HCCL-Controller。
-    ```
-        mkdir -p /var/log/mindx-dl/hccl-controller
-        kubectl apply -f rbac.yaml
-        kubectl apply -f hccl-controller.yaml
-    ```
-    
+
+<h2 id="组件安装.md">组件安装</h2>
 
 
-<h2 id="环境依赖.md">环境依赖</h2>
+1.  请参考《MindX DL用户指南》(https://www.hiascend.com/software/mindx-dl)
+    中的“集群调度用户指南 > 安装部署指导 \> 安装集群调度组件 \> 典型安装场景 \> 集群调度场景”进行。
 
-Kubernetes 1.16及以上
-
-Go 1.13及以上
-
-<h2 id="目录结构.md">目录结构</h2>
-
-```
-hccl-controller                                    #深度学习组件hccl-controller模块                       
-├── build                                                 #编译和测试目录 
-│   ├── build.sh
-│   ├── Dockerfile
-│   ├── hccl-controller.yaml
-│   ├── hccl-controller-without-token.yaml
-│   ├── rbac.yaml
-│   └── test.sh
-├── doc
-│   └── images                                            #文档素材
-│       ├── Controller-interaction-process.png
-│       ├── HCCL-Controller-process.png
-│       ├── icon-caution.gif
-│       ├── icon-danger.gif
-│       ├── icon-note.gif
-│       ├── icon-notice.gif
-│       ├── icon-tip.gif
-│       └── icon-warning.gif
-├── go.mod
-├── └──go.sum
-├── main.go                                               #程序入口
-├── pkg                                                         #程序文件包
-│   ├── resource-controller
-│   │   └── signals
-│   │       └── signal.go
-│   └── ring-controller
-│       ├── agent
-│           ├── businessagent.go
-│           ├── businessagent_test.go
-│           ├── deploymentworker.go
-│           ├── deploymentworker_test.go
-│           ├── vcjobworker.go
-│           ├── vcjobworker_test.go
-│           └── types.go
-│       ├── common
-│           └── constants.go
-│       ├── controller
-│           ├── controller.go
-│           ├── controller_test.go
-│           └── types.go
-│       ├── model
-│           ├── deployment.go
-│           ├── deployment_test.go
-│           ├── types.go
-│           ├── vcjob.go
-│           └── vcjob_test.go
-│       └── ranktable
-│           ├── v1
-│               ├── ranktable.go
-│               ├── ranktable_test.go
-│               └── types.go
-│           └── v2
-│               ├── ranktable.go
-│               ├── ranktable_test.go
-│               └── types.go
-│   ├── testtool
-│   │   └── initlog.go
-├── README_EN.md                                           #HCCL-Controller README文件英文版
-└── README.md                                              #HCCL-Controller README文件中文版
-```
-
-<h2 id="版本更新信息.md">版本更新信息</h2>
-
+<h2 id="更新日志.md">更新日志</h2>
 
 | 版本   | 发布日期   | 修改说明  |
 | ---- | ---- | ---- |
-| v3.0.0| 2023-01-18    | 第一次正式发布    |
+| v3.0.0| 2022-1230    | 首次发布    |
 
