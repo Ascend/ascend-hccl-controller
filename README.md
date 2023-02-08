@@ -1,9 +1,11 @@
-# hccl-controller.zh
--   [组件介绍](#组件介绍.md)
--   [编译HCCL-Controller](#编译HCCL-Controller.md)
--   [组件安装](#组件安装.md)
--   [更新日志](#更新日志.md)
-<h2 id="组件介绍.md">组件介绍</h2>
+# hccl-controller
+-   [组件介绍](#组件介绍)
+-   [编译HCCL-Controller](#编译HCCL-Controller)
+-   [组件安装](#组件安装)
+-   [说明](#说明)
+-   [更新日志](#更新日志)
+
+# 组件介绍
 
 -   一个Controller至少追踪一种类型的Kubernetes资源。这些对象有一个代表期望状态的指定字段。Controller负责确保其追踪的资源对象的当前状态接近期望状态。
 -   Controller Manager就是集群内部的管理控制中心，由负责不同资源的多个Controller构成，共同负责集群内的节点、Pod等所有资源的管理。
@@ -45,15 +47,15 @@ HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的�
 -   hccl-controller持续监控 volcano job，pod和ConfigMap的变化（需携带[•约定1：训练任务，Pod，ConfigMap需...](#li121021418717)中的标签），同一个训练任务的volcano job和ConfigMap通过volume（ascend-910-config）关联。如果有新创建的Pod，hccl-controller把Pod中的annotation（atlas.kubectl.kubernetes.io/ascend-910-configuration）的值取出，为volcano job创建数据缓存信息表，当volcano job的所有实例信息获取完整后，更新对应的rings-config的ConfigMap。
 -   ConfigMap中rings-config的文件名默认为hccl.json，默认挂在路径为：“/user/serverid/devindex/config”。
 
-<h2 id="编译HCCL-Controller.md">编译HCCL-Controller</h2>
+# 编译HCCL-Controller
 
-1.  下载源码包，获得ascend-hccl-controller。
+1.  通过git拉取源码，并切换sync-dev分支，获得ascend-hccl-controller。
 
     示例：源码放在/home/test/ascend-hccl-controller目录下
 
 2.  执行以下命令，进入构建目录，执行构建脚本，在“output“目录下生成二进制hccl-controller、yaml文件和Dockerfile。
 
-    **cd **_/home/test/_**ascend-hccl-controller/build/**
+    **cd** _/home/test/_**ascend-hccl-controller/build/**
 
     **chmod +x build.sh**
 
@@ -61,7 +63,7 @@ HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的�
 
 3.  执行以下命令，查看**output**生成的软件列表。
 
-    **ll **_/home/test/_**ascend-hccl-controller/output**
+    **ll** _/home/test/_**ascend-hccl-controller/output**
 
     ```
     drwxr-xr-x 2 root root     4096 Jan 29 19:12 ./
@@ -72,13 +74,16 @@ HCCL-Controller是专门用于生成训练作业所有Pod的hccl.json文件的�
     ```
 
 
-<h2 id="组件安装.md">组件安装</h2>
-
+# 组件安装
 
 1.  请参考《MindX DL用户指南》(https://www.hiascend.com/software/mindx-dl)
     中的“集群调度用户指南 > 安装部署指导 \> 安装集群调度组件 \> 典型安装场景 \> 集群调度场景”进行。
 
-<h2 id="更新日志.md">更新日志</h2>
+# 说明
+
+1. 当前容器方式部署本组件，本组件的认证鉴权方式为ServiceAccount， 该认证鉴权方式为ServiceAccount的token明文显示，如果需要加密保存，请自行修改
+
+# 更新日志
 
 | 版本   | 发布日期   | 修改说明  |
 | ---- | ---- | ---- |
