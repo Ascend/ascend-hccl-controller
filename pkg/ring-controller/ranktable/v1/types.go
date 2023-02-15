@@ -1,31 +1,29 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 
 package v1
 
 const (
 	// ResourceName NPU resource Name
 	ResourceName = "huawei.com/Ascend910"
-	// ConfigmapCompleted Staus
+	// ConfigmapCompleted Status
 	ConfigmapCompleted = "completed"
 	// ConfigmapInitializing status
 	ConfigmapInitializing = "initializing"
 
-	// MaximumMemory Memory limit unit B
-	maximumMemory = 50 * 1024 * 1024
+	// configmap max data size 1MB
+	cmDataMaxMemory = 1024 * 1024
 )
 
 // RankTableStatus to hccl

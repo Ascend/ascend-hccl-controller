@@ -12,17 +12,30 @@
    limitations under the License.
 */
 
-// Package signals package
-package signals
+// Package common for common value
+package common
 
 const (
-	stopChCapacity = 100
-)
+	// BitSize32 BitSize32
+	BitSize32 = 32
+	// Decimal Decimal
+	Decimal = 10
+	// MaxJobParallelism max job Parallelism
+	MaxJobParallelism = 32
+	// MaxPodParallelism max pod Parallelism
+	MaxPodParallelism = 32
+	// InformerInterval InformerInterval
+	InformerInterval = 30
 
-// SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func SetupSignalHandler() chan struct{} {
-	stop := make(chan struct{}, stopChCapacity)
-	return stop
-}
+	// Index0 index 0
+	Index0 = 0
+	// Index1 index 1
+	Index1 = 1
+	// Index2 index 2
+	Index2 = 2
+	// Index3 index 3
+	Index3 = 3
+
+	// A800MaxChipNum the max num of Ascend910 in Atlas 800 server
+	A800MaxChipNum = 8
+)

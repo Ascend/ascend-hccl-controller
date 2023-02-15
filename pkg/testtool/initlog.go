@@ -12,17 +12,22 @@
    limitations under the License.
 */
 
-// Package signals package
-package signals
+// Package testtool for init logger for llt
+package testtool
 
-const (
-	stopChCapacity = 100
+import (
+	"context"
+	"fmt"
+
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 )
 
-// SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func SetupSignalHandler() chan struct{} {
-	stop := make(chan struct{}, stopChCapacity)
-	return stop
+// this is for llt
+func init() {
+	config := hwlog.LogConfig{
+		OnlyToStdout: true,
+	}
+	if err := hwlog.InitRunLogger(&config, context.Background()); err != nil {
+		fmt.Printf("%v", err)
+	}
 }

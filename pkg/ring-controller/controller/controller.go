@@ -1,29 +1,29 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 
 // Package controller responsibilities:business worker for each job according to job events
 package controller
 
 import (
 	"fmt"
-	"hccl-controller/pkg/hwlog"
-	"hccl-controller/pkg/ring-controller/agent"
-	"hccl-controller/pkg/ring-controller/model"
+	"reflect"
+	"strings"
+	"time"
+
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	corev1 "k8s.io/api/core/v1"
-	pkgutilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -31,31 +31,31 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"reflect"
-	"strings"
-	"time"
-	clientset "volcano.sh/volcano/pkg/client/clientset/versioned"
-	samplescheme "volcano.sh/volcano/pkg/client/clientset/versioned/scheme"
+	"volcano.sh/apis/pkg/client/clientset/versioned"
+	samplescheme "volcano.sh/apis/pkg/client/clientset/versioned/scheme"
+
+	"hccl-controller/pkg/ring-controller/agent"
+	"hccl-controller/pkg/ring-controller/common"
+	"hccl-controller/pkg/ring-controller/model"
 )
 
-// NewController returns a new sample controller
-func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.Interface, config *agent.Config,
-	informerInfo InformerInfo,
-	stopCh <-chan struct{}) *Controller {
+// NewEventController returns a new sample controller
+func NewEventController(kubeclientset kubernetes.Interface, jobclientset versioned.Interface, config *agent.Config,
+	informerInfo InformerInfo, stopCh <-chan struct{}) (*EventController, error) {
 	// Create event broadcaster
 	// Add ring-controller types to the default Kubernetes Scheme so Events can be
 	// logged for ring-controller types.
-	pkgutilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
-	hwlog.Info("Creating event broadcaster")
+	runtime.Must(samplescheme.AddToScheme(scheme.Scheme))
+	hwlog.RunLog.Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(hwlog.Infof)
+	eventBroadcaster.StartLogging(hwlog.RunLog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
 	agents, err := agent.NewBusinessAgent(kubeclientset, recorder, config, stopCh)
 	if err != nil {
-		hwlog.Fatalf("Error creating business agent: %s", err.Error())
+		return nil, fmt.Errorf("error creating business agent: %s", err.Error())
 	}
-	c := &Controller{
+	c := &EventController{
 		kubeclientset: kubeclientset,
 		jobclientset:  jobclientset,
 		jobsSynced:    informerInfo.JobInformer.Informer().HasSynced,
@@ -66,96 +66,72 @@ func NewController(kubeclientset kubernetes.Interface, jobclientset clientset.In
 		cacheIndexers: informerInfo.CacheIndexers,
 	}
 	informerInfo.addEventHandle(c)
-	return c
+	return c, nil
 }
 
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers. It will block until stopCh
-// is closed, at which point it will shutdown the WorkQueue and wait for
-// workers to finish processing their current work items.
-func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
-	defer pkgutilruntime.HandleCrash()
+func (c *EventController) Run(threadiness int, stopCh <-chan struct{}) error {
+	defer runtime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	defer c.agent.Workqueue.ShuttingDown()
 
 	// Wait for the caches to be synced before starting workers
-	hwlog.Debug("Waiting for informer caches to sync")
+	hwlog.RunLog.Debug("Waiting for informer caches to sync")
 	ok := cache.WaitForCacheSync(stopCh, c.jobsSynced, c.deploySynced)
 	if !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	hwlog.Debug("Starting workers")
+	hwlog.RunLog.Debug("Starting workers")
 
 	for i := 0; i < threadiness; i++ {
-		go wait.Until(c.runMasterWorker, time.Second, stopCh)
+		go wait.Until(c.runMaster, time.Second, stopCh)
 	}
 
-	hwlog.Debug("Started workers")
+	hwlog.RunLog.Debug("Started")
 	if stopCh != nil {
 		<-stopCh
 	}
-	hwlog.Debug("Shutting down workers")
-
+	hwlog.RunLog.Debug("Shutting down")
 	return nil
 }
 
-// runMasterWorker is a long-running function that will continually call the
-// processNextWorkItem function in order to read and process a message on the
-// workqueue.
-func (c *Controller) runMasterWorker() {
-	for c.processNextWorkItem() {
+func (c *EventController) runMaster() {
+	for c.processNextWork() {
 	}
 }
 
-// processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling the SyncHandler.
-func (c *Controller) processNextWorkItem() bool {
-	hwlog.Debug("start to get workqueue", c.workqueue.Len())
+func (c *EventController) processNextWork() bool {
+	hwlog.RunLog.Debug("get workqueue", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
 	}
 
-	// We wrap this block in a func so we can defer c.workqueue.Done.
 	err := func(obj interface{}) error {
-		// We call Done here so the workqueue knows we have finished
-		// processing this item. We also must remember to call Forget if we
-		// do not want this work item being re-queued. For example, we do
-		// not call Forget if a transient error occurs, instead the item is
-		// put back on the workqueue and attempted again after a back-off
-		// period.
+
 		defer c.workqueue.Done(obj)
 		var mo model.ResourceEventHandler
 		var ok bool
-		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
-		// workqueue means the items in the informer cache may actually be
-		// more up to date that when the item was initially put onto the
-		// workqueue.
 		if mo, ok = obj.(model.ResourceEventHandler); !ok {
-			// As the item in the workqueue is actually invalid, we call
-			// Forget here else we'd go into a loop of attempting to
-			// process a work item that is invalid.
 			c.workqueue.Forget(obj)
-			return fmt.Errorf("expected string in workqueue but got %#v", obj)
+			return fmt.Errorf("expected ResourceEventHandler in workqueue but got %#v", obj)
 		}
-		// Run the SyncHandler, passing it the namespace/name string of the
-		// Job/Deployment resource to be synced.
+
 		if err := c.SyncHandler(mo); err != nil {
 			c.workqueue.Forget(obj)
-			return fmt.Errorf("error syncing '%s': %s", mo.GetModelKey(), err.Error())
+			return fmt.Errorf("error to syncing '%s': %s", mo.GetModelKey(), err.Error())
 		}
-		// Finally, if no error occurs we Forget this item so it does not
-		// get queued again until another change happens.
+
 		c.workqueue.Forget(obj)
-		hwlog.Debugf("Successfully synced %+v ", mo)
+		hwlog.RunLog.Debugf("Synced Successfully %+v ", mo)
 		return nil
 	}(obj)
 
 	if err != nil {
-		hwlog.Errorf("controller processNextWorkItem is failed, err %v", err)
-		pkgutilruntime.HandleError(err)
+		hwlog.RunLog.Errorf("processNextWork controller, err %v", err)
+		runtime.HandleError(err)
 		return true
 	}
 
@@ -165,22 +141,35 @@ func (c *Controller) processNextWorkItem() bool {
 // enqueueJob takes a Job resource and converts
 // it into a namespace/name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than Job.
-func (c *Controller) enqueueJob(obj interface{}, eventType string) {
+func (c *EventController) enqueueJob(obj interface{}, eventType string) {
 	models, err := model.Factory(obj, eventType, c.cacheIndexers)
 	if err != nil {
-		pkgutilruntime.HandleError(err)
+		runtime.HandleError(err)
 		return
 	}
 	c.workqueue.AddRateLimited(models)
 }
 
 // SyncHandler : to do things from model
-func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
+func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	key := model.GetModelKey()
-	hwlog.Infof("SyncHandler start, current key is %v", key)
-	namespace, name, eventType, err := splitKeyFunc(key)
-	if err != nil {
-		return fmt.Errorf("failed to split key: %v", err)
+	hwlog.RunLog.Infof("SyncHandler start, current key is %v", key)
+
+	var namespace, name, eventType string
+	parts := strings.Split(key, "/")
+	switch len(parts) {
+	case common.Index2:
+		// name only, no namespace
+		namespace = ""
+		name = parts[common.Index0]
+		eventType = parts[common.Index1]
+	case common.Index3:
+		// namespace and name
+		namespace = parts[common.Index0]
+		name = parts[common.Index1]
+		eventType = parts[common.Index2]
+	default:
+		return fmt.Errorf("failed to split key, unexpected key format: %q", key)
 	}
 
 	_, exists, err := model.GetCacheIndex().GetByKey(namespace + "/" + name)
@@ -196,14 +185,14 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 
 	switch eventType {
 	case agent.EventAdd:
-		hwlog.Infof("exist + add, current job is %s/%s", namespace, name)
-		err := model.EventAdd(c.agent)
+		hwlog.RunLog.Infof("exist + add, current job is %s/%s", namespace, name)
+		err = model.EventAdd(c.agent)
 		if err != nil {
 			return err
 		}
 	case agent.EventUpdate:
 		// unnecessary to handle
-		err := model.EventUpdate(c.agent)
+		err = model.EventUpdate(c.agent)
 		if err != nil {
 			return err
 		}
@@ -214,7 +203,7 @@ func (c *Controller) SyncHandler(model model.ResourceEventHandler) error {
 	return nil
 }
 
-func (in *InformerInfo) addEventHandle(controller *Controller) {
+func (in *InformerInfo) addEventHandle(controller *EventController) {
 	eventHandlerFunc := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			controller.enqueueJob(obj, agent.EventAdd)
@@ -230,19 +219,4 @@ func (in *InformerInfo) addEventHandle(controller *Controller) {
 	}
 	in.JobInformer.Informer().AddEventHandler(eventHandlerFunc)
 	in.DeployInformer.Informer().AddEventHandler(eventHandlerFunc)
-}
-
-// splitKeyFunc to splite key by format namespace,jobname,eventType
-func splitKeyFunc(key string) (namespace, name, eventType string, err error) {
-	parts := strings.Split(key, "/")
-	switch len(parts) {
-	case 2:
-		// name only, no namespace
-		return "", parts[0], parts[1], nil
-	case 3:
-		// namespace and name
-		return parts[0], parts[1], parts[2], nil
-	default:
-		return "", "", "", fmt.Errorf("unexpected key format: %q", key)
-	}
 }

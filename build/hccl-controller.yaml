@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: hccl-controller
-  namespace: default
+  namespace: mindx-dl
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -29,7 +29,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: hccl-controller
-    namespace: default
+    namespace: mindx-dl
 roleRef:
   kind: ClusterRole
   name: pods-hccl-controller-role
@@ -39,6 +39,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hccl-controller
+  namespace: mindx-dl
 spec:
   replicas: 1
   selector:
@@ -48,6 +49,8 @@ spec:
     metadata:
       labels:
         app: hccl-controller
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
     spec:
       nodeSelector:
         masterselector: dls-master-node
@@ -59,7 +62,7 @@ spec:
           readOnlyRootFilesystem: true
           capabilities:
             drop: ["ALL"]
-        image: hccl-controller:v20.2.0
+        image: hccl-controller:v3.0.0
         resources:
           requests:
               memory: 300Mi
@@ -76,6 +79,7 @@ spec:
             mountPath: /var/log/mindx-dl/hccl-controller
           - name: localtime
             mountPath: /etc/localtime
+            readOnly: true
       volumes:
         - name: device-hcclcontroller
           hostPath:

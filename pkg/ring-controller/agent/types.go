@@ -1,30 +1,30 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 
 package agent
 
 import (
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
+	"sync"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sync"
+
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 const (
@@ -32,8 +32,8 @@ const (
 	Key910 = "ring-controller.atlas"
 	// Val910 to get Configmap
 	Val910 = "ascend-910" // Val910 to get Configmap
-	// ResourceName for 910
-	ResourceName = "huawei.com/Ascend910"
+	// A910ResourceName resource name for 910
+	A910ResourceName = "huawei.com/Ascend910"
 	// ConfigmapPrefix to get from configmap
 	ConfigmapPrefix = "rings-config"
 	// ConfigmapCompleted Staus
@@ -62,15 +62,38 @@ const (
 	retryMilliSecond = 5
 	threeMinutes     = 180
 	splitNum         = 4
+
+	a910With2CResourceName  = A910ResourceName + "-2c"
+	a910With4CResourceName  = A910ResourceName + "-4c"
+	a910With8CResourceName  = A910ResourceName + "-8c"
+	a910With16CResourceName = A910ResourceName + "-16c"
+
+	// InvalidNPUNum invalid NPU num
+	InvalidNPUNum = -1
 )
 
 var (
-	// JSONVersion of hccl.json
-	JSONVersion = "v2"
+	// jsonVersion of hccl.json
+	jsonVersion = "v2"
 	// ResourceList pod annotation
-	ResourceList = []string{"huawei.com/Ascend910", "huawei.com/Ascend910-2c", "huawei.com/Ascend910-4c",
-		"huawei.com/Ascend910-8c", "huawei.com/Ascend910-16c"}
+	resourceList = []string{A910ResourceName, a910With2CResourceName, a910With4CResourceName,
+		a910With8CResourceName, a910With16CResourceName}
 )
+
+// SetJSONVersion set jsonVersion
+func SetJSONVersion(v string) {
+	jsonVersion = v
+}
+
+// GetJSONVersion get jsonVersion
+func GetJSONVersion() string {
+	return jsonVersion
+}
+
+// GetResourceList get ResourceList
+func GetResourceList() []string {
+	return resourceList
+}
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
 // * list/watch 910 pods, and assign each pod to corresponding handler
@@ -121,7 +144,7 @@ type podIdentifier struct {
 	eventType string
 }
 
-// VCJobWorker controller for each volcano job, list/watch corresponding pods and build configmap (rank table)
+// VCJobWorker controller for each volcano job, list/watch corresponding pods and build configmap rank table
 type VCJobWorker struct {
 	// WorkerInfo: normal Worker info
 	WorkerInfo
@@ -165,7 +188,7 @@ type WorkerInfo struct {
 	podsIndexer cache.Indexer
 
 	configmapName string
-	configmapData v1.RankTabler
+	configmapData ranktablev1.RankTabler
 
 	statisticStopped  bool
 	rankIndex         int
