@@ -1,25 +1,27 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 
 // Package agent for run the logic
 package agent
 
 import (
 	"fmt"
-	"hccl-controller/pkg/hwlog"
+	"reflect"
+	"strings"
+	"time"
+
+	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,11 +33,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"math"
-	"strings"
-	"time"
 
-	"reflect"
+	"hccl-controller/pkg/ring-controller/common"
 )
 
 // String  to return podIdentifier string style :
@@ -48,18 +47,14 @@ func (p *podIdentifier) String() string {
 // implemented in the form of worker interface in the agent framework run.
 // Agent monitors POD events with a specific label and implements the
 // combination of tasks through different workers at different times.
-var NewBusinessAgent = func(
-	kubeClientSet kubernetes.Interface,
-	recorder record.EventRecorder,
-	config *Config,
+func NewBusinessAgent(kubeClientSet kubernetes.Interface, recorder record.EventRecorder, config *Config,
 	stopCh <-chan struct{}) (*BusinessAgent, error) {
-
 	// create pod informer factory
 	labelSelector := labels.Set(map[string]string{
 		Key910: Val910,
 	}).AsSelector().String()
-	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet, time.Second*30,
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet,
+		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
 
@@ -92,11 +87,11 @@ var NewBusinessAgent = func(
 		},
 	})
 
-	hwlog.Info("start informer factory")
+	hwlog.RunLog.Info("start informer factory")
 	go podInformerFactory.Start(stopCh)
-	hwlog.Info("waiting for informer caches to sync")
+	hwlog.RunLog.Info("waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, businessAgent.podInformer.HasSynced); !ok {
-		hwlog.Errorf("caches sync failed")
+		hwlog.RunLog.Errorf("caches sync failed")
 		return businessAgent, fmt.Errorf("caches sync failed")
 	}
 
@@ -109,18 +104,18 @@ func (b *BusinessAgent) enqueuePod(obj interface{}, eventType string) {
 	var name string
 	var err error
 	if name, err = nameGenerationFunc(obj, eventType); err != nil {
-		hwlog.Errorf("pod key generation error: %v", err)
+		hwlog.RunLog.Errorf("pod key generation error: %v", err)
 		return
 	}
 	b.Workqueue.AddRateLimited(name)
 }
 
 func (b *BusinessAgent) run(threadiness int) error {
-	hwlog.Info("Starting workers")
+	hwlog.RunLog.Info("Starting workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(b.runMasterWorker, time.Second, b.agentSwitch)
 	}
-	hwlog.Info("Started workers")
+	hwlog.RunLog.Info("Started workers")
 
 	return nil
 }
@@ -159,29 +154,37 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	tmpObj, podExist, err := b.PodsIndexer.GetByKey(podKeyInfo.namespace + "/" + podKeyInfo.name)
 	if err != nil {
 		b.Workqueue.Forget(obj)
-		hwlog.Errorf("syncing '%s' failed: failed to get obj from indexer", podKeyInfo)
+		hwlog.RunLog.Errorf("syncing '%s' failed: failed to get obj from indexer", podKeyInfo)
 		return true
 	}
+
+	return b.doWorkByWorker(tmpObj, obj, podExist, podKeyInfo)
+}
+
+func (b *BusinessAgent) doWorkByWorker(tmpObj, obj interface{}, podExist bool, podKeyInfo *podIdentifier) bool {
 	// Lock to safely obtain worker data in the Map
 	b.RwMutex.RLock()
 	defer b.RwMutex.RUnlock()
 	bsnsWorker, workerExist := b.BusinessWorker[podKeyInfo.namespace+"/"+podKeyInfo.jobName]
-	hwlog.Debugf(" worker : \n %+v", b.BusinessWorker)
+	hwlog.RunLog.Debugf(" worker : \n %+v", b.BusinessWorker)
 	if !workerExist {
 		if !podExist {
 			b.Workqueue.Forget(obj)
-			hwlog.Infof("syncing '%s' terminated: current obj is no longer exist",
+			hwlog.RunLog.Infof("syncing '%s' terminated: current obj is no longer exist",
 				podKeyInfo.String())
 			return true
 		}
 		// if someone create a single 910 pod without a job, how to handle?
-		hwlog.Debugf("syncing '%s' delayed: corresponding job worker may be uninitialized",
+		hwlog.RunLog.Debugf("syncing '%s' delayed: corresponding job worker may be uninitialized",
 			podKeyInfo.String())
 		return false
 	}
 	if podKeyInfo.eventType == EventDelete {
 		b.Workqueue.Forget(obj)
-		bsnsWorker.handleDeleteEvent(podKeyInfo)
+		if err := bsnsWorker.handleDeleteEvent(podKeyInfo); err != nil {
+			// only logs need to be recorded.
+			hwlog.RunLog.Errorf("handleDeleteEvent error, error is %s", err)
+		}
 		return true
 	}
 	// if worker exist but pod not exist, try again except delete event
@@ -190,12 +193,12 @@ func (b *BusinessAgent) doWork(obj interface{}) bool {
 	}
 	pod, ok := tmpObj.(*apiCoreV1.Pod)
 	if !ok {
-		hwlog.Error("pod transform failed")
+		hwlog.RunLog.Error("pod transform failed")
 		return true
 	}
 
 	// if worker exist && pod exist, need check some special scenarios
-	hwlog.Debugf("successfully synced '%s'", podKeyInfo)
+	hwlog.RunLog.Debugf("successfully synced '%s'", podKeyInfo)
 
 	forgetQueue, retry := bsnsWorker.doWork(pod, podKeyInfo)
 	if forgetQueue {
@@ -214,16 +217,16 @@ func nameGenerationFunc(obj interface{}, eventType string) (string, error) {
 	return metaData.GetNamespace() + "/" + metaData.GetName() + "/" + getWorkName(labelMaps) + "/" + eventType, nil
 }
 
-func splitWorkerKey(key string) (podInfo *podIdentifier, err error) {
+func splitWorkerKey(key string) (*podIdentifier, error) {
 	parts := strings.Split(key, "/")
 	if len(parts) != splitNum {
 		return nil, fmt.Errorf("unexpected key format: %q", key)
 	}
-	podInfo = &podIdentifier{
-		namespace: parts[0],
-		name:      parts[1],
-		jobName:   parts[2],
-		eventType: parts[3],
+	podInfo := &podIdentifier{
+		namespace: parts[common.Index0],
+		name:      parts[common.Index1],
+		jobName:   parts[common.Index2],
+		eventType: parts[common.Index3],
 	}
 	return podInfo, nil
 }
@@ -232,12 +235,12 @@ func preCheck(obj interface{}) (*podIdentifier, bool) {
 	var key string
 	var ok bool
 	if key, ok = obj.(string); !ok {
-		hwlog.Errorf("expected string in WorkerQueue but got %#v", obj)
+		hwlog.RunLog.Errorf("expected string in WorkerQueue but got %#v", obj)
 		return nil, true
 	}
 	podPathInfo, err := splitWorkerKey(key)
 	if err != nil || podPathInfo == nil {
-		hwlog.Errorf("failed to split key: %v", err)
+		hwlog.RunLog.Errorf("failed to split key: %v", err)
 		return nil, true
 	}
 	return podPathInfo, false
@@ -255,38 +258,40 @@ func isReferenceJobSameWithBsnsWorker(pod *apiCoreV1.Pod, jobName, bsnsWorkerUID
 }
 
 func isPodAnnotationsReady(pod *apiCoreV1.Pod, identifier string) bool {
-	useChip := false
-	for _, container := range pod.Spec.Containers {
-		if GetNPUNum(container) > 0 {
-			useChip = true
-			break
-		}
-	}
-	if useChip {
-		_, exist := pod.Annotations[PodDeviceKey]
-		if !exist {
-			hwlog.Infof("syncing '%s' delayed: device info is not ready", identifier)
-			return false
-		}
+	_, exist := pod.Annotations[PodDeviceKey]
+	if !exist {
+		hwlog.RunLog.Infof("syncing '%s' delayed: device info is not ready", identifier)
+		return false
 	}
 	return true
 }
 
-// GetNPUNum get npu npuNum from container
+func containerUsedChip(pod *apiCoreV1.Pod) bool {
+	for _, container := range pod.Spec.Containers {
+		if GetNPUNum(container) > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetNPUNum get npu npuNum from container:
+// 0 presents not use npu;
+// -1 presents got invalid npu num;
+// other values present use npu;
 func GetNPUNum(c apiCoreV1.Container) int32 {
 	var qtt resource.Quantity
 	var exist bool
-	for _, res := range ResourceList {
+	for _, res := range GetResourceList() {
 		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
-		if math.MaxInt32 < qtt.Value() {
-			return math.MaxInt32
+		if !exist {
+			continue
 		}
-		if math.MinInt32 > qtt.Value() {
-			return math.MinInt32
+		if common.A800MaxChipNum < qtt.Value() || qtt.Value() < 0 {
+			return InvalidNPUNum
 		}
-		if exist && int32(qtt.Value()) > 0 {
-			return int32(qtt.Value())
-		}
+		return int32(qtt.Value())
 	}
 	return 0
 }
@@ -295,19 +300,19 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 func DeleteWorker(namespace string, name string, agent *BusinessAgent) {
 	agent.RwMutex.Lock()
 	defer agent.RwMutex.Unlock()
-	hwlog.Infof("not exist + delete, current job is %s/%s", namespace, name)
+	hwlog.RunLog.Infof("not exist + delete, current job is %s/%s", namespace, name)
 	identifier := namespace + "/" + name
-	_, exist := agent.BusinessWorker[identifier]
+	worker, exist := agent.BusinessWorker[identifier]
 	if !exist {
-		hwlog.Infof("failed to delete business worker for %s/%s, it's not exist", namespace,
+		hwlog.RunLog.Infof("failed to delete business worker for %s/%s, it's not exist", namespace,
 			name)
 		return
 	}
 
 	if agent.Config.DisplayStatistic {
-		agent.BusinessWorker[identifier].CloseStatistic()
+		worker.CloseStatistic()
 	}
 	delete(agent.BusinessWorker, identifier)
-	hwlog.Infof("business worker for %s is deleted", identifier)
+	hwlog.RunLog.Infof("business worker for %s is deleted", identifier)
 	return
 }

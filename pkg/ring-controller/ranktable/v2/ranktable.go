@@ -1,56 +1,51 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 
 // Package v2 ranktable version 2
 package v2
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	v1 "hccl-controller/pkg/ring-controller/ranktable/v1"
-	apiCoreV1 "k8s.io/api/core/v1"
 	"sort"
 	"strconv"
+
+	apiCoreV1 "k8s.io/api/core/v1"
+
+	"hccl-controller/pkg/ring-controller/common"
+	ranktablev1 "hccl-controller/pkg/ring-controller/ranktable/v1"
 )
 
 // CachePodInfo :Cache pod info to RankTableV2
-func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankIndex *int) error {
-	var instance v1.Instance
+func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, instance ranktablev1.Instance, rankIndex *int) error {
 	var server Server
-
-	if err := json.Unmarshal([]byte(deviceInfo), &instance); err != nil {
-		return fmt.Errorf("parse annotation of pod %s/%s error: %v", pod.Namespace, pod.Name, err)
-	}
-	if !v1.CheckDeviceInfo(&instance) {
+	if !ranktablev1.CheckDeviceInfo(&instance) {
 		return errors.New("deviceInfo failed the validation")
 	}
 	for _, server := range r.ServerList {
 		if server.PodID == instance.PodName {
-			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace,
-				pod.Name)
+			return fmt.Errorf("ANOMALY: pod %s/%s is already cached", pod.Namespace, pod.Name)
 		}
 	}
-
-	rankFactor := len(instance.Devices)
 
 	// Build new server-level struct from device info
 	server.ServerID = instance.ServerID
 	server.PodID = instance.PodName
-
+	rankFactor := len(instance.Devices)
+	if rankFactor > common.A800MaxChipNum {
+		return fmt.Errorf("get error device num(%d), device num is too big", rankFactor)
+	}
 	for _, device := range instance.Devices {
 		var serverDevice Device
 		serverDevice.DeviceID = device.DeviceID
@@ -65,8 +60,8 @@ func (r *RankTable) CachePodInfo(pod *apiCoreV1.Pod, deviceInfo string, rankInde
 
 	r.ServerList = append(r.ServerList, &server)
 	sort.Slice(r.ServerList, func(i, j int) bool {
-		iRank, err := strconv.ParseInt(r.ServerList[i].DeviceList[0].RankID, 10, 32)
-		jRank, err2 := strconv.ParseInt(r.ServerList[j].DeviceList[0].RankID, 10, 32)
+		iRank, err := strconv.ParseInt(r.ServerList[i].DeviceList[0].RankID, common.Decimal, common.BitSize32)
+		jRank, err2 := strconv.ParseInt(r.ServerList[j].DeviceList[0].RankID, common.Decimal, common.BitSize32)
 		if err != nil || err2 != nil {
 			return false
 		}
