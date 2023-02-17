@@ -20,13 +20,12 @@ cur_dir=$(dirname "$(readlink -f "$0")")
 top_dir=$(realpath "${cur_dir}"/..)
 export GO111MODULE="on"
 ver_file="${top_dir}"/service_config.ini
-build_version="v3.0.0"
+build_version="v5.0.RC1"
 if [ -f "$ver_file" ]; then
-  line=$(sed -n '3p' "$ver_file" 2>&1)
-  #cut the chars after ':'
-  build_version=${line#*:}
+  line=$(sed -n '1p' "$ver_file" 2>&1)
+  #cut the chars after ':' and add char 'v', the final example is v3.0.0
+  build_version=${line#*=}
 fi
-npu_exporter_folder="${top_dir}/npu-exporter"
 arch=$(arch 2>&1)
 echo "Build Architecture is" "${arch}"
 
