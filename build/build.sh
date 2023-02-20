@@ -24,7 +24,7 @@ build_version="v5.0.RC1"
 if [ -f "$ver_file" ]; then
   line=$(sed -n '1p' "$ver_file" 2>&1)
   #cut the chars after ':' and add char 'v', the final example is v3.0.0
-  build_version=${line#*=}
+  build_version="v"${line#*=}
 fi
 arch=$(arch 2>&1)
 echo "Build Architecture is" "${arch}"
