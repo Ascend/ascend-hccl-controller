@@ -20,7 +20,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
@@ -102,7 +101,7 @@ func main() {
 
 // NewClientK8s create k8s client
 func NewClientK8s() (*kubernetes.Clientset, *versioned.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
 		hwlog.RunLog.Errorf("build client config err: %#v", err)
 		return nil, nil, err
