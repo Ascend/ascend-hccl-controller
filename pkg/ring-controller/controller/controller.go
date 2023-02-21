@@ -179,6 +179,8 @@ func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	if !exists {
 		if eventType == agent.EventDelete {
 			agent.DeleteWorker(namespace, name, c.agent)
+			hwlog.RunLog.Infof("not exist + delete, eventType is %s, current key is %s", eventType, key)
+			return nil
 		}
 		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
@@ -186,21 +188,13 @@ func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	switch eventType {
 	case agent.EventAdd:
 		hwlog.RunLog.Infof("exist + add, current job is %s/%s", namespace, name)
-		err = model.EventAdd(c.agent)
-		if err != nil {
-			return err
-		}
+		return model.EventAdd(c.agent)
 	case agent.EventUpdate:
 		// unnecessary to handle
-		err = model.EventUpdate(c.agent)
-		if err != nil {
-			return err
-		}
+		return model.EventUpdate(c.agent)
 	default:
 		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
-
-	return nil
 }
 
 func (in *InformerInfo) addEventHandle(controller *EventController) {
