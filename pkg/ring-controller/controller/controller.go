@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -103,7 +103,7 @@ func (c *EventController) runMaster() {
 }
 
 func (c *EventController) processNextWork() bool {
-	hwlog.RunLog.Debug("get workqueue", c.workqueue.Len())
+	hwlog.RunLog.Debug("get workqueue-", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
