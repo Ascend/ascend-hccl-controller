@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -50,9 +51,13 @@ func (p *podIdentifier) String() string {
 func NewBusinessAgent(kubeClientSet kubernetes.Interface, recorder record.EventRecorder, config *Config,
 	stopCh <-chan struct{}) (*BusinessAgent, error) {
 	// create pod informer factory
-	labelSelector := labels.Set(map[string]string{
-		Key910: Val910,
-	}).AsSelector().String()
+	temp, newErr := labels.NewRequirement(Key910, selection.In, []string{Val910B, Val910})
+	if newErr != nil {
+		hwlog.RunLog.Infof("NewBusinessAgent %s", newErr)
+		return nil, newErr
+	}
+
+	labelSelector := temp.String()
 	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(kubeClientSet,
 		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector

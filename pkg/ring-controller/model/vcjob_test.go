@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -186,7 +186,7 @@ func checkCmWhenNormal(cms typedcorev1.ConfigMapInterface, fakeClient *fake.Clie
 	data := make(map[string]string, 1)
 	label := make(map[string]string, 1)
 	data[DataKey] = DataValue
-	label[agent.Key910] = agent.Val910
+	label[agent.Key910] = agent.Val910B
 	putCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: CMName,
 		Namespace: "namespace", Labels: label}, Data: data}
 	cms.Create(context.TODO(), putCM, metav1.CreateOptions{})
