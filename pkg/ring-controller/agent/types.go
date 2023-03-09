@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -31,7 +31,9 @@ const (
 	// Key910 to get Configmap
 	Key910 = "ring-controller.atlas"
 	// Val910 to get Configmap
-	Val910 = "ascend-910" // Val910 to get Configmap
+	Val910 = "ascend-910"
+	// Val910B to get Configmap
+	Val910B = "ascend-910b"
 	// A910ResourceName resource name for 910
 	A910ResourceName = "huawei.com/Ascend910"
 	// ConfigmapPrefix to get from configmap
@@ -96,8 +98,8 @@ func GetResourceList() []string {
 }
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
-// * list/watch 910 pods, and assign each pod to corresponding handler
-//   (each business worker belongs to a volcano job, and contains a handler for building rank table)
+//   - list/watch 910 pods, and assign each pod to corresponding handler
+//     (each business worker belongs to a volcano job, and contains a handler for building rank table)
 type BusinessAgent struct {
 	// Config Agent configuration file
 	Config *Config

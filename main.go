@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -20,12 +20,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -80,7 +80,11 @@ func main() {
 		hwlog.RunLog.Error(err)
 		return
 	}
-	jobInformerFactory, deploymentFactory := newInformerFactory(jobClient, kubeClient)
+	jobInformerFactory, deploymentFactory, newErr := newInformerFactory(jobClient, kubeClient)
+	if newErr != nil {
+		hwlog.RunLog.Error(newErr)
+		return
+	}
 	jobInformer := jobInformerFactory.Batch().V1alpha1().Jobs()
 	deploymentInformer := deploymentFactory.Apps().V1().Deployments()
 	cacheIndexer := make(map[string]cache.Indexer, 1)
@@ -102,7 +106,7 @@ func main() {
 
 // NewClientK8s create k8s client
 func NewClientK8s() (*kubernetes.Clientset, *versioned.Clientset, error) {
-	cfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
 		hwlog.RunLog.Errorf("build client config err: %#v", err)
 		return nil, nil, err
@@ -131,8 +135,13 @@ func newConfig() *agent.Config {
 }
 
 func newInformerFactory(jobClient *versioned.Clientset, kubeClient *kubernetes.Clientset) (
-	externalversions.SharedInformerFactory, informers.SharedInformerFactory) {
-	labelSelector := labels.Set(map[string]string{agent.Key910: agent.Val910}).AsSelector().String()
+	externalversions.SharedInformerFactory, informers.SharedInformerFactory, error) {
+	temp, newErr := labels.NewRequirement(agent.Key910, selection.In, []string{agent.Val910B, agent.Val910})
+	if newErr != nil {
+		hwlog.RunLog.Infof("newInformerFactory %s", newErr)
+		return nil, nil, newErr
+	}
+	labelSelector := temp.String()
 	jobInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(jobClient,
 		time.Second*common.InformerInterval, externalversions.WithTweakListOptions(func(options *v1.
 			ListOptions) {
@@ -142,7 +151,7 @@ func newInformerFactory(jobClient *versioned.Clientset, kubeClient *kubernetes.C
 		time.Second*common.InformerInterval, informers.WithTweakListOptions(func(options *v1.ListOptions) {
 			options.LabelSelector = labelSelector
 		}))
-	return jobInformerFactory, deploymentFactory
+	return jobInformerFactory, deploymentFactory, nil
 }
 
 func init() {

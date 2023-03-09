@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -103,7 +103,7 @@ func (c *EventController) runMaster() {
 }
 
 func (c *EventController) processNextWork() bool {
-	hwlog.RunLog.Debug("get workqueue", c.workqueue.Len())
+	hwlog.RunLog.Debug("get workqueue-", c.workqueue.Len())
 	obj, shutdown := c.workqueue.Get()
 	if shutdown {
 		return false
@@ -179,6 +179,8 @@ func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	if !exists {
 		if eventType == agent.EventDelete {
 			agent.DeleteWorker(namespace, name, c.agent)
+			hwlog.RunLog.Infof("not exist + delete, eventType is %s, current key is %s", eventType, key)
+			return nil
 		}
 		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
@@ -186,21 +188,13 @@ func (c *EventController) SyncHandler(model model.ResourceEventHandler) error {
 	switch eventType {
 	case agent.EventAdd:
 		hwlog.RunLog.Infof("exist + add, current job is %s/%s", namespace, name)
-		err = model.EventAdd(c.agent)
-		if err != nil {
-			return err
-		}
+		return model.EventAdd(c.agent)
 	case agent.EventUpdate:
 		// unnecessary to handle
-		err = model.EventUpdate(c.agent)
-		if err != nil {
-			return err
-		}
+		return model.EventUpdate(c.agent)
 	default:
 		return fmt.Errorf("undefined condition, eventType is %s, current key is %s", eventType, key)
 	}
-
-	return nil
 }
 
 func (in *InformerInfo) addEventHandle(controller *EventController) {

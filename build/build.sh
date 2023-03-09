@@ -44,7 +44,7 @@ function build() {
 
   CGO_CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
   CGO_CPPFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2 -fPIC -ftrapv"
-  go build -mod=mod -buildmode=pie -ldflags "-s  -extldflags=-Wl,-z,now  -X main.BuildName=${output_name} \
+  go build -mod=mod -buildmode=pie -ldflags "-s -linkmode=external -extldflags=-Wl,-z,now  -X main.BuildName=${output_name} \
             -X main.BuildVersion=${build_version}_linux-${arch}" \
   -o ${output_name}
   ls ${output_name}

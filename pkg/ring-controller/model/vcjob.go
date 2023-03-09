@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -181,8 +181,8 @@ func checkCMCreation(namespace, name string, kubeClientSet kubernetes.Interface,
 		return nil, fmt.Errorf("failed to get configmap for job %s/%s: %v", namespace, name, err)
 	}
 	label910, exist := (*cm).Labels[agent.Key910]
-	if !exist || label910 != agent.Val910 {
-		return nil, fmt.Errorf("invalid configmap label %#v", label910)
+	if !exist || !(label910 == agent.Val910B || label910 == agent.Val910) {
+		return nil, fmt.Errorf("invalid configmap label %s", label910)
 	}
 
 	return cm, nil

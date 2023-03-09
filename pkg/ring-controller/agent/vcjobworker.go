@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -351,8 +351,8 @@ func updateConfigMap(w *WorkerInfo, namespace string) error {
 	}
 	hwlog.RunLog.Debugf("old cm ranktable %#v", oldCM)
 	label910, exist := (*cm).Labels[Key910]
-	if !exist || label910 != Val910 {
-		return fmt.Errorf("invalid configmap label: %#v", label910)
+	if !exist || !(label910 == Val910B || label910 == Val910) {
+		return fmt.Errorf("invalid configmap label: %s", label910)
 	}
 	dataByteArray, err := json.Marshal(w.configmapData)
 	if err != nil {
