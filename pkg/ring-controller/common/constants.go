@@ -1,4 +1,4 @@
-/* Copyright(C) 2022. Huawei Technologies Co.,Ltd. All rights reserved.
+/* Copyright(C) 2020-2023. Huawei Technologies Co.,Ltd. All rights reserved.
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -24,7 +24,7 @@ const (
 	MaxJobParallelism = 32
 	// MaxPodParallelism max pod Parallelism
 	MaxPodParallelism = 32
-	// InformerInterval InformerInterval
+	// InformerInterval informer interval time.
 	InformerInterval = 30
 
 	// Index0 index 0
@@ -36,6 +36,6 @@ const (
 	// Index3 index 3
 	Index3 = 3
 
-	// A800MaxChipNum the max num of Ascend910 in Atlas 800 server
-	A800MaxChipNum = 8
+	// A800MaxChipNum the max num of Ascend910(B) in Atlas 800 server
+	A800MaxChipNum = 16
 )
