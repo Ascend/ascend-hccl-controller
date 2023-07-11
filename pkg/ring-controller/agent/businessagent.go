@@ -24,7 +24,6 @@ import (
 	"huawei.com/npu-exporter/v3/common-utils/hwlog"
 	apiCoreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -286,11 +285,8 @@ func containerUsedChip(pod *apiCoreV1.Pod) bool {
 // -1 presents got invalid npu num;
 // other values present use npu;
 func GetNPUNum(c apiCoreV1.Container) int32 {
-	var qtt resource.Quantity
-	var exist bool
-	for _, res := range GetResourceList() {
-		qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
-		if !exist {
+	for name, qtt := range c.Resources.Limits {
+		if !strings.HasPrefix(string(name), A910ResourceName) {
 			continue
 		}
 		if common.A800MaxChipNum < qtt.Value() || qtt.Value() < 0 {
@@ -299,6 +295,18 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 		return int32(qtt.Value())
 	}
 	return 0
+	//var exist bool
+	//for _, res := range GetResourceList() {
+	//	qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
+	//	if !exist {
+	//		continue
+	//	}
+	//	if common.A800MaxChipNum < qtt.Value() || qtt.Value() < 0 {
+	//		return InvalidNPUNum
+	//	}
+	//	return int32(qtt.Value())
+	//}
+	//return 0
 }
 
 // DeleteWorker : Delete worker(namespace/name) from BusinessWorker map in agent
