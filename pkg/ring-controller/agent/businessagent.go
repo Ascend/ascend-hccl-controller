@@ -295,18 +295,6 @@ func GetNPUNum(c apiCoreV1.Container) int32 {
 		return int32(qtt.Value())
 	}
 	return 0
-	//var exist bool
-	//for _, res := range GetResourceList() {
-	//	qtt, exist = c.Resources.Limits[apiCoreV1.ResourceName(res)]
-	//	if !exist {
-	//		continue
-	//	}
-	//	if common.A800MaxChipNum < qtt.Value() || qtt.Value() < 0 {
-	//		return InvalidNPUNum
-	//	}
-	//	return int32(qtt.Value())
-	//}
-	//return 0
 }
 
 // DeleteWorker : Delete worker(namespace/name) from BusinessWorker map in agent

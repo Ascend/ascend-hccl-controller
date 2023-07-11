@@ -70,7 +70,7 @@ func TestProcessNextWorkItem(t *testing.T) {
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
 				Status: v1alpha1.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
@@ -88,7 +88,7 @@ func TestProcessNextWorkItem(t *testing.T) {
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
 				Status: v1alpha1.JobStatus{}}
 			ctr.enqueueJob(obj, agent.EventAdd)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(ctr), "SyncHandler", func(_ *EventController,
@@ -112,7 +112,7 @@ func TestControllerSyncHandler(t *testing.T) {
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
 				Status: v1alpha1.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			patches := gomonkey.ApplyMethod(reflect.TypeOf(new(model.VCJobModel)), "GetModelKey",
@@ -128,7 +128,7 @@ func TestControllerSyncHandler(t *testing.T) {
 				GenerateName: "", Namespace: "namespace", SelfLink: "", UID: types.UID("xxxx"),
 				ResourceVersion: "", Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
 				Status: v1alpha1.JobStatus{}}
 			rs, _ := model.Factory(obj, agent.EventAdd, ctr.cacheIndexers)
 			rs.GetCacheIndex().Add(obj)

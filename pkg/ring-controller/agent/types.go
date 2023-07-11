@@ -65,10 +65,7 @@ const (
 	threeMinutes     = 180
 	splitNum         = 4
 
-	a910With2CResourceName  = A910ResourceName + "-2c"
-	a910With4CResourceName  = A910ResourceName + "-4c"
-	a910With8CResourceName  = A910ResourceName + "-8c"
-	a910With16CResourceName = A910ResourceName + "-16c"
+	a910With2CResourceName = A910ResourceName + "-2c"
 
 	// InvalidNPUNum invalid NPU num
 	InvalidNPUNum = -1
@@ -77,9 +74,6 @@ const (
 var (
 	// jsonVersion of hccl.json
 	jsonVersion = "v2"
-	// ResourceList pod annotation
-	resourceList = []string{A910ResourceName, a910With2CResourceName, a910With4CResourceName,
-		a910With8CResourceName, a910With16CResourceName}
 )
 
 // SetJSONVersion set jsonVersion
@@ -92,10 +86,10 @@ func GetJSONVersion() string {
 	return jsonVersion
 }
 
-// GetResourceList get ResourceList
-func GetResourceList() []string {
-	return resourceList
-}
+//// GetResourceList get ResourceList
+//func GetResourceList() []string {
+//	return resourceList
+//}
 
 // BusinessAgent Agent for all businessWorkers, responsibilities:
 //   - list/watch 910 pods, and assign each pod to corresponding handler
