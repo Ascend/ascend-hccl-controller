@@ -86,11 +86,6 @@ func GetJSONVersion() string {
 	return jsonVersion
 }
 
-//// GetResourceList get ResourceList
-//func GetResourceList() []string {
-//	return resourceList
-//}
-
 // BusinessAgent Agent for all businessWorkers, responsibilities:
 //   - list/watch 910 pods, and assign each pod to corresponding handler
 //     (each business worker belongs to a volcano job, and contains a handler for building rank table)
