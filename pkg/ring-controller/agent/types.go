@@ -65,8 +65,6 @@ const (
 	threeMinutes     = 180
 	splitNum         = 4
 
-	a910With2CResourceName = A910ResourceName + "-2c"
-
 	// InvalidNPUNum invalid NPU num
 	InvalidNPUNum = -1
 )

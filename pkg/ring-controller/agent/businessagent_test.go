@@ -48,6 +48,7 @@ func TestDeleteWorker(t *testing.T) {
 
 // TestGetNPUNum test GetNPUNum
 func TestGetNPUNum(t *testing.T) {
+	const a910With2CResourceName = A910ResourceName + "-2c"
 	convey.Convey("Get NPUNum", t, func() {
 		convey.Convey("no npu found", func() {
 			c := apiCorev1.Container{Resources: apiCorev1.ResourceRequirements{}}
