@@ -7,9 +7,9 @@ require (
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/stretchr/testify v1.8.0
 	huawei.com/npu-exporter/v3 v3.0.0
-	k8s.io/api v0.25.3
-	k8s.io/apimachinery v0.25.3
-	k8s.io/client-go v0.25.3
+	k8s.io/api v0.25.13
+	k8s.io/apimachinery v0.25.13
+	k8s.io/client-go v0.25.13
 	volcano.sh/apis v1.7.0
 )
 
@@ -43,11 +43,11 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
@@ -66,7 +66,7 @@ replace (
 	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
 	github.com/golang/protobuf => github.com/golang/protobuf v1.5.1
 	huawei.com/npu-exporter/v3 => gitee.com/ascend/ascend-npu-exporter/v3 v3.0.0
-	k8s.io/api => k8s.io/api v0.25.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.25.3
-	k8s.io/client-go => k8s.io/client-go v0.25.3
+	k8s.io/api => k8s.io/api v0.25.13
+	k8s.io/apimachinery => k8s.io/apimachinery v0.25.13
+	k8s.io/client-go => k8s.io/client-go v0.25.13
 )
