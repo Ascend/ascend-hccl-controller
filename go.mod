@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/agiledragon/gomonkey/v2 v2.8.0
 	github.com/smartystreets/goconvey v1.7.2
-	github.com/stretchr/testify v1.8.0
-	huawei.com/npu-exporter/v3 v3.0.0
+	github.com/stretchr/testify v1.8.2
+	huawei.com/npu-exporter/v5 v5.0.0-RC4.b001
 	k8s.io/api v0.25.13
 	k8s.io/apimachinery v0.25.13
 	k8s.io/client-go v0.25.13
@@ -50,7 +50,7 @@ require (
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -64,8 +64,7 @@ require (
 
 replace (
 	github.com/agiledragon/gomonkey/v2 v2.0.1 => github.com/agiledragon/gomonkey/v2 v2.1.0
-	github.com/golang/protobuf => github.com/golang/protobuf v1.5.1
-	huawei.com/npu-exporter/v3 => gitee.com/ascend/ascend-npu-exporter/v3 v3.0.0
+	huawei.com/npu-exporter/v5 => gitee.com/ascend/ascend-npu-exporter/v5 v5.0.0-RC4.b001
 	k8s.io/api => k8s.io/api v0.25.13
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.13
 	k8s.io/client-go => k8s.io/client-go v0.25.13
