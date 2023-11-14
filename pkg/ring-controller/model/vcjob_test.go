@@ -62,7 +62,7 @@ func TestFactory(t *testing.T) {
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: appsV1.DaemonSetSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: appsV1.DaemonSetSpec{},
 				Status: appsV1.DaemonSetStatus{}}
 			_, err := Factory(obj, "add", nil)
 			convey.So(err, convey.ShouldNotEqual, nil)
@@ -73,7 +73,7 @@ func TestFactory(t *testing.T) {
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
+				Finalizers: nil, ManagedFields: nil}, Spec: v1alpha1.JobSpec{},
 				Status: v1alpha1.JobStatus{}}
 			rs, _ := Factory(obj, "add", nil)
 			convey.So(rs, convey.ShouldEqual, nil)
@@ -85,7 +85,7 @@ func TestFactory(t *testing.T) {
 				GenerateName: "", Namespace: "tt1", SelfLink: "", UID: types.UID("xxxx"), ResourceVersion: "",
 				Generation: 0, CreationTimestamp: metav1.Now(), DeletionTimestamp: nil,
 				DeletionGracePeriodSeconds: nil, Labels: nil, Annotations: nil, OwnerReferences: nil,
-				Finalizers: nil, ClusterName: "", ManagedFields: nil},
+				Finalizers: nil, ManagedFields: nil},
 				Spec: appsV1.DeploymentSpec{Replicas: &replicas}, Status: appsV1.DeploymentStatus{}}
 			rs, _ := Factory(obj, "add", nil)
 			convey.So(rs, convey.ShouldEqual, nil)

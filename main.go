@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -177,7 +177,7 @@ func init() {
 
 func initHwLogger() error {
 	if err := hwlog.InitRunLogger(hwLogConfig, context.Background()); err != nil {
-		return fmt.Errorf("hwlog init failed, error is %v", err)
+		return fmt.Errorf("hwlog init failed, error is %v\n", err)
 	}
 	return nil
 }

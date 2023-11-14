@@ -22,7 +22,7 @@ import (
 	"net"
 	"strconv"
 
-	"huawei.com/npu-exporter/v3/common-utils/hwlog"
+	"huawei.com/npu-exporter/v5/common-utils/hwlog"
 	"k8s.io/api/core/v1"
 
 	"hccl-controller/pkg/ring-controller/common"
